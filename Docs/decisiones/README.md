@@ -20,6 +20,7 @@ Investigaciones y cotizaciones que preparan una decisión posterior. No son ADR.
 | Nota | Historia | Qué decide después |
 | --- | --- | --- |
 | [Proveedor de respaldo](nota-proveedor-de-respaldo.md) | HU-02.04 | Proveedor y adaptador del puerto `ProveedorFacturacion` (HU-06.06) |
+| [Prototipo del modo simple](../producto/prototipo-modo-simple.md) | HU-03.01 | Flujo de «factura en 3 toques» (HU-06.01), tras la prueba con el piloto |
 
 ## Plantilla
 
