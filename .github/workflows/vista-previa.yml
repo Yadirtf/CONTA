@@ -102,39 +102,10 @@ jobs:
             fi
           done
 
-  base-de-datos:
-    needs: cambios
-    if: needs.cambios.outputs.neon == 'true' && needs.cambios.outputs.api == 'true'
-    runs-on: ubuntu-latest
-    environment: SECRETOS
-    outputs:
-      db_url: ${{ steps.rama.outputs.db_url }}
-    steps:
-      - name: Rama de Neon del PR
-        if: env.ES_PR == 'true'
-        id: rama-pr
-        uses: neondatabase/create-branch-action@v6
-        with:
-          project_id: ${{ vars.NEON_PROJECT_ID }}
-          branch_name: preview/pr-${{ env.PR }}
-          parent_branch: develop
-          role: conta_app
-          api_key: ${{ secrets.NEON_API_KEY }}
-      - name: Rama de Neon de develop
-        if: env.ES_PR != 'true'
-        id: rama-develop
-        uses: neondatabase/create-branch-action@v6
-        with:
-          project_id: ${{ vars.NEON_PROJECT_ID }}
-          branch_name: develop
-          parent_branch: main
-          role: conta_app
-          api_key: ${{ secrets.NEON_API_KEY }}
-      - id: rama
-        run: echo "db_url=${{ steps.rama-pr.outputs.db_url || steps.rama-develop.outputs.db_url }}" >> "$GITHUB_OUTPUT"
-
+  # La rama de Neon se crea dentro del mismo job: su cadena de conexión lleva la contraseña y GitHub no deja
+  # pasar valores secretos de un job a otro.
   api:
-    needs: [cambios, base-de-datos]
+    needs: cambios
     if: needs.cambios.outputs.api == 'true'
     runs-on: ubuntu-latest
     environment: SECRETOS
@@ -142,7 +113,7 @@ jobs:
       run:
         working-directory: api
     env:
-      DATABASE_URL: ${{ needs.base-de-datos.outputs.db_url }}
+      CON_NEON: ${{ needs.cambios.outputs.neon }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -156,13 +127,38 @@ jobs:
           npm run tipos
           npm run build
           npm test
+      - name: Rama de Neon del PR
+        if: env.CON_NEON == 'true' && env.ES_PR == 'true'
+        id: rama-pr
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: preview/pr-${{ env.PR }}
+          parent_branch: develop
+          role: conta_app
+          api_key: ${{ secrets.NEON_API_KEY }}
+      - name: Rama de Neon de develop
+        if: env.CON_NEON == 'true' && env.ES_PR != 'true'
+        id: rama-develop
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: develop
+          parent_branch: main
+          role: conta_app
+          api_key: ${{ secrets.NEON_API_KEY }}
       - name: Migraciones sobre la rama de Neon
+        if: env.CON_NEON == 'true'
+        env:
+          DATABASE_URL: ${{ steps.rama-pr.outputs.db_url || steps.rama-develop.outputs.db_url }}
         run: npm run migrar
       - name: Pruebas de integración y e2e de NestJS contra la rama de Neon
         if: env.ES_PR == 'true'
+        env:
+          DATABASE_URL: ${{ steps.rama-pr.outputs.db_url }}
         run: npm run test:e2e
       - name: Desplegar en Render (deploy hook)
-        if: env.ES_PR != 'true'
+        if: env.CON_NEON == 'true' && env.ES_PR != 'true'
         env:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
