@@ -29,11 +29,13 @@ export function verificarConXmlsec(xmlFirmado: string, caPem: string): Resultado
 }
 
 /**
- * Sobre SOAP con firma WS-Security (HU-02.03). xmlsec1 no resuelve la referencia al BinarySecurityToken,
- * así que recibe el certificado firmante; se comprueba la canonicalización exclusiva y la firma.
+ * Sobre SOAP con firma WS-Security (HU-02.03). xmlsec1 no resuelve la referencia al BinarySecurityToken
+ * (la versión 1.3 responde KEY-NOT-FOUND), así que se le quita el KeyInfo, que no está firmado, y recibe
+ * el certificado firmante. Se comprueba la canonicalización exclusiva y la firma.
  */
 export function verificarSobreConXmlsec(sobreFirmado: string, certificadoPem: string): ResultadoDeVerificacion {
-  return xmlsec(sobreFirmado, certificadoPem, (documento, pem) => ['--pubkey-cert-pem', pem, '--id-attr:Id', 'To', documento]);
+  const sinKeyInfo = sobreFirmado.replace(/<ds:KeyInfo>[\s\S]*?<\/ds:KeyInfo>/, '');
+  return xmlsec(sinKeyInfo, certificadoPem, (documento, pem) => ['--pubkey-cert-pem', pem, '--id-attr:Id', 'To', documento]);
 }
 
 function xmlsec(xml: string, pem: string, argumentos: (documento: string, pem: string) => string[]): ResultadoDeVerificacion {
