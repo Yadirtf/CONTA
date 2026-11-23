@@ -141,9 +141,10 @@ No hay que crear nada a mano: el workflow crea los recursos la primera vez. Como
 | --- | --- | --- | --- |
 | `conta-consola` | Worker (OpenNext) | `https://conta-consola.<subdominio>.workers.dev` | `https://pr-<n>-conta-consola.<subdominio>.workers.dev` |
 | `conta-sitio` | Worker (OpenNext) | `https://conta-sitio.<subdominio>.workers.dev` | `https://pr-<n>-conta-sitio.<subdominio>.workers.dev` |
-| `conta-app` | Pages (Flutter web) | `https://conta-app.pages.dev` | `https://pr-<n>.conta-app.pages.dev` |
+| `conta-app` | Pages (Flutter web) | `https://conta-app-uka.pages.dev` | `https://pr-<n>.conta-app-uka.pages.dev` |
 
-- `<subdominio>` es el subdominio `workers.dev` de la cuenta (Workers & Pages → panel derecho). Si la cuenta nunca lo eligió, hay que elegirlo una vez.
+- `<subdominio>` es el subdominio `workers.dev` de la cuenta; hoy es `panter`, porque la cuenta se comparte con ese proyecto.
+- Cloudflare le añadió el sufijo `-uka` al subdominio de Pages porque `conta-app.pages.dev` ya estaba tomado. El workflow lee la URL real de la salida de wrangler.
 - Una versión de vista previa de un Worker exige que el Worker ya exista. Si el primer PR llega antes que el primer push a `develop`, el workflow hace un despliegue inicial y luego sube la vista previa.
 - El proyecto de Pages `conta-app` se crea con `develop` como rama de producción.
 - La API acepta llamadas del navegador solo desde estos orígenes (más `localhost`). Para otro origen se agrega en la variable `ORIGENES_PERMITIDOS` de Render, separada por comas.

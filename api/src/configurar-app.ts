@@ -6,7 +6,8 @@ import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swag
 // sus vistas previas pr-<n>-conta-*) y Cloudflare Pages conta-app.
 const ORIGENES_POR_DEFECTO = [
   /^https:\/\/([a-z0-9-]+-)?conta-[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev$/,
-  /^https:\/\/([a-z0-9-]+\.)?conta-app\.pages\.dev$/,
+  // Pages puede añadir un sufijo al subdominio del proyecto (hoy conta-app-uka.pages.dev).
+  /^https:\/\/([a-z0-9-]+\.)?conta-app(-[a-z0-9]+)?\.pages\.dev$/,
   /^http:\/\/localhost:\d+$/,
 ];
 

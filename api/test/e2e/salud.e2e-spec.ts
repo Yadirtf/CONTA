@@ -31,6 +31,12 @@ describe('GET /salud (e2e)', () => {
     expect(respuesta.headers['access-control-allow-origin']).toBe(origen);
   });
 
+  it('permite llamar desde la vista previa de la app en Cloudflare Pages', async () => {
+    const origen = 'https://pr-87.conta-app-uka.pages.dev';
+    const respuesta = await request(app.getHttpServer()).get('/salud').set('Origin', origen).expect(200);
+    expect(respuesta.headers['access-control-allow-origin']).toBe(origen);
+  });
+
   it('no permite orígenes ajenos', async () => {
     const respuesta = await request(app.getHttpServer()).get('/salud').set('Origin', 'https://panter.inge.workers.dev');
     expect(respuesta.headers['access-control-allow-origin']).toBeUndefined();
