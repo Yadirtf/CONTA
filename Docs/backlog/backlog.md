@@ -119,9 +119,10 @@ Como administrador, quiero enviar la factura firmada al ambiente de habilitació
 - Dada una factura con error, entonces se guardan los códigos de rechazo legibles.
 - Implementación: [`api/src/modulos/facturacion`](../../api/src/modulos/facturacion/README.md#envío-a-la-dian-hu-0203); decisión en [ADR-0008](../decisiones/0008-envio-dian-con-cola-en-tabla-y-despertador.md). Pasa a «Hecha» cuando el workflow «Habilitación DIAN» responda «aceptada».
 
-**HU-02.04 Cotizar proveedor de respaldo** (S, S)
+**HU-02.04 Cotizar proveedor de respaldo** (S, S) — Hecha
 Como administrador, quiero tener cotizado un proveedor externo, para activarlo si la conexión directa se retrasa.
 - Existe una nota en `Docs/decisiones/` con al menos dos proveedores, precio y cómo encaja en el puerto `ProveedorFacturacion`.
+- Nota: [proveedor de respaldo](../decisiones/nota-proveedor-de-respaldo.md). Recomienda MATIAS API, con Muisca como segunda opción.
 
 #### EP-03. Validación con clientes — Prioridad M
 
