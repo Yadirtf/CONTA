@@ -15,6 +15,13 @@
       "when": 1795454587663,
       "tag": "0001_aislamiento_multiempresa",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795465997128,
+      "tag": "0002_envio_a_la_dian",
+      "breakpoints": true
     }
   ]
 }

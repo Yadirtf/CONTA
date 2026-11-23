@@ -1,0 +1,60 @@
+# Prueba real contra el ambiente de habilitación de la DIAN (HU-02.03, ADR-0008).
+# Solo a mano (workflow_dispatch): arma una factura SETP, la firma con el certificado de habilitación,
+# la envía con SendTestSetAsync y consulta GetStatusZip hasta que la DIAN responde.
+# Los datos salen del entorno SECRETOS; el log muestra solo número, CUFE, ZipKey y la respuesta de la DIAN.
+name: Habilitación DIAN
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: habilitacion-dian
+  cancel-in-progress: false
+
+jobs:
+  enviar:
+    name: enviar una factura al set de pruebas
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: SECRETOS
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: api/.node-version
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+      - name: Comprobar que están los datos
+        env:
+          DIAN_HAB_P12_BASE64: ${{ secrets.DIAN_HAB_P12_BASE64 }}
+          DIAN_HAB_P12_CONTRASENA: ${{ secrets.DIAN_HAB_P12_CONTRASENA }}
+          DIAN_HAB_TEST_SET_ID: ${{ secrets.DIAN_HAB_TEST_SET_ID }}
+          DIAN_HAB_ID_SOFTWARE: ${{ secrets.DIAN_HAB_ID_SOFTWARE }}
+          DIAN_HAB_PIN: ${{ secrets.DIAN_HAB_PIN }}
+          DIAN_HAB_NIT: ${{ vars.DIAN_HAB_NIT }}
+        run: |
+          faltan=""
+          for v in DIAN_HAB_P12_BASE64 DIAN_HAB_P12_CONTRASENA DIAN_HAB_TEST_SET_ID DIAN_HAB_ID_SOFTWARE DIAN_HAB_PIN DIAN_HAB_NIT; do
+            [ -n "${!v}" ] || faltan="$faltan $v"
+          done
+          if [ -n "$faltan" ]; then
+            echo "::error::Faltan en el entorno SECRETOS:$faltan"
+            exit 1
+          fi
+      - name: Enviar y consultar en habilitación
+        env:
+          DIAN_HAB_P12_BASE64: ${{ secrets.DIAN_HAB_P12_BASE64 }}
+          DIAN_HAB_P12_CONTRASENA: ${{ secrets.DIAN_HAB_P12_CONTRASENA }}
+          DIAN_HAB_TEST_SET_ID: ${{ secrets.DIAN_HAB_TEST_SET_ID }}
+          DIAN_HAB_ID_SOFTWARE: ${{ secrets.DIAN_HAB_ID_SOFTWARE }}
+          DIAN_HAB_PIN: ${{ secrets.DIAN_HAB_PIN }}
+          DIAN_HAB_NIT: ${{ vars.DIAN_HAB_NIT }}
+          DIAN_HAB_CLAVE_TECNICA: ${{ secrets.DIAN_HAB_CLAVE_TECNICA }}
+        run: npm run test:habilitacion

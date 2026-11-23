@@ -1,4 +1,5 @@
 // API pública del módulo de facturación para otros módulos.
+export { SolicitarEnvioDian, type EnvioSolicitado, type SolicitudDeEnvio } from './aplicacion/comandos/solicitar-envio-dian.js';
 export { FirmarDocumentoElectronico } from './aplicacion/comandos/firmar-documento-electronico.js';
 export { GenerarXmlFactura } from './aplicacion/comandos/generar-xml-factura.js';
 export { CertificadoDeFirma } from './aplicacion/firma/certificado-de-firma.js';

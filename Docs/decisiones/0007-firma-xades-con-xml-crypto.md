@@ -1,6 +1,6 @@
 # ADR-0007. Firma XAdES-EPES: xml-crypto para XMLDSig, propiedades XAdES propias y node-forge para el .p12
 
-- Estado: Propuesto
+- Estado: Aceptado
 - Fecha: 2026-11-23
 - Historia: HU-02.02
 - Decide: Inge

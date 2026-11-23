@@ -272,7 +272,7 @@ jobs:
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "### app: ${url:-sin URL}" >> "$GITHUB_STEP_SUMMARY"
 
-  # Despertador: Worker con cron que llama a /salud cada 14 minutos en horario de pruebas.
+  # Despertador: Worker con cron que llama a /salud y procesa la cola cada 14 minutos en horario de pruebas.
   # Se despliega solo desde develop, cuando cambia su carpeta (o este workflow).
   despertador:
     needs: [cambios, api]
@@ -291,7 +291,13 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx --yes wrangler@4.166.0 deploy
+          TOKEN_TRABAJOS: ${{ secrets.TOKEN_TRABAJOS_INTERNOS }}
+        run: |
+          npx --yes wrangler@4.166.0 deploy
+          # El token de los trabajos internos (ADR-0008) se copia como secreto del Worker, si existe.
+          if [ -n "$TOKEN_TRABAJOS" ]; then
+            printf '%s' "$TOKEN_TRABAJOS" | npx --yes wrangler@4.166.0 secret put TOKEN_TRABAJOS
+          fi
 
   comentar:
     needs: [cambios, api, web, app]

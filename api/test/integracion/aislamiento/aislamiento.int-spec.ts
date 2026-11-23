@@ -31,8 +31,12 @@ describe('aislamiento entre empresas por tabla (integración)', () => {
 
         await comoEmpresa(cliente, empresaB);
         expect((await cliente.query(contar, [id])).rows[0]).toEqual({ n: 0 });
-        const cambio = await cliente.query(`UPDATE ${tabla} SET ${fabrica.columnaEmpresa} = $2 WHERE ${fabrica.columnaId} = $1`, [id, empresaB]);
-        expect(cambio.rowCount).toBe(0);
+        const cambiar = `UPDATE ${tabla} SET ${fabrica.columnaEmpresa} = $2 WHERE ${fabrica.columnaId} = $1`;
+        if (fabrica.empresaInmutable) {
+          expect((await errorDe(cliente, cambiar, [id, empresaB]))?.message).toMatch(/permission denied/);
+        } else {
+          expect((await cliente.query(cambiar, [id, empresaB])).rowCount).toBe(0);
+        }
       });
     });
 
@@ -42,7 +46,7 @@ describe('aislamiento entre empresas por tabla (integración)', () => {
         const id = await fabrica.insertar(cliente, empresaA);
         await comoEmpresa(cliente, empresaA);
         const error = await errorDe(cliente, `UPDATE ${tabla} SET ${fabrica.columnaEmpresa} = $2 WHERE ${fabrica.columnaId} = $1`, [id, nuevoId()]);
-        expect(error?.message).toMatch(/row-level security|violates/);
+        expect(error?.message).toMatch(fabrica.empresaInmutable ? /permission denied/ : /row-level security|violates/);
       });
     });
   });

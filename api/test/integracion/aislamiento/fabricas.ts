@@ -11,7 +11,26 @@ export interface FabricaDeFilas {
   readonly columnaEmpresa: string;
   /** Columna que identifica la fila insertada. */
   readonly columnaId: string;
+  /**
+   * true si conta_api no puede cambiar la columna de empresa (UPDATE por columnas o sin UPDATE): la prueba
+   * exige entonces que el cambio se niegue por permisos, una garantía más fuerte que la de RLS.
+   */
+  readonly empresaInmutable?: boolean;
   insertar(cliente: pg.Client, empresaId: string): Promise<string>;
+}
+
+const CUFE_DE_PRUEBA = 'a'.repeat(96);
+
+/** Inserta un envío a la DIAN de la empresa (HU-02.03). */
+export async function crearEnvioDian(cliente: pg.Client, empresaId: string): Promise<string> {
+  await prepararEmpresa(cliente, empresaId);
+  const id = nuevoId();
+  await cliente.query(
+    `INSERT INTO conta.envios_dian (empresa_id, id, cufe, numero, nit_emisor, anio, consecutivo, xml_firmado, estado)
+     VALUES ($1, $2, $3, 'SETP990000001', '900373076', 2026, 1, '<Invoice/>', 'pendiente')`,
+    [empresaId, id, CUFE_DE_PRUEBA],
+  );
+  return id;
 }
 
 export async function crearEmpresa(cliente: pg.Client, empresaId: string): Promise<void> {
@@ -26,6 +45,27 @@ export const FABRICAS: Readonly<Record<string, FabricaDeFilas>> = {
     async insertar(cliente, empresaId) {
       await crearEmpresa(cliente, empresaId);
       return empresaId;
+    },
+  },
+  'conta.envios_dian': {
+    columnaEmpresa: 'empresa_id',
+    columnaId: 'id',
+    empresaInmutable: true,
+    insertar: crearEnvioDian,
+  },
+  'conta.intentos_envio_dian': {
+    columnaEmpresa: 'empresa_id',
+    columnaId: 'id',
+    empresaInmutable: true,
+    async insertar(cliente, empresaId) {
+      const envioId = await crearEnvioDian(cliente, empresaId);
+      const id = nuevoId();
+      await cliente.query(
+        `INSERT INTO conta.intentos_envio_dian (empresa_id, id, envio_id, numero, operacion, resultado, detalle, duracion_ms, ocurrido_en)
+         VALUES ($1, $2, $3, 1, 'SendTestSetAsync', 'recibido', 'ZipKey de prueba', 10, now())`,
+        [empresaId, id, envioId],
+      );
+      return id;
     },
   },
 };

@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
+    "test:habilitacion": "vitest run --config ./vitest.config.habilitacion.ts",
     "migrar": "node scripts/migrar.mjs",
     "migracion:nueva": "drizzle-kit generate --custom --name",
     "contrato": "node scripts/generar-contrato.mjs",

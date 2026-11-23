@@ -7,3 +7,7 @@ export { MomentoDeEmision } from './objetos-valor/momento-de-emision.js';
 export { NumeroDeFactura } from './objetos-valor/numero-de-factura.js';
 export { participante, type Direccion, type Participante } from './objetos-valor/participante.js';
 export { TARIFAS_IVA, tarifaIva, type TarifaIva } from './objetos-valor/tarifa-iva.js';
+export { EnvioDian, type DatosDelEnvio } from './envio-dian/envio-dian.js';
+export { ESTADOS_DEL_ENVIO, esEstadoFinal, type EstadoDelEnvio } from './envio-dian/estado-del-envio.js';
+export { esperaDeConsulta, esperaTrasFalla, MAXIMO_DE_INTENTOS } from './envio-dian/politica-de-reintentos.js';
+export { RespuestaDeLaDian, type ResultadoDeValidacion } from './envio-dian/respuesta-de-la-dian.js';
