@@ -79,7 +79,7 @@ Orden recomendado: **Neon → Render → GitHub → Cloudflare**. Neon va primer
 
 1. Crear el proyecto `conta` en la región **AWS US East 1 (N. Virginia)**. Es la más cercana a Colombia y coincide con la región de Render del paso 4.2.
 2. En **Branches**, crear dos ramas a partir de `main`: `develop` y `preview`.
-3. Crear el rol `conta_app` en **Roles**. Las tablas no le pertenecen y no tiene `BYPASSRLS`, para que Row Level Security aplique siempre. Los permisos sobre las tablas se dan en la migración inicial (HU-01.05).
+3. Crear el rol `conta_app` en **Roles**. Las tablas no le pertenecen y no debe tener `BYPASSRLS`, para que Row Level Security aplique siempre. Neon lo crea con `BYPASSRLS`: después de crearlo, en el SQL Editor y con el rol dueño, correr `ALTER ROLE conta_app NOBYPASSRLS;` en las ramas `main`, `develop` y `preview`. Los permisos sobre las tablas se dan en la migración inicial (HU-01.05).
 4. Copiar dos cadenas de conexión del rol `conta_app` con el botón **Connect**, marcando la opción *Pooled connection*: una de la rama `develop` y otra de la rama `preview`.
 5. En **Settings**, copiar el *Project ID*. En la cuenta, **API keys**, crear una llave para GitHub.
 
@@ -159,7 +159,7 @@ Ninguno de estos valores va en el repositorio, en el texto de un PR ni en un cha
 - Solo datos de prueba. Nunca un NIT, certificado o cliente real en Render, en una vista previa ni en una rama de Neon de pruebas.
 - La DIAN siempre en el **ambiente de habilitación** y Wompi en **sandbox**.
 - Las migraciones corren en Actions sobre la rama de Neon antes de desplegar; si fallan, no se despliega.
-- En cada PR que cambia `api/`, la prueba [`rol-de-la-api.int-spec.ts`](../../api/test/integracion/rol-de-la-api.int-spec.ts) corre contra la rama `preview/pr-<n>` y falla si el rol `conta_app` es superusuario o tiene `BYPASSRLS`, o si Row Level Security deja ver filas sin `app.empresa_id` o de otra empresa. Si falla por el rol, en el SQL Editor de Neon, con el rol dueño, se corre `ALTER ROLE conta_app NOBYPASSRLS;` en `main` y se recrean las ramas. Con Neon configurado no se puede saltar. La prueba de aislamiento de cada tabla llega con HU-01.05.
+- En cada PR que cambia `api/`, la prueba [`rol-de-la-api.int-spec.ts`](../../api/test/integracion/rol-de-la-api.int-spec.ts) corre contra la rama `preview/pr-<n>` y falla si el rol `conta_app` es superusuario o tiene `BYPASSRLS`, o si Row Level Security deja ver filas sin `app.empresa_id` o de otra empresa. Neon crea los roles del panel con `BYPASSRLS` (visto en el PR #91). El arreglo: en el SQL Editor de Neon, con el rol dueño (`neondb_owner`), correr `ALTER ROLE conta_app NOBYPASSRLS;` en cada rama que ya exista (`main`, `develop`, `preview` y las `preview/pr-<n>` abiertas). Cada rol se copia por rama: las ramas nuevas lo heredan de su madre. Con Neon configurado no se puede saltar. La prueba de aislamiento de cada tabla llega con HU-01.05.
 - Las ramas de Neon de cada PR se borran al cerrar el PR, porque cuentan contra el límite de cómputo de la cuenta.
 - Los artefactos de los builds duran 2 días (ver [flujo de ramas](../forma-de-trabajo/flujo-de-ramas.md#3-artefactos-de-github-actions)).
 - Esto es un entorno de pruebas. Producción se decide en otro ADR.
