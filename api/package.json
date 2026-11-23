@@ -47,6 +47,7 @@
     "dependency-cruiser": "18.9.0",
     "drizzle-kit": "0.31.11",
     "eslint": "9.39.5",
+    "fast-check": "4.10.2",
     "globals": "16.4.0",
     "supertest": "7.3.2",
     "typescript": "6.0.3",

@@ -23,6 +23,33 @@ export default tseslint.config(
     },
   },
   {
+    // Dinero exacto (HU-01.04, ADR-0005): en el dominio no hay decimales de punto flotante.
+    // Los montos, tarifas y cantidades se escriben como texto ('0.19') y se operan con Dinero o DecimalExacto.
+    files: ['src/**/dominio/**/*.ts'],
+    ignores: ['**/*.spec.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[raw=/^[0-9_]*\\.[0-9]/]',
+          message: 'Sin decimales en number dentro del dominio: usa Dinero.de(\'0.19\') o DecimalExacto.desde(\'0.19\').',
+        },
+        {
+          selector: "CallExpression[callee.name='parseFloat'], MemberExpression[object.name='Number'][property.name='parseFloat']",
+          message: 'parseFloat devuelve un número de punto flotante: usa DecimalExacto.desde(texto).',
+        },
+        {
+          selector: "MemberExpression[property.name='toFixed']",
+          message: 'toFixed redondea un número de punto flotante: usa Dinero.redondear() o DecimalExacto.redondear().',
+        },
+        {
+          selector: "MemberExpression[object.name='Math'][property.name=/^(round|floor|ceil|trunc)$/]",
+          message: 'Redondear en el dominio se hace con DecimalExacto.redondear(escala, modo) (mitad al par por defecto).',
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.mjs', '**/*.cjs'],
     languageOptions: { globals: globals.node },
   },

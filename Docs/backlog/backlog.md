@@ -68,10 +68,11 @@ Como administrador, quiero un workflow por carpeta, para que un cambio en `web/`
 - Cada workflow corre lint, tipos, pruebas y reglas de dependencia.
 - Todo `upload-artifact` usa `retention-days: 2` (lo revisa `ci-repositorio.yml`).
 
-**HU-01.04 Objeto de valor Dinero** (M, S)
+**HU-01.04 Objeto de valor Dinero** (M, S) — Hecha
 Como contador, quiero que los montos se calculen sin errores de redondeo, para que los totales cuadren con la DIAN.
 - Dado `0,1 + 0,2`, cuando se suma con `Dinero`, entonces el resultado es exactamente `0,3`.
 - Las reglas de redondeo del anexo técnico 1.9 están cubiertas con pruebas de propiedad.
+- Decisión: [ADR-0005](../decisiones/0005-dinero-con-decimal-exacto-propio.md), decimal exacto propio sobre `bigint` con mitad al par.
 
 **HU-01.05 Aislamiento multiempresa con RLS** (M, M) **[VS]**
 Como dueño, quiero que ninguna otra empresa pueda ver mis datos, para confiar mis ventas a la plataforma.
