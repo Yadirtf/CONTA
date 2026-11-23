@@ -122,9 +122,10 @@ jobs:
           cache: npm
           cache-dependency-path: api/package-lock.json
       - run: npm ci
-      - name: Tipos, compilación y pruebas unitarias
+      - name: Tipos, reglas de dependencia, compilación y pruebas unitarias
         run: |
           npm run tipos
+          npm run dependencias
           npm run build
           npm test
       - name: Rama de Neon del PR
@@ -228,9 +229,10 @@ jobs:
           flutter-version-file: app/pubspec.yaml
           cache: true
       - run: flutter pub get
-      - name: Análisis y pruebas
+      - name: Análisis, reglas de dependencia y pruebas
         run: |
           flutter analyze
+          dart run tool/reglas_de_dependencia.dart
           flutter test
       - name: Construir Flutter web
         run: |
