@@ -8,7 +8,7 @@ export default function Inicio() {
   return (
     <main>
       <h1>CONTA · Consola</h1>
-      <p style={{ color: 'var(--suave)' }}>Entorno de pruebas. Solo datos de prueba.</p>
+      <p style={{ color: 'var(--conta-color-texto-suave)' }}>Entorno de pruebas. Solo datos de prueba.</p>
       <Suspense fallback={<p role="status">Consultando la API…</p>}>
         <EstadoDeLaApi />
       </Suspense>

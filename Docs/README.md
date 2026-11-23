@@ -13,6 +13,7 @@ Plataforma multiempresa de facturación electrónica DIAN y contabilidad para mi
 | [Flujo de ramas](forma-de-trabajo/flujo-de-ramas.md) | `main`, `develop`, ramas de trabajo, versiones y retención de artefactos |
 | [Entorno de pruebas](despliegue/entorno-de-pruebas.md) | Carpetas `api/`, `web/` y `app/`, pruebas por PR con la API en Render, web y app en Cloudflare y Neon |
 | [Decisiones (ADR)](decisiones/README.md) | Registro de decisiones de arquitectura con sus alternativas |
+| [Sistema de diseño](producto/sistema-de-diseno.md) | Paleta 60/30/10, estados, tipografía, espaciado, tokens compartidos y principios anti-fricción por superficie |
 | [Prototipo del modo simple](producto/prototipo-modo-simple.md) | Las 5 pantallas del modo simple, los 3 flujos de venta y el guion de prueba con pilotos |
 
 ## Orden de lectura para alguien nuevo (persona o agente)

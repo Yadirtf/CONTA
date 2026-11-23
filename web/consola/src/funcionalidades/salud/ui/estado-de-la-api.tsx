@@ -4,7 +4,7 @@ import { mensajeDeEstado } from '../dominio/estado-api';
 export async function EstadoDeLaApi() {
   const mensaje = mensajeDeEstado(await consultarSalud(process.env.NEXT_PUBLIC_API_URL));
   return (
-    <p role="status" style={{ color: mensaje.nivel === 'ok' ? 'var(--ok)' : 'var(--alerta)' }}>
+    <p role="status" style={{ color: mensaje.nivel === 'ok' ? 'var(--conta-color-exito)' : 'var(--conta-color-advertencia)' }}>
       {mensaje.texto}
     </p>
   );
