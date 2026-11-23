@@ -2,7 +2,7 @@
 
 Esta guía dice cómo trabajan el coordinador y los agentes en este proyecto para que el resultado no sea la solución rápida y genérica, sino la mejor que se pudo encontrar. Aplica a cualquier persona o agente que diseñe, programe o revise en CONTA.
 
-Documentos relacionados: [arquitectura limpia](../arquitectura/arquitectura-limpia.md), [backlog](../backlog/backlog.md), [plantillas de prompts](plantillas-de-prompts.md), [decisiones (ADR)](../decisiones/README.md).
+Documentos relacionados: [protocolo de encargos](protocolo-de-encargos.md), [flujo de ramas](flujo-de-ramas.md), [arquitectura limpia](../arquitectura/arquitectura-limpia.md), [backlog](../backlog/backlog.md), [plantillas de prompts](plantillas-de-prompts.md), [decisiones (ADR)](../decisiones/README.md).
 
 ## 1. Por qué esta guía existe
 
@@ -168,19 +168,7 @@ Para historias sin [VS], el flujo empieza directamente en el implementador, pero
 
 ### Cómo redacta el coordinador el encargo a un agente
 
-Todo encargo a un hilo o agente incluye estos bloques, en este orden:
-
-```
-Historia: HU-xx.yy — <título> (enlace al backlog)
-Rol: <Explorador | Generador | Contrapunto | Evaluador | Implementador | Revisor>
-Nivel de decisión: <0 | 1 | 2 | 3>
-Contexto obligatorio: Docs/arquitectura/arquitectura-limpia.md, <ADR relacionados>
-Restricciones duras: <lista>
-Solución obvia conocida: <la que se espera que el modelo proponga primero>
-Entregable: <alternativas con probabilidad | matriz de evaluación | PR | revisión>
-Criterios: <tabla de la dimensión, con pesos ajustados si aplica>
-Definición de hecho: sección 7 de la guía
-```
+Cada pedido de Inge (implementar, ajustar, arreglar, investigar u operar) se convierte en un encargo con el **[protocolo de encargos](protocolo-de-encargos.md)**. Ese protocolo tiene la plantilla común, el bloque de Verbalized Sampling, el bloque de cada tipo de pedido, el formato de entrega del agente y la verificación que hace el coordinador antes de llevar el resultado a Inge. Las [plantillas de prompts](plantillas-de-prompts.md) son las piezas de Verbalized Sampling que van dentro de ese encargo.
 
 Nombrar la **solución obvia** en el encargo es deliberado: obliga a que las alternativas se midan contra ella en lugar de repetirla.
 
@@ -227,11 +215,12 @@ Una historia está **Hecha** solo si se cumple todo:
 
 **Decisión y documentación**
 - [ ] Si es [VS]: nota de decisión en el PR o ADR enlazado, con alternativas, probabilidades y descartes.
-- [ ] Backlog actualizado (estado de la historia).
+- [ ] Backlog e issue de GitHub actualizados (estado de la historia).
 - [ ] Contrato OpenAPI regenerado si cambió la API.
 
 **Entrega**
-- [ ] PR revisado con la lista de la sección 9 y CI en verde.
+- [ ] PR hacia `develop`, revisado con la lista de la sección 9 y CI en verde.
+- [ ] Probado en el entorno de pruebas (Cloudflare + rama de Neon del PR) cuando la carpeta ya tiene despliegue.
 - [ ] Observabilidad: errores nuevos llegan a Sentry con `empresaId`.
 
 ## 8. Formato de la nota de decisión (nivel 2)

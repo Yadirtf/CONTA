@@ -1,0 +1,67 @@
+# Borra los artefactos de Actions con más de N días (2 por defecto).
+# Conserva los artefactos de ejecuciones de etiquetas de versión (v*) y los que se llamen version-*.
+# Las Releases y las etiquetas no son artefactos: este workflow nunca las toca.
+name: Limpiar artefactos
+
+on:
+  schedule:
+    - cron: "17 6 * * *" # todos los días, 06:17 UTC (01:17 en Colombia)
+  workflow_dispatch:
+    inputs:
+      dias:
+        description: "Borrar artefactos con más de estos días"
+        required: false
+        default: "2"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: limpiar-artefactos
+  cancel-in-progress: false
+
+jobs:
+  limpiar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Borrar artefactos vencidos
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const dias = Number((context.payload.inputs && context.payload.inputs.dias) || 2);
+            if (!Number.isFinite(dias) || dias < 1) {
+              core.setFailed(`Valor de días no válido: ${dias}`);
+              return;
+            }
+            const limite = Date.now() - dias * 24 * 60 * 60 * 1000;
+
+            const etiquetas = new Set(
+              (await github.paginate(github.rest.repos.listTags, { owner, repo, per_page: 100 }))
+                .map((t) => t.name)
+            );
+
+            const artefactos = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              { owner, repo, per_page: 100 }
+            );
+
+            let borrados = 0;
+            let conservados = 0;
+            for (const a of artefactos) {
+              if (a.expired) continue;
+              const rama = a.workflow_run && a.workflow_run.head_branch;
+              const esVersion = a.name.startsWith("version-") || (rama && etiquetas.has(rama));
+              if (esVersion || new Date(a.created_at).getTime() > limite) {
+                conservados++;
+                continue;
+              }
+              await github.rest.actions.deleteArtifact({ owner, repo, artifact_id: a.id });
+              core.info(`Borrado: ${a.name} (${a.created_at}, rama ${rama || "?"})`);
+              borrados++;
+            }
+            await core.summary
+              .addHeading("Limpieza de artefactos")
+              .addRaw(`Borrados: ${borrados}. Conservados: ${conservados}. Límite: ${dias} días.`)
+              .write();
