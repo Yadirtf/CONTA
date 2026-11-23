@@ -72,26 +72,72 @@ La rama `preview` de Neon se puede reiniciar desde `develop` cuando se ensucie.
 
 ## 4. Configuración que tiene que hacer Inge (una sola vez)
 
-**En Render:**
-1. Crear el servicio web `conta-api-develop` desde este repositorio, rama `develop`, carpeta raíz `api`, tipo de instancia **Free**, con despliegue automático **apagado** (lo hace el workflow después de pasar las pruebas y migraciones).
-2. Variables del servicio: `DATABASE_URL` (rama `develop` de Neon, rol `conta_app`), `DATABASE_URL_PREVIEW` (rama `preview` de Neon, rol `conta_app`), `MASTER_KEY` (llave de prueba de 32 bytes en base64).
-3. En **Settings → PR Previews**, dejarlas en modo manual.
-4. Copiar el **Deploy Hook** del servicio.
+Orden recomendado: **Neon → Render → GitHub → Cloudflare**. Neon va primero porque Render necesita sus cadenas de conexión y deben quedar en la misma región.
 
-**En Neon:** crear el proyecto, las ramas `develop` y `preview` desde `main`, y el rol `conta_app` (sin `BYPASSRLS`, no dueño de las tablas).
+### 4.1 Neon (base de datos)
 
-**En GitHub, Settings → Secrets and variables → Actions:**
+1. Crear el proyecto `conta` en la región **AWS US East 1 (N. Virginia)**. Es la más cercana a Colombia y coincide con la región de Render del paso 4.2.
+2. En **Branches**, crear dos ramas a partir de `main`: `develop` y `preview`.
+3. Crear el rol `conta_app` en **Roles**. Las tablas no le pertenecen y no tiene `BYPASSRLS`, para que Row Level Security aplique siempre. Los permisos sobre las tablas se dan en la migración inicial (HU-01.05).
+4. Copiar dos cadenas de conexión del rol `conta_app` con el botón **Connect**, marcando la opción *Pooled connection*: una de la rama `develop` y otra de la rama `preview`.
+5. En **Settings**, copiar el *Project ID*. En la cuenta, **API keys**, crear una llave para GitHub.
 
-| Tipo | Nombre | De dónde sale |
+### 4.2 Render: crear el servicio web, campo por campo
+
+En Render: **New → Web Service → Yadirtf/CONTA**.
+
+| Campo en Render | Valor | Por qué |
 | --- | --- | --- |
-| Secret | `RENDER_DEPLOY_HOOK_URL` | Render → servicio → Settings → Deploy Hook |
-| Variable | `API_URL_DEVELOP` | `https://conta-api-develop.onrender.com` |
-| Secret | `NEON_API_KEY` | Neon → Account settings → API keys |
-| Variable | `NEON_PROJECT_ID` | Neon → Project settings |
+| **Name** | `conta-api-develop` | Forma la URL `https://conta-api-develop.onrender.com`, que usan el workflow y el despertador. Si Render la cambia por estar ocupada, avisa la URL real |
+| **Language** | `Node` | NestJS corre en Node |
+| **Branch** | `develop` | Es el entorno estable de pruebas |
+| **Region** | `Virginia (US East)` | La misma región que Neon; la API habla con la base en cada petición |
+| **Root Directory** | `api` | La API vive en `api/`; los cambios en `web/` o `app/` no la redespliegan |
+| **Build Command** | `npm ci && npm run build` | El proyecto usa npm (no yarn); compila NestJS a `dist/` |
+| **Start Command** | `npm run start:prod` | Arranca la versión compilada (`node dist/main`) |
+| **Compute** | `Free` ($0/mes) | Capa gratuita (ver sección 3) |
+| **Environment Variables** | Ver la tabla de abajo | — |
+| **Secret Files** | Ninguno | Los secretos van como variables |
+| **Health Check Path** | `/salud` | Es la ruta de salud de la API; no consulta la base |
+| **Pre-Deploy Command** | Vacío | En el plan gratuito está bloqueado (candado). Las migraciones corren en GitHub Actions antes del despliegue |
+| **Auto-Deploy** | `Off` | El workflow despliega con el deploy hook **después** de migrar Neon. Con «After CI Checks Pass» Render desplegaría además por su cuenta y habría dos despliegues |
+| **Build Filters** | Vacío | Con Root Directory `api` y Auto-Deploy apagado no hacen falta |
+
+**Variables de entorno del servicio:**
+
+| Key | Value |
+| --- | --- |
+| `NODE_VERSION` | `22` |
+| `DATABASE_URL` | Cadena *pooled* de Neon, rama `develop`, rol `conta_app` |
+| `DATABASE_URL_PREVIEW` | Cadena *pooled* de Neon, rama `preview`, rol `conta_app` |
+| `MASTER_KEY` | Botón **Generate** de Render (crea un valor aleatorio). Solo para pruebas |
+
+No se pone `NODE_ENV=production` en Render: haría que `npm ci` omita las herramientas de compilación y el build fallaría. La API lo fija al arrancar.
+
+**Antes de que exista el código (HU-01.01):** se puede crear el servicio desde ya. El primer despliegue va a **fallar** porque `api/` todavía no tiene `package.json`. Es lo esperado y no cuesta nada; lo importante es tener la URL y el deploy hook. Cuando se fusione HU-01.01, el workflow despliega solo.
+
+**Después de crearlo, en el menú del servicio:**
+1. **Settings → PR Previews**: elegir **Manual**. Así una vista previa solo se crea con la etiqueta `render-preview` en el PR.
+2. **Settings → Deploy Hook**: copiar la URL (es secreta).
+
+### 4.3 GitHub
+
+En el repositorio: **Settings → Secrets and variables → Actions**. Los *secrets* van en la pestaña **Secrets** y las *variables* en la pestaña **Variables**.
+
+| Tipo | Nombre | Valor |
+| --- | --- | --- |
+| Secret | `RENDER_DEPLOY_HOOK_URL` | La URL del Deploy Hook de Render |
+| Variable | `API_URL_DEVELOP` | `https://conta-api-develop.onrender.com` (o la URL real que dio Render) |
+| Secret | `NEON_API_KEY` | La llave de API de Neon |
+| Variable | `NEON_PROJECT_ID` | El Project ID de Neon |
 | Secret | `CLOUDFLARE_API_TOKEN` | Cloudflare → My Profile → API Tokens → plantilla «Edit Cloudflare Workers» + permiso de Pages |
 | Variable | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare → Workers & Pages → panel derecho |
 
-Ninguno de estos valores va en el repositorio ni en el texto de un PR.
+### 4.4 Cloudflare
+
+Se configura cuando existan `web/` y `app/` (HU-01.01). El despertador se activa cuando la API ya responda `/salud`: `cd herramientas/despertador && npx wrangler deploy`.
+
+Ninguno de estos valores va en el repositorio, en el texto de un PR ni en un chat.
 
 ## 5. Reglas del entorno de pruebas
 

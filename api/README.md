@@ -6,7 +6,7 @@ API única de CONTA en **NestJS**. Aquí viven **todas** las reglas del negocio:
 - Pruebas: servicio gratuito de Render con Neon ([ADR-0002](../Docs/decisiones/0002-entorno-de-pruebas-render-cloudflare-neon.md)).
 - Debe exponer `GET /salud` sin consultar la base de datos (lo usa el despertador).
 - En vistas previas de Render (`IS_PULL_REQUEST=true`) usa `DATABASE_URL_PREVIEW`.
-- Scripts que espera el CI: `migrar`, `test`, `test:e2e`.
+- Gestor de paquetes: npm (`package-lock.json`). Scripts que esperan el CI y Render: `build`, `start:prod`, `migrar`, `test`, `test:e2e`.
 - Publica el contrato en `../contratos/openapi.yaml`.
 - No importa nada de `web/` ni de `app/`.
 
