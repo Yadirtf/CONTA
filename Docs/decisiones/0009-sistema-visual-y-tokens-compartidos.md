@@ -1,6 +1,6 @@
 # ADR-0009. Sistema visual «Calma fresca» y tokens de diseño compartidos en `contratos/diseno/`
 
-- Estado: Propuesto
+- Estado: Aceptado
 - Fecha: 2026-11-23
 - Historia: HU-03.03 **[VS]**
 - Decide: Inge
