@@ -6,8 +6,8 @@ import {
   NumeroDeFactura,
   ResolucionDeNumeracion,
 } from '../../../src/modulos/facturacion/dominio/index.js';
-import { calcularCufe, sha384 } from '../../../src/modulos/facturacion/infraestructura/dian-directa/cufe.js';
-import { GeneradorUblDian } from '../../../src/modulos/facturacion/infraestructura/dian-directa/generador-ubl-dian.js';
+import { calcularCufe, sha384 } from '../../../src/modulos/facturacion/infraestructura/dian-directa/ubl/cufe.js';
+import { GeneradorUblDian } from '../../../src/modulos/facturacion/infraestructura/dian-directa/ubl/generador-ubl-dian.js';
 import { erroresContraUblInvoice, erroresDeExtensionesDian } from '../../recursos/dian/validador-xsd.js';
 import { adquirenteDePrueba, configuracionDePrueba, emisorDePrueba, facturaConDosLineas } from './datos-de-prueba.js';
 

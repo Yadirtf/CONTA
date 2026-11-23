@@ -1,5 +1,5 @@
 // Escritor de XML mínimo y determinista para los documentos de la DIAN. No indenta ni agrega espacios:
-// lo que se escribe es exactamente lo que se firmará después (HU-02.02).
+// lo que se escribe es exactamente lo que se firma después (ver ../firma).
 
 export interface NodoXml {
   readonly nombre: string;
@@ -19,8 +19,14 @@ export function grupo(nombre: string, hijos: readonly Hijo[], atributos: Record<
   return { nombre, atributos, contenido: hijos.filter((h): h is NodoXml => Boolean(h)) };
 }
 
+/** Documento completo, con la declaración XML. */
 export function serializar(raiz: NodoXml): string {
   return `<?xml version="1.0" encoding="UTF-8" standalone="no"?>${escribir(raiz)}`;
+}
+
+/** Un elemento suelto, sin declaración, para insertarlo dentro de otro documento (p. ej. las propiedades XAdES). */
+export function serializarFragmento(raiz: NodoXml): string {
+  return escribir(raiz);
 }
 
 const NOMBRE = /^[A-Za-z_][\w.-]*(:[A-Za-z_][\w.-]*)?$/;
