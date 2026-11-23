@@ -1,6 +1,6 @@
 # ADR-0003. Drizzle ORM y migraciones SQL versionadas para la API
 
-- Estado: Propuesto (empate técnico; lo decide Inge)
+- Estado: Aceptado (Inge eligió Drizzle el 2026-11-23, tras un empate técnico con Kysely)
 - Fecha: 2026-11-23
 - Historia: HU-01.01
 - Decide: Inge
@@ -44,7 +44,7 @@ C1 cambiar la tecnología después (25 %), C2 simplicidad para una persona (25 %
 | 6 `pg` puro | 5 | 3 | 4 | 5 | 3 | 4,00 |
 | 9 SQL primero + Kysely | 5 | 3 | 4 | 4 | 3 | 3,85 |
 
-La diferencia entre 3 y 4 es 0,10 (empate según la guía), así que la decisión es de Inge. Mientras tanto HU-01.01 avanza con la recomendada; cambiarla ahora solo toca `scripts/migrar.mjs` y `drizzle.config.ts`.
+La diferencia entre 3 y 4 es 0,10 (empate según la guía), así que la decidió Inge con una tarjeta de decisión: eligió Drizzle, la recomendada.
 
 ## Decisión
 Drizzle ORM (`drizzle-orm` 0.45.4 y `drizzle-kit` 0.31.11, versiones exactas) con el driver `pg`. Está en la ronda completa pero no es la opción típica (Prisma). Se combina con dos ideas de la cola:
