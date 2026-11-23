@@ -4,8 +4,9 @@ import { FABRICAS } from './fabricas.js';
 
 // Prueba de catálogo (HU-01.05, ADR-0006). Revisa en PostgreSQL TODAS las tablas de negocio, las de hoy y las
 // que lleguen: si una migración crea una tabla sin las protecciones, esta prueba falla en CI y nombra la tabla.
-const ESQUEMAS_DE_NEGOCIO = ['public'];
-const ESQUEMAS_PROPIOS = ['public', 'conta_sistema'];
+// public se revisa también: una tabla creada ahí por error debe cumplir las mismas reglas o fallar aquí.
+const ESQUEMAS_DE_NEGOCIO = ['conta', 'public'];
+const ESQUEMAS_PROPIOS = ['conta', 'conta_sistema', 'public'];
 const ROL_API = 'conta_api';
 
 interface Tabla {
@@ -122,7 +123,7 @@ describe('catálogo de aislamiento multiempresa (integración)', () => {
       const fallas = llaves
         .filter((l) => {
           const destino = conEsquema(l.destino);
-          if (destino === 'public.empresas') return !(l.columnas.length === 1 && l.columnas[0] === 'empresa_id');
+          if (destino === 'conta.empresas') return !(l.columnas.length === 1 && l.columnas[0] === 'empresa_id');
           const i = l.columnas.indexOf('empresa_id');
           return i < 0 || l.columnasDestino[i] !== (FABRICAS[destino]?.columnaEmpresa ?? 'empresa_id');
         })

@@ -36,32 +36,38 @@ GRANT USAGE ON SCHEMA conta_sistema TO conta_api;
 --> statement-breakpoint
 GRANT EXECUTE ON FUNCTION conta_sistema.empresa_actual() TO conta_api;
 --> statement-breakpoint
-GRANT USAGE ON SCHEMA public TO conta_api;
+
+-- 3. Esquema de negocio propio, del que conta_app es dueño. No se usa public: en PostgreSQL 15+ su dueño
+--    es el de la base (en Neon, neondb_owner) y conta_app no puede crear tablas ahí. Un esquema nuevo no da
+--    ningún permiso a PUBLIC; conta_api solo recibe USAGE y, tabla por tabla, lo que la migración le dé.
+CREATE SCHEMA IF NOT EXISTS conta;
+--> statement-breakpoint
+GRANT USAGE ON SCHEMA conta TO conta_api;
 --> statement-breakpoint
 
--- 3. Empresas: la raíz del aislamiento. Su llave de empresa es su propio id.
+-- 4. Empresas: la raíz del aislamiento. Su llave de empresa es su propio id.
 --    Las demás tablas de negocio llevan empresa_id con FK compuesta (empresa_id, id) hacia sus padres,
 --    para que una fila nunca pueda apuntar a otra empresa (ver Docs/arquitectura/multiempresa.md).
-CREATE TABLE public.empresas (
+CREATE TABLE conta.empresas (
   id uuid PRIMARY KEY,
   razon_social text NOT NULL CHECK (length(btrim(razon_social)) BETWEEN 1 AND 450),
   creada_en timestamptz NOT NULL DEFAULT now()
 );
 --> statement-breakpoint
-ALTER TABLE public.empresas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conta.empresas ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
-ALTER TABLE public.empresas FORCE ROW LEVEL SECURITY;
+ALTER TABLE conta.empresas FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
-CREATE POLICY empresas_de_la_empresa_actual ON public.empresas
+CREATE POLICY empresas_de_la_empresa_actual ON conta.empresas
   TO conta_api
   USING (id = conta_sistema.empresa_actual())
   WITH CHECK (id = conta_sistema.empresa_actual());
 --> statement-breakpoint
 -- Sin DELETE: una empresa no se borra (tiene documentos fiscales); se desactiva en su historia.
-GRANT SELECT, INSERT, UPDATE ON public.empresas TO conta_api;
+GRANT SELECT, INSERT, UPDATE ON conta.empresas TO conta_api;
 --> statement-breakpoint
 
--- 4. Única forma de fijar la empresa de una transacción. Falla si la conexión ya trae una empresa:
+-- 5. Única forma de fijar la empresa de una transacción. Falla si la conexión ya trae una empresa:
 --    eso solo pasa si alguien la fijó a nivel de sesión (set_config(..., false)), y con el pooler esa
 --    conexión podría llegarle a otra empresa. Así una fuga de contexto se detiene en vez de mezclar datos.
 CREATE OR REPLACE FUNCTION conta_sistema.fijar_empresa(empresa uuid) RETURNS void

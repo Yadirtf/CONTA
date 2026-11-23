@@ -19,32 +19,32 @@ Reglas que vigila CI:
 
 ## 2. Crear una tabla de negocio
 
-Una migración escrita a mano (`npm run migracion:nueva -- <nombre>`) con este molde:
+Una migración escrita a mano (`npm run migracion:nueva -- <nombre>`) con este molde. Las tablas de negocio van en el esquema `conta`, del que `conta_app` es dueño; no en `public`, donde en Neon `conta_app` no puede crear tablas:
 
 ```sql
-CREATE TABLE public.clientes (
-  empresa_id uuid NOT NULL REFERENCES public.empresas (id),
+CREATE TABLE conta.clientes (
+  empresa_id uuid NOT NULL REFERENCES conta.empresas (id),
   id uuid NOT NULL,
   nit text NOT NULL,
   PRIMARY KEY (empresa_id, id),          -- la llave empieza por empresa_id
   UNIQUE (empresa_id, nit)               -- todo índice único empieza por empresa_id
 );
 --> statement-breakpoint
-ALTER TABLE public.clientes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conta.clientes ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
-ALTER TABLE public.clientes FORCE ROW LEVEL SECURITY;
+ALTER TABLE conta.clientes FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
-CREATE POLICY clientes_de_la_empresa_actual ON public.clientes TO conta_api
+CREATE POLICY clientes_de_la_empresa_actual ON conta.clientes TO conta_api
   USING (empresa_id = conta_sistema.empresa_actual())
   WITH CHECK (empresa_id = conta_sistema.empresa_actual());
 --> statement-breakpoint
-GRANT SELECT, INSERT, UPDATE ON public.clientes TO conta_api;
+GRANT SELECT, INSERT, UPDATE ON conta.clientes TO conta_api;
 ```
 
 Y una tabla hija referencia al padre con la empresa incluida, para que nunca apunte a una fila de otra empresa:
 
 ```sql
-FOREIGN KEY (empresa_id, cliente_id) REFERENCES public.clientes (empresa_id, id)
+FOREIGN KEY (empresa_id, cliente_id) REFERENCES conta.clientes (empresa_id, id)
 ```
 
 Reglas:

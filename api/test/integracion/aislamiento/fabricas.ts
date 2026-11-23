@@ -16,11 +16,11 @@ export interface FabricaDeFilas {
 
 export async function crearEmpresa(cliente: pg.Client, empresaId: string): Promise<void> {
   await comoEmpresa(cliente, empresaId);
-  await cliente.query('INSERT INTO public.empresas (id, razon_social) VALUES ($1, $2)', [empresaId, `Empresa ${empresaId}`]);
+  await cliente.query('INSERT INTO conta.empresas (id, razon_social) VALUES ($1, $2)', [empresaId, `Empresa ${empresaId}`]);
 }
 
 export const FABRICAS: Readonly<Record<string, FabricaDeFilas>> = {
-  'public.empresas': {
+  'conta.empresas': {
     columnaEmpresa: 'id',
     columnaId: 'id',
     async insertar(cliente, empresaId) {
