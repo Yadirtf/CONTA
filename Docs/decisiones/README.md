@@ -6,6 +6,7 @@ Cada decisión de nivel 3 (ver la [guía del coordinador](../forma-de-trabajo/gu
 | --- | --- | --- |
 | [0001](0001-monolito-modular-con-arquitectura-limpia.md) | Monolito modular con arquitectura limpia | Aceptado |
 | [0002](0002-entorno-de-pruebas-render-cloudflare-neon.md) | Entorno de pruebas: API NestJS en Render, web y app en Cloudflare, Neon | Aceptado |
+| [0003](0003-drizzle-para-persistencia-y-migraciones.md) | Drizzle ORM y migraciones SQL versionadas para la API | Aceptado |
 
 ## Plantilla
 

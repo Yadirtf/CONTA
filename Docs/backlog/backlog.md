@@ -51,11 +51,11 @@ La Definición de Hecho está en la [guía de trabajo](../forma-de-trabajo/guia-
 
 Objetivo: que cualquier agente pueda trabajar sobre una estructura que ya impone la arquitectura limpia.
 
-**HU-01.01 Estructura del monorepo** (M, M) **[VS]**
+**HU-01.01 Estructura del monorepo** (M, M) **[VS]** — Hecha
 Como administrador, quiero las carpetas `app/`, `api/`, `web/` y `contratos/` con su configuración base, para empezar a construir sin rehacer la estructura.
 - Dado el repositorio, cuando se clona, entonces existen las tres aplicaciones con un «hola mundo» que compila y sus pruebas pasan.
 - Dado `api/`, entonces sigue la estructura de módulos y capas de la arquitectura.
-- Decisión [VS]: ORM o constructor de consultas; gestor de versiones de herramientas.
+- Decisión [VS]: ORM o constructor de consultas (ADR-0003, Drizzle, aceptado); gestor de versiones de herramientas (nota en el PR: `.node-version` + `engines` + versión de Flutter en `pubspec.yaml`); framework de la app (ADR-0004).
 
 **HU-01.02 Reglas de dependencia en CI** (M, S)
 Como administrador, quiero que el pipeline falle si una capa importa lo que no debe, para que la arquitectura no se degrade.

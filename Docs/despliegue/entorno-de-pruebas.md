@@ -135,7 +135,20 @@ En el repositorio: **Settings → Secrets and variables → Actions**. Los *secr
 
 ### 4.4 Cloudflare
 
-Se configura cuando existan `web/` y `app/` (HU-01.01). El despertador se activa cuando la API ya responda `/salud`: `cd herramientas/despertador && npx wrangler deploy`.
+No hay que crear nada a mano: el workflow crea los recursos la primera vez. Como la cuenta se comparte con otro proyecto, todos llevan el prefijo `conta-`.
+
+| Recurso | Tipo | URL estable (develop) | URL de un PR |
+| --- | --- | --- | --- |
+| `conta-consola` | Worker (OpenNext) | `https://conta-consola.<subdominio>.workers.dev` | `https://pr-<n>-conta-consola.<subdominio>.workers.dev` |
+| `conta-sitio` | Worker (OpenNext) | `https://conta-sitio.<subdominio>.workers.dev` | `https://pr-<n>-conta-sitio.<subdominio>.workers.dev` |
+| `conta-app` | Pages (Flutter web) | `https://conta-app.pages.dev` | `https://pr-<n>.conta-app.pages.dev` |
+
+- `<subdominio>` es el subdominio `workers.dev` de la cuenta (Workers & Pages → panel derecho). Si la cuenta nunca lo eligió, hay que elegirlo una vez.
+- Una versión de vista previa de un Worker exige que el Worker ya exista. Si el primer PR llega antes que el primer push a `develop`, el workflow hace un despliegue inicial y luego sube la vista previa.
+- El proyecto de Pages `conta-app` se crea con `develop` como rama de producción.
+- La API acepta llamadas del navegador solo desde estos orígenes (más `localhost`). Para otro origen se agrega en la variable `ORIGENES_PERMITIDOS` de Render, separada por comas.
+
+El despertador se activa cuando la API ya responda `/salud`: `cd herramientas/despertador && npx wrangler deploy`.
 
 Ninguno de estos valores va en el repositorio, en el texto de un PR ni en un chat.
 

@@ -1,0 +1,49 @@
+# Generado por api/ con "npm run build && npm run contrato". No se edita a mano.
+openapi: 3.0.0
+paths:
+  /salud:
+    get:
+      operationId: SaludController_obtener
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaSalud"
+      summary: Indica si la API está viva. No consulta la base de datos.
+      tags:
+        - salud
+info:
+  title: CONTA API
+  description: "API única de CONTA: facturación electrónica DIAN, contabilidad y
+    multiempresa."
+  version: 0.1.0
+  contact: {}
+tags: []
+servers: []
+components:
+  schemas:
+    RespuestaSalud:
+      type: object
+      properties:
+        estado:
+          type: string
+          enum:
+            - ok
+        servicio:
+          type: string
+          enum:
+            - conta-api
+        version:
+          type: string
+          example: 0.1.0
+        hora:
+          type: string
+          format: date-time
+      required:
+        - estado
+        - servicio
+        - version
+        - hora

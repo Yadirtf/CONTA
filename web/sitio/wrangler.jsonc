@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Worker de pruebas del sitio público. Prefijo conta- porque la cuenta de Cloudflare se comparte con otro proyecto.
+  "name": "conta-sitio",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "services": [{ "binding": "WORKER_SELF_REFERENCE", "service": "conta-sitio" }],
+  "workers_dev": true,
+  "preview_urls": true,
+  "observability": { "enabled": true }
+}

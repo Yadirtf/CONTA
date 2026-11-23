@@ -38,6 +38,27 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Revisar la configuración de Docs/despliegue/entorno-de-pruebas.md (sección 4.3)
+        env:
+          V_API_URL_DEVELOP: ${{ vars.API_URL_DEVELOP }}
+          V_NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          V_CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          S_NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          S_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          S_RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          # Solo dice qué falta; nunca imprime valores.
+          faltan=0
+          for n in API_URL_DEVELOP NEON_PROJECT_ID CLOUDFLARE_ACCOUNT_ID; do
+            v="V_$n"
+            if [ -z "${!v}" ]; then echo "::warning::Falta la variable $n (pestaña Variables de Actions)"; faltan=1; fi
+          done
+          for n in NEON_API_KEY CLOUDFLARE_API_TOKEN RENDER_DEPLOY_HOOK_URL; do
+            v="S_$n"
+            if [ -z "${!v}" ]; then echo "::warning::Falta el secret $n (pestaña Secrets de Actions)"; faltan=1; fi
+          done
+          [ "$faltan" = 0 ] && echo "Configuración completa."
+          exit 0
       - id: detectar
         run: |
           if [ "$ES_PR" = "true" ]; then
@@ -50,6 +71,7 @@ jobs:
             proyecto=false
             case "$c" in
               app) [ -f app/pubspec.yaml ] && proyecto=true ;;
+              web) [ -f web/consola/package.json ] && [ -f web/sitio/package.json ] && proyecto=true ;;
               *)   [ -f "$c/package.json" ] && proyecto=true ;;
             esac
             if $proyecto && echo "$cambiados" | grep -qE "^($c|contratos)/"; then
@@ -102,10 +124,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: api/.node-version
           cache: npm
           cache-dependency-path: api/package-lock.json
       - run: npm ci
+      - name: Tipos, compilación y pruebas unitarias
+        run: |
+          npm run tipos
+          npm run build
+          npm test
       - name: Migraciones sobre la rama de Neon
         run: npm run migrar
       - name: Pruebas de integración y e2e de NestJS contra la rama de Neon
@@ -134,17 +161,32 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: web/${{ matrix.sitio }}/.node-version
+          cache: npm
+          cache-dependency-path: web/${{ matrix.sitio }}/package-lock.json
       - run: npm ci
+      - name: Tipos y pruebas
+        run: |
+          npm run tipos
+          npm test
       - name: Construir y desplegar con OpenNext
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          set -o pipefail
           export NEXT_PUBLIC_API_URL="$API_URL"
           npx opennextjs-cloudflare build
           if [ "$ES_PR" = "true" ]; then
-            npx wrangler versions upload --preview-alias "pr-$PR"
+            # Una versión de vista previa exige que el Worker ya exista. La primera vez se crea con deploy.
+            if ! npx wrangler versions upload --preview-alias "pr-$PR" | tee subida.log; then
+              echo "El Worker aún no existe: se crea con el primer despliegue."
+              npx wrangler deploy
+              npx wrangler versions upload --preview-alias "pr-$PR" | tee subida.log
+            fi
+            url="$(grep -oE 'https://pr-[0-9]+-[a-z0-9.-]+\.workers\.dev' subida.log | head -1)"
+            echo "URL de vista previa: ${url:-no encontrada}"
+            echo "### ${{ matrix.sitio }}: ${url:-sin URL}" >> "$GITHUB_STEP_SUMMARY"
           else
             npx wrangler deploy
           fi
@@ -160,9 +202,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version-file: app/pubspec.yaml
           cache: true
       - run: flutter pub get
+      - name: Análisis y pruebas
+        run: |
+          flutter analyze
+          flutter test
       - name: Construir Flutter web
         run: |
           flutter build web --release --dart-define=API_URL="$API_URL"
@@ -170,10 +216,15 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER: npx --yes wrangler@4.166.0
         run: |
+          # El proyecto de Pages se crea solo la primera vez; develop es su rama de producción.
+          if ! $WRANGLER pages project list | grep -q 'conta-app '; then
+            $WRANGLER pages project create conta-app --production-branch develop
+          fi
           rama="develop"
           [ "$ES_PR" = "true" ] && rama="pr-$PR"
-          npx wrangler pages deploy build/web --project-name conta-app --branch "$rama"
+          $WRANGLER pages deploy build/web --project-name conta-app --branch "$rama" --commit-dirty=true
 
   comentar:
     needs: [cambios, api, web, app]
@@ -189,7 +240,7 @@ jobs:
             const filas = [
               ["API (pruebas en Actions)", "rama de Neon preview/pr-" + pr, r(0)],
               ["API en Render", etiquetas.includes("render-preview") ? `https://conta-api-develop-pr-${pr}.onrender.com` : "sin vista previa (agrega la etiqueta render-preview)", r(0)],
-              ["Consola y sitio", `alias pr-${pr} en los Workers de web`, r(1)],
+              ["Consola y sitio", `https://pr-${pr}-conta-consola.<subdominio>.workers.dev y pr-${pr}-conta-sitio (enlaces exactos en el resumen del workflow)`, r(1)],
               ["App web", `https://pr-${pr}.conta-app.pages.dev`, r(2)],
             ].filter((f) => f[2] === "success");
             if (!filas.length) return;
