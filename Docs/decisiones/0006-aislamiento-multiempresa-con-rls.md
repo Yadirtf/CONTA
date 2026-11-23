@@ -1,6 +1,6 @@
 # ADR-0006. Aislamiento multiempresa: contexto explícito, RLS forzado y llaves con empresa_id
 
-- Estado: Propuesto
+- Estado: Aceptado
 - Fecha: 2026-11-23
 - Historia: HU-01.05
 - Decide: Inge

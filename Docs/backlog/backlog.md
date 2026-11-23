@@ -100,10 +100,11 @@ Como administrador, quiero que los artefactos de Actions duren 2 días y solo se
 
 Objetivo: reducir el mayor riesgo técnico (XML, firma, CUFE) desde el mes 1.
 
-**HU-02.01 Generar XML UBL 2.1 de una factura** (M, L)
+**HU-02.01 Generar XML UBL 2.1 de una factura** (M, L) — Hecha
 Como administrador, quiero generar el XML de una factura según el anexo técnico 1.9, para enviarlo a la DIAN.
 - Dada una factura con dos líneas, IVA 19% y 0%, cuando se genera el XML, entonces valida contra los esquemas XSD oficiales.
 - El CUFE calculado coincide con el ejemplo del anexo técnico.
+- Implementación: [`api/src/modulos/facturacion`](../../api/src/modulos/facturacion/README.md); los XSD de prueba y su origen en [`api/test/recursos/dian`](../../api/test/recursos/dian/README.md).
 
 **HU-02.02 Firmar con XAdES** (M, L) **[VS]**
 Como administrador, quiero firmar el XML con el certificado del facturador, para que la DIAN lo acepte.
