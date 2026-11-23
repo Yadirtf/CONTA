@@ -79,7 +79,7 @@ Como dueño, quiero que ninguna otra empresa pueda ver mis datos, para confiar m
 - Dada una consulta SQL sin `app.empresa_id` fijado, entonces PostgreSQL no devuelve filas.
 - Una prueba de aislamiento corre en CI para cada tabla nueva.
 
-**HU-01.06 Entorno de pruebas en Render, Cloudflare y Neon** (M, M) **[VS]**
+**HU-01.06 Entorno de pruebas en Render, Cloudflare y Neon** (M, M) **[VS]** — Hecha
 Como administrador, quiero que cada PR se pruebe con su propia base de datos en Neon, la API en Render y la web y la app en Cloudflare, usando solo capas gratuitas, para probar cada implementación sin tocar datos de otros.
 - Dado un PR hacia `develop` que cambia `api/`, cuando se abre, entonces las pruebas de integración y e2e de NestJS corren en Actions contra la rama de Neon del PR; con la etiqueta `render-preview`, además existe su vista previa en Render.
 - Dado un PR que cambia `web/` o `app/`, entonces se despliega su vista previa en Cloudflare y el PR muestra las URLs.

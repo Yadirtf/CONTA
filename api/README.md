@@ -21,7 +21,7 @@ Requiere Node 22 (`.node-version`) y npm 10.9 o superior.
 | `npm run lint` / `npm run tipos` | ESLint con reglas de tipos (typescript-eslint) y verificación de tipos |
 | `npm test` | Pruebas unitarias (dominio y casos de uso, sin red ni base de datos) |
 | `npm run dependencias` | Reglas de capas y módulos (dependency-cruiser); falla con el nombre de la regla |
-| `npm run test:e2e` | Pruebas e2e de la API completa (en CI, contra la rama de Neon del PR) |
+| `npm run test:e2e` | Pruebas e2e e integración (`test/e2e/`, `test/integracion/`); en CI, contra la rama de Neon del PR. Sin `DATABASE_URL` se saltan las que usan base |
 | `npm run build` / `npm run start:prod` | Compilar a `dist/` y arrancar como en Render |
 | `npm run migrar` | Aplica `migraciones/*.sql` sobre `DATABASE_URL` (Drizzle, [ADR-0003](../Docs/decisiones/0003-drizzle-para-persistencia-y-migraciones.md)) |
 | `npm run migracion:nueva -- <nombre>` | Crea una migración SQL vacía para escribir a mano (RLS, triggers, GRANT) |
@@ -40,4 +40,5 @@ src/
 migraciones/                # SQL versionado (registro en conta_sistema.migraciones)
 scripts/                    # migrar.mjs, generar-contrato.mjs
 test/e2e/                   # pruebas de la API completa
+test/integracion/           # pruebas contra PostgreSQL (rol sin BYPASSRLS, RLS)
 ```
