@@ -1,6 +1,6 @@
 # Plantillas de prompts con Verbalized Sampling
 
-Plantillas listas para copiar. Reemplaza lo que está entre `<...>`. Se basan en el formato del paper (Zhang et al., 2025, figura 2), adaptado a decisiones de producto. El proceso completo está en la [guía del coordinador](guia-del-coordinador.md).
+Estas plantillas son las piezas de Verbalized Sampling que el coordinador mete dentro de cada encargo. El encargo completo (contexto, criterios, tipo de pedido, Definición de Hecho y formato de entrega) se arma con el [protocolo de encargos](protocolo-de-encargos.md); nadie, ni Inge ni un agente, tiene que escribir estos prompts desde cero. Reemplaza lo que está entre `<...>`. Se basan en el formato del paper (Zhang et al., 2025, figura 2), adaptado a decisiones de producto. El proceso completo está en la [guía del coordinador](guia-del-coordinador.md).
 
 Reglas comunes:
 - **k = 5** por llamada. Si se necesitan más, se hace otra llamada pidiendo alternativas distintas de las ya dadas.

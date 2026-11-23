@@ -9,7 +9,7 @@ El backlog traduce el [plan del proyecto](../Plan%20del%20proyecto%20plataforma%
 - **Prioridad (MoSCoW):** **M** debe estar para cumplir la meta de la fase; **S** debería, si cabe; **C** podría, si sobra tiempo; **W** no ahora.
 - **Tamaño:** S (≤ 1 día), M (2–3 días), L (≤ 1 semana). Una historia L que no se puede partir se revisa antes de empezar.
 - **Estado:** Por refinar → Lista → En curso → En revisión → Hecha. «Lista» exige cumplir la Definición de Listo (abajo).
-- **Dónde vive:** este archivo es la fuente de verdad del alcance. Cuando se trabaje una historia, se abre un issue en GitHub con el mismo id (`HU-03.02`) y el PR lo referencia.
+- **Dónde vive:** este archivo es la fuente de verdad del alcance. Cada épica e historia tiene su issue en GitHub con el mismo id en el título (`HU-03.02 …`), etiquetas de fase, prioridad, tamaño y `vs`. El PR enlaza su issue con `Closes #<n>`. Si una historia cambia aquí, se actualiza también su issue.
 - **Marca VS:** las historias con **[VS]** tienen una decisión de diseño, UX, seguridad o escalabilidad que se resuelve con el proceso de Verbalized Sampling de la [guía de trabajo](../forma-de-trabajo/guia-del-coordinador.md) antes de programar.
 
 ### Roles
@@ -52,9 +52,9 @@ La Definición de Hecho está en la [guía de trabajo](../forma-de-trabajo/guia-
 Objetivo: que cualquier agente pueda trabajar sobre una estructura que ya impone la arquitectura limpia.
 
 **HU-01.01 Estructura del monorepo** (M, tamaño M) **[VS]**
-Como administrador, quiero las carpetas `app/`, `backend/`, `web/` y `contratos/` con su configuración base, para empezar a construir sin rehacer la estructura.
+Como administrador, quiero las carpetas `app/`, `api/`, `web/` y `contratos/` con su configuración base, para empezar a construir sin rehacer la estructura.
 - Dado el repositorio, cuando se clona, entonces existen las tres aplicaciones con un «hola mundo» que compila y sus pruebas pasan.
-- Dado `backend/`, entonces sigue la estructura de módulos y capas de la arquitectura.
+- Dado `api/`, entonces sigue la estructura de módulos y capas de la arquitectura.
 - Decisión [VS]: ORM o constructor de consultas; gestor de versiones de herramientas.
 
 **HU-01.02 Reglas de dependencia en CI** (M, S)
@@ -77,6 +77,18 @@ Como dueño, quiero que ninguna otra empresa pueda ver mis datos, para confiar m
 - Dadas dos empresas A y B, cuando un usuario de A consulta cualquier endpoint con el id de un recurso de B, entonces recibe 404 y no hay fuga de datos.
 - Dada una consulta SQL sin `app.empresa_id` fijado, entonces PostgreSQL no devuelve filas.
 - Una prueba de aislamiento corre en CI para cada tabla nueva.
+
+**HU-01.06 Entorno de pruebas en Cloudflare con Neon** (M, M) **[VS]**
+Como administrador, quiero que cada PR se despliegue en Cloudflare con su propia base de datos en Neon, para probar cada implementación sin tocar datos de otros.
+- Dado un PR hacia `develop`, cuando cambia `api/`, `web/` o `app/`, entonces se despliega su vista previa y el PR muestra las URLs.
+- Dado un PR, entonces existe la rama `preview/pr-<n>` en Neon con las migraciones aplicadas; al cerrar el PR se borra.
+- La API se conecta con un rol sin `BYPASSRLS`; la prueba de aislamiento corre contra la rama de Neon.
+- Decisión [VS]: cómo corre la API en Cloudflare (ADR-0002).
+
+**HU-01.07 Retención de artefactos de 2 días** (M, S) — Hecha
+Como administrador, quiero que los artefactos de Actions duren 2 días y solo se conserven las versiones, para no acumular almacenamiento.
+- Dado un artefacto con más de 2 días que no es de una etiqueta `v*` ni se llama `version-*`, cuando corre la limpieza diaria, entonces se borra.
+- Las Releases y etiquetas nunca se borran.
 
 #### EP-02. Prueba técnica con la DIAN — Prioridad M
 
@@ -130,7 +142,7 @@ Como contador, quiero cambiar entre las empresas que llevo, para no tener varias
 **HU-04.03 Roles y modos** (M, M)
 Como dueño, quiero invitar a mi cajero con permisos limitados, para que venda sin ver los informes.
 - Dado un cajero, cuando intenta abrir informes o anular documentos, entonces recibe «no tienes permiso».
-- El modo (simple o contador) viene del backend con la membresía.
+- El modo (simple o contador) viene de la API con la membresía.
 
 **HU-04.04 Verificación en dos pasos para contador y consola** (M, S)
 - Dado un usuario con rol contador o administrador, cuando inicia sesión, entonces se exige el segundo factor.
@@ -285,7 +297,7 @@ Como visitante, quiero pagar la activación y el plan en el sitio, para empezar 
 
 ## 4. Orden recomendado de las primeras historias
 
-1. HU-01.01 → HU-01.02 → HU-01.03 → HU-01.04
+1. HU-01.01 → HU-01.02 → HU-01.03 → HU-01.06 → HU-01.04
 2. HU-02.01 → HU-02.02 → HU-02.03 (riesgo técnico mayor, en paralelo con HU-03.01 y HU-03.02)
 3. HU-01.05 antes de la primera tabla de negocio
 4. EP-04 → EP-05 → EP-06 → EP-07 → EP-08 → EP-09

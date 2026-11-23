@@ -7,7 +7,7 @@ Este documento fija cómo se organiza el código de la plataforma. Parte del [pl
 1. **El dominio manda.** Las reglas del negocio (factura, CUFE, asiento contable, PUC, impuestos, caja) no saben nada de NestJS, PostgreSQL, Flutter, la DIAN ni Wompi.
 2. **Las dependencias apuntan hacia adentro.** Presentación e infraestructura dependen de aplicación; aplicación depende de dominio; dominio no depende de nadie.
 3. **Puertos y adaptadores.** Todo lo externo (DIAN, proveedor de respaldo, Wompi, KMS, S3, correo, WhatsApp, reloj, generador de ids) entra por una interfaz declarada en el dominio o la aplicación.
-4. **Monolito modular primero.** Un solo backend desplegable, dividido en módulos con fronteras claras. Se separa un módulo en servicio solo con un ADR que lo justifique con datos (carga, equipo, despliegue).
+4. **Monolito modular primero.** Una sola API desplegable, dividido en módulos con fronteras claras. Se separa un módulo en servicio solo con un ADR que lo justifique con datos (carga, equipo, despliegue).
 5. **Inmutabilidad fiscal y contable.** Documentos electrónicos y asientos no se editan ni se borran: se corrigen con notas y reversiones.
 6. **Multiempresa por defecto.** Ningún caso de uso se ejecuta sin `empresaId` en su contexto; PostgreSQL lo refuerza con Row Level Security.
 7. **Dinero exacto.** `numeric` en base de datos y un objeto de valor `Dinero` (centavos en enteros o decimal exacto) en código. Nunca `float`/`double`.
@@ -21,7 +21,7 @@ Este documento fija cómo se organiza el código de la plataforma. Parte del [pl
 | **Infraestructura** | Repositorios con PostgreSQL, adaptador DIAN directo, adaptador de proveedor de respaldo, Wompi, KMS, S3, colas BullMQ, correo | Aplicación y dominio (implementa sus puertos) | Presentación |
 | **Presentación** | Controladores REST, validación de entrada, guardas de autenticación y rol, mapeo a OpenAPI, manejadores de webhooks y de colas | Aplicación | Infraestructura directamente (la recibe por inyección) |
 
-La **composición** (qué adaptador implementa qué puerto) vive solo en el módulo NestJS de cada funcionalidad (`*.module.ts`), que es el único archivo que conoce todas las capas.
+La **composición** (qué adaptador implementa qué puerto) vive solo en el archivo de composición de cada módulo (`composicion.ts`, o `*.module.ts` si se usa NestJS), que es el único archivo que conoce todas las capas.
 
 ### Diagrama de dependencias
 
@@ -38,7 +38,7 @@ Estas reglas se comprueban en CI, no solo en la revisión:
 
 | Regla | Cómo se verifica |
 | --- | --- |
-| `dominio/` no importa nada de `@nestjs/*`, `typeorm`/`prisma`/`kysely`, `axios`, SDKs ni de `aplicacion/`, `infraestructura/`, `presentacion/` | `dependency-cruiser` (o `eslint-plugin-boundaries`) en el backend |
+| `dominio/` no importa nada de `hono`, `@nestjs/*`, `@cloudflare/*`, `@neondatabase/*`, `typeorm`/`prisma`/`kysely`, `axios`, SDKs ni de `aplicacion/`, `infraestructura/`, `presentacion/` | `dependency-cruiser` (o `eslint-plugin-boundaries`) en `api/` |
 | `aplicacion/` no importa de `infraestructura/` ni de `presentacion/` | Igual |
 | Un módulo no importa el dominio interno de otro módulo; se comunica por su API pública (`index.ts` del módulo) o por eventos de dominio | Igual, con reglas por carpeta `modulos/*` |
 | En Flutter, `dominio/` no importa `package:flutter`, `dio`, `drift` ni `riverpod` | `import_lint` / `custom_lint` en el análisis de Dart |
@@ -55,22 +55,24 @@ Monorepo con tres carpetas independientes. Cada una tiene su propio pipeline en 
 CONTA/
   Docs/                         # esta documentación
   app/                          # Flutter: Android, iPhone y web del cliente
-  backend/                      # NestJS + PostgreSQL
+  api/                          # API TypeScript + PostgreSQL (Neon); runtime según ADR-0002
   web/                          # Next.js: consola de administración y sitio público
-  contratos/                    # openapi.yaml generado por el backend; fuente de los clientes de API
-  .github/workflows/            # ci-app.yml, ci-backend.yml, ci-web.yml
+  contratos/                    # openapi.yaml generado por la API; fuente de los clientes de API
+  .github/workflows/            # ci-app.yml, ci-api.yml, ci-web.yml, vista-previa.yml, limpiar-artefactos.yml
   CLAUDE.md                     # instrucciones cortas para agentes; apunta a Docs/
 ```
 
-### 4.1 Backend (NestJS)
+### 4.1 API
+
+El framework HTTP (Hono en Workers o NestJS en Containers) lo fija el [ADR-0002](../decisiones/0002-entorno-de-pruebas-cloudflare-y-neon.md). Solo afecta a `presentacion/` y al archivo de composición de cada módulo; dominio y aplicación no cambian.
 
 ```
-backend/
+api/
   src/
     compartido/                       # núcleo transversal, sin lógica de negocio
       dominio/                        # Dinero, Nit, Fecha fiscal, Resultado<T,E>, EventoDominio, ErrorDominio
       aplicacion/                     # UnidadDeTrabajo, Reloj, GeneradorId, ContextoEmpresa (puertos)
-      infraestructura/                # Postgres (pool, RLS, migraciones), BullMQ, KMS, S3, logger, Sentry
+      infraestructura/                # Postgres/Neon (pool, RLS, migraciones), colas (Cloudflare Queues), llaves, R2, logger, Sentry
       presentacion/                   # filtros de error, guardas de rol y modo, interceptores de auditoría
     modulos/
       identidad/
@@ -94,13 +96,13 @@ backend/
           colas/                      # trabajos de envío y reintento
         presentacion/
           http/                       # controladores y DTO de entrada validados
-        facturacion.module.ts         # composición: puerto → adaptador
+        composicion.ts                # composición: puerto → adaptador (facturacion.module.ts si es NestJS)
         index.ts                      # API pública del módulo para otros módulos
       caja/ inventario/ cartera/ contabilidad/ impuestos/
       habilitacion-dian/ suscripciones/ notificaciones/ auditoria/
   test/
     unitarias/                        # dominio y casos de uso, sin red ni base de datos
-    integracion/                      # adaptadores contra PostgreSQL real (Testcontainers)
+    integracion/                      # adaptadores contra PostgreSQL real (Testcontainers o rama de Neon)
     contrato/                         # ambiente de habilitación DIAN, sandbox de Wompi
     e2e/                              # API completa
 ```
@@ -142,7 +144,7 @@ web/
   sitio/                              # página de venta, precios, registro y pago con Wompi
 ```
 
-La consola no tiene lógica fiscal ni contable propia: todo pasa por el backend.
+La consola no tiene lógica fiscal ni contable propia: todo pasa por la API.
 
 ## 5. Patrones obligatorios
 
@@ -150,19 +152,19 @@ La consola no tiene lógica fiscal ni contable propia: todo pasa por el backend.
 | --- | --- |
 | Caso de uso que cambia estado | Comando → valida → carga agregado → aplica regla de dominio → guarda en una sola transacción → publica eventos (outbox) |
 | Comunicación entre módulos | Eventos de dominio por **outbox transaccional** (p. ej. `DocumentoEmitido` → contabilidad genera el asiento). Nada de llamar al repositorio de otro módulo |
-| Llamadas a la DIAN y a Wompi | Siempre en cola (BullMQ), idempotentes, con reintentos exponenciales y registro de cada intento |
+| Llamadas a la DIAN y a Wompi | Siempre en cola (puerto de colas; Cloudflare Queues en pruebas), idempotentes, con reintentos exponenciales y registro de cada intento |
 | Webhooks de Wompi | Verificar firma, guardar el evento crudo, procesar en cola de forma idempotente por id de evento |
 | Errores esperables | `Resultado<T, Error>` en dominio y aplicación; las excepciones quedan para fallas técnicas |
 | Lecturas pesadas (informes) | Consultas dedicadas (lado de lectura) que pueden leer directo de vistas SQL; no cargan agregados |
-| Multiempresa | `ContextoEmpresa` en cada caso de uso; la infraestructura fija `app.empresa_id` en la sesión de PostgreSQL para RLS |
+| Multiempresa | `ContextoEmpresa` en cada caso de uso; la infraestructura fija `app.empresa_id` con `SET LOCAL` en cada transacción; la app usa un rol sin `BYPASSRLS` y las tablas tienen `FORCE ROW LEVEL SECURITY` |
 | Auditoría | Interceptor de presentación + evento `AccionAuditada`; obligatorio al "entrar como cliente" |
 | Secretos | Certificados cifrados con KMS; solo el adaptador `FirmadorDocumentos` los descifra en memoria |
 
 ## 6. Funcionamiento sin internet (app)
 
-- La venta se registra en Drift con un id generado en el teléfono (UUID v7) y un número reservado de un bloque de consecutivos asignado por el backend.
-- La cola de `sincronizacion/` envía los documentos cuando vuelve la conexión; el backend es idempotente por id de documento.
-- Los conflictos se resuelven en el backend: la app nunca decide el estado DIAN.
+- La venta se registra en Drift con un id generado en el teléfono (UUID v7) y un número reservado de un bloque de consecutivos asignado por la API.
+- La cola de `sincronizacion/` envía los documentos cuando vuelve la conexión; la API es idempotente por id de documento.
+- Los conflictos se resuelven en la API: la app nunca decide el estado DIAN.
 - La app muestra el estado de cada documento (pendiente, enviado, aceptado, rechazado) con palabras del modo activo.
 
 ## 7. Atributos de calidad y cómo se cuidan
@@ -187,11 +189,15 @@ La consola no tiene lógica fiscal ni contable propia: todo pasa por el backend.
 | Presentación | E2E de API | Autorización por rol y modo, aislamiento entre empresas |
 | App | Widget, golden y de integración | Flujo "factura en 3 toques" y "vender sin internet" siempre verdes |
 
-## 9. Decisiones abiertas
+## 9. Despliegue de pruebas
+
+Cada PR se prueba en Cloudflare con su propia rama de Neon. Detalle en [entorno de pruebas](../despliegue/entorno-de-pruebas.md) y [ADR-0002](../decisiones/0002-entorno-de-pruebas-cloudflare-y-neon.md).
+
+## 10. Decisiones abiertas
 
 Se resuelven con el proceso de alternativas de la [guía de trabajo](../forma-de-trabajo/guia-del-coordinador.md) y quedan como ADR:
 
-- ORM o constructor de consultas en el backend (Prisma, TypeORM, Kysely, Drizzle).
+- ORM o constructor de consultas en la API (Prisma, TypeORM, Kysely, Drizzle).
 - Librería de firma XAdES en Node o implementación propia.
 - Proveedor de nube administrada y de KMS.
 - Estrategia de reserva de consecutivos para facturar sin internet.
