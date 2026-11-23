@@ -7,4 +7,15 @@ App del cliente en Flutter: Android, iPhone y versión web, con el mismo código
 - Sin precios, botones de pago ni enlaces a Wompi en la versión Android.
 - El cliente de API se genera desde `../contratos/openapi.yaml`. No importa nada de `api/` ni de `web/`.
 
-La versión web se prueba en Cloudflare Pages ([entorno de pruebas](../Docs/despliegue/entorno-de-pruebas.md)). Se inicializa en la historia HU-01.01.
+La versión web se prueba en Cloudflare Pages, proyecto `conta-app` ([entorno de pruebas](../Docs/despliegue/entorno-de-pruebas.md)).
+
+## Comandos
+
+Requiere Flutter 3.50.1 (fijado en `pubspec.yaml`, `environment.flutter`).
+
+| Comando | Qué hace |
+| --- | --- |
+| `flutter pub get` | Instala dependencias |
+| `flutter analyze` / `flutter test` | Análisis estático y pruebas |
+| `flutter run -d chrome --dart-define=API_URL=http://localhost:3000` | App web local contra la API local |
+| `flutter build web --release --dart-define=API_URL=<url>` | Versión web, como en CI |
