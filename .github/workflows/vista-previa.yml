@@ -58,6 +58,7 @@ jobs:
           S_NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           S_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           S_RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          S_NEON_CONTA_API_PASSWORD: ${{ secrets.NEON_CONTA_API_PASSWORD }}
         run: |
           # Solo dice qué falta; nunca imprime valores.
           faltan=0
@@ -65,7 +66,7 @@ jobs:
             v="V_$n"
             if [ -z "${!v}" ]; then echo "::warning::Falta la variable $n (environment SECRETOS, Variables)"; faltan=1; fi
           done
-          for n in NEON_API_KEY CLOUDFLARE_API_TOKEN RENDER_DEPLOY_HOOK_URL; do
+          for n in NEON_API_KEY CLOUDFLARE_API_TOKEN RENDER_DEPLOY_HOOK_URL NEON_CONTA_API_PASSWORD; do
             v="S_$n"
             if [ -z "${!v}" ]; then echo "::warning::Falta el secret $n (environment SECRETOS, Secrets)"; faltan=1; fi
           done
@@ -156,10 +157,24 @@ jobs:
       - name: Pruebas de integración y e2e de NestJS contra la rama de Neon
         if: env.ES_PR == 'true'
         env:
-          DATABASE_URL: ${{ steps.rama-pr.outputs.db_url }}
+          # La acción de Neon entrega la cadena de conta_app (dueño, corre migraciones). La API y sus pruebas
+          # usan conta_api, creado por SQL sin BYPASSRLS (Docs/despliegue/entorno-de-pruebas.md, sección 4.1).
+          DATABASE_URL_DUENO: ${{ steps.rama-pr.outputs.db_url }}
+          ROL_API: conta_api
+          ROL_API_CLAVE: ${{ secrets.NEON_CONTA_API_PASSWORD }}
           # Con Neon configurado, la prueba del rol (sin BYPASSRLS) y de RLS no puede saltarse.
           REQUIERE_BASE: ${{ env.CON_NEON }}
-        run: npm run test:e2e
+        run: |
+          if [ "$CON_NEON" = "true" ]; then
+            if [ -z "$ROL_API_CLAVE" ]; then
+              echo "::error::Falta el secret NEON_CONTA_API_PASSWORD (environment SECRETOS). Ver Docs/despliegue/entorno-de-pruebas.md, sección 4.1."
+              exit 1
+            fi
+            DATABASE_URL="$(DATABASE_URL="$DATABASE_URL_DUENO" node scripts/url-con-rol.mjs)"
+            echo "::add-mask::$DATABASE_URL"
+            export DATABASE_URL
+          fi
+          npm run test:e2e
       - name: Desplegar en Render (deploy hook)
         if: env.CON_NEON == 'true' && env.ES_PR != 'true'
         env:

@@ -79,8 +79,14 @@ Orden recomendado: **Neon → Render → GitHub → Cloudflare**. Neon va primer
 
 1. Crear el proyecto `conta` en la región **AWS US East 1 (N. Virginia)**. Es la más cercana a Colombia y coincide con la región de Render del paso 4.2.
 2. En **Branches**, crear dos ramas a partir de `main`: `develop` y `preview`.
-3. Crear el rol `conta_app` en **Roles**. Las tablas no le pertenecen y no debe tener `BYPASSRLS`, para que Row Level Security aplique siempre. Neon lo crea con `BYPASSRLS`: después de crearlo, en el SQL Editor y con el rol dueño, correr `ALTER ROLE conta_app NOBYPASSRLS;` en las ramas `main`, `develop` y `preview`. Los permisos sobre las tablas se dan en la migración inicial (HU-01.05).
-4. Copiar dos cadenas de conexión del rol `conta_app` con el botón **Connect**, marcando la opción *Pooled connection*: una de la rama `develop` y otra de la rama `preview`.
+3. Crear el rol `conta_app` en **Roles**. Es el rol **dueño**: corre las migraciones y es dueño de las tablas. Neon le da `BYPASSRLS` y no deja quitárselo, por eso la API no lo usa.
+   Luego crear el rol de la API, `conta_api`, **por SQL**: así nace sin `BYPASSRLS` y sin ser dueño de nada, y Row Level Security le aplica siempre. En el SQL Editor, con `neondb_owner`, en las ramas `develop` y `preview` (y en cada `preview/pr-<n>` que ya exista), con la misma contraseña larga y aleatoria:
+   ```sql
+   CREATE ROLE conta_api LOGIN PASSWORD '<contraseña>';
+   SELECT rolname, rolbypassrls FROM pg_roles WHERE rolname = 'conta_api';  -- debe decir f
+   ```
+   Las ramas nuevas copian el rol de su madre. La contraseña va solo al secret `NEON_CONTA_API_PASSWORD` (sección 4.3) y a las cadenas de Render; nunca a un chat ni al repositorio. Los permisos sobre las tablas los da la migración de cada tabla (HU-01.05).
+4. Copiar dos cadenas de conexión con el botón **Connect**, marcando la opción *Pooled connection*: una de la rama `develop` y otra de la rama `preview`. En cada una, cambiar el usuario y la contraseña por `conta_api` y su contraseña (`postgresql://conta_api:<contraseña>@...`); si la contraseña tiene símbolos, van codificados (`@` → `%40`).
 5. En **Settings**, copiar el *Project ID*. En la cuenta, **API keys**, crear una llave para GitHub.
 
 ### 4.2 Render: crear el servicio web, campo por campo
@@ -109,8 +115,8 @@ En Render: **New → Web Service → Yadirtf/CONTA**.
 | Key | Value |
 | --- | --- |
 | `NODE_VERSION` | `22` |
-| `DATABASE_URL` | Cadena *pooled* de Neon, rama `develop`, rol `conta_app` |
-| `DATABASE_URL_PREVIEW` | Cadena *pooled* de Neon, rama `preview`, rol `conta_app` |
+| `DATABASE_URL` | Cadena *pooled* de Neon, rama `develop`, rol `conta_api` |
+| `DATABASE_URL_PREVIEW` | Cadena *pooled* de Neon, rama `preview`, rol `conta_api` |
 | `MASTER_KEY` | Botón **Generate** de Render (crea un valor aleatorio). Solo para pruebas |
 
 No se pone `NODE_ENV=production` en Render: haría que `npm ci` omita las herramientas de compilación y el build fallaría. La API lo fija al arrancar.
@@ -131,6 +137,7 @@ En el repositorio: **Settings → Environments → SECRETOS**, en sus secciones 
 | Variable | `API_URL_DEVELOP` | `https://conta-api-develop.onrender.com` (o la URL real que dio Render) |
 | Secret | `NEON_API_KEY` | La llave de API de Neon |
 | Variable | `NEON_PROJECT_ID` | El Project ID de Neon |
+| Secret | `NEON_CONTA_API_PASSWORD` | La contraseña del rol `conta_api` (sección 4.1, paso 3) |
 | Secret | `CLOUDFLARE_API_TOKEN` | Cloudflare → My Profile → API Tokens → plantilla «Edit Cloudflare Workers» + permiso de Pages |
 | Variable | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare → Workers & Pages → panel derecho |
 
@@ -159,7 +166,7 @@ Ninguno de estos valores va en el repositorio, en el texto de un PR ni en un cha
 - Solo datos de prueba. Nunca un NIT, certificado o cliente real en Render, en una vista previa ni en una rama de Neon de pruebas.
 - La DIAN siempre en el **ambiente de habilitación** y Wompi en **sandbox**.
 - Las migraciones corren en Actions sobre la rama de Neon antes de desplegar; si fallan, no se despliega.
-- En cada PR que cambia `api/`, la prueba [`rol-de-la-api.int-spec.ts`](../../api/test/integracion/rol-de-la-api.int-spec.ts) corre contra la rama `preview/pr-<n>` y falla si el rol `conta_app` es superusuario o tiene `BYPASSRLS`, o si Row Level Security deja ver filas sin `app.empresa_id` o de otra empresa. Neon crea los roles del panel con `BYPASSRLS` (visto en el PR #91). El arreglo: en el SQL Editor de Neon, con el rol dueño (`neondb_owner`), correr `ALTER ROLE conta_app NOBYPASSRLS;` en cada rama que ya exista (`main`, `develop`, `preview` y las `preview/pr-<n>` abiertas). Cada rol se copia por rama: las ramas nuevas lo heredan de su madre. Con Neon configurado no se puede saltar. La prueba de aislamiento de cada tabla llega con HU-01.05.
+- En cada PR que cambia `api/`, la prueba [`rol-de-la-api.int-spec.ts`](../../api/test/integracion/rol-de-la-api.int-spec.ts) corre contra la rama `preview/pr-<n>` y falla si el rol `conta_app` es superusuario o tiene `BYPASSRLS`, o si Row Level Security deja ver filas sin `app.empresa_id` o de otra empresa. La acción de Neon entrega la cadena de `conta_app` (dueño); CI cambia usuario y contraseña por los de `conta_api` con `api/scripts/url-con-rol.mjs` antes de las pruebas. Si falla por el rol, revisar que `conta_api` exista en la rama y que la API no esté usando `conta_app`. Con Neon configurado no se puede saltar. La prueba de aislamiento de cada tabla llega con HU-01.05.
 - Las ramas de Neon de cada PR se borran al cerrar el PR, porque cuentan contra el límite de cómputo de la cuenta.
 - Los artefactos de los builds duran 2 días (ver [flujo de ramas](../forma-de-trabajo/flujo-de-ramas.md#3-artefactos-de-github-actions)).
 - Esto es un entorno de pruebas. Producción se decide en otro ADR.
