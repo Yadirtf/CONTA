@@ -35,7 +35,8 @@ describe.skipIf(!hayBase)('UnidadDeTrabajoPostgres (integración)', () => {
       expect(vista?.id.valor).toBe(propia.valor);
       expect(oculta).toBeNull();
     }
-  });
+    // Son unas 1.000 idas y vueltas a la base; contra Neon desde Actions pasan de los 5 s por defecto.
+  }, 60_000);
 
   it('si la transacción falla, se deshace y la conexión queda limpia para la siguiente empresa', async () => {
     const nueva = IdEmpresa.de(nuevoId());
