@@ -1,6 +1,6 @@
 # Despertador de la API de pruebas en Render (capa gratuita).
 # Llama a /salud cada 14 minutos de lunes a sábado, de 7 a. m. a 11 p. m. hora de Colombia (UTC-5),
-# que en UTC es de 12:00 a 03:59 del día siguiente.
+# que en UTC es de 12:00 a 03:59 del día siguiente. Activado el 2026-11-23 (se despliega desde vista-previa.yml).
 name = "conta-despertador"
 main = "index.js"
 compatibility_date = "2026-11-01"

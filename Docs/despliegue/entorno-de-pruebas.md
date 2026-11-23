@@ -65,8 +65,9 @@ La rama `preview` de Neon se puede reiniciar desde `develop` cuando se ensucie.
 ### Despertador de 14 minutos (opcional)
 `herramientas/despertador/` es un Worker de Cloudflare con un cron que llama a `GET /salud` cada 14 minutos de lunes a sábado, de 7 a. m. a 11 p. m. en hora de Colombia. Así la API no se duerme mientras se prueba y se gastan unas 430 horas al mes, dejando cerca de 300 para las vistas previas.
 
-- Se activa desplegándolo una vez: `cd herramientas/despertador && npx wrangler deploy`.
-- Se apaga con `npx wrangler delete`, o quitando el cron en `wrangler.toml`.
+- Está **activo** desde el 2026-11-23. El workflow lo despliega (Worker `conta-despertador`) cada vez que un cambio en su carpeta llega a `develop`.
+- Se apaga dejando `crons = []` en `wrangler.toml` y fusionando a `develop`, o con `npx wrangler delete`.
+- La capa gratuita de Cloudflare permite pocos cron triggers por cuenta y esta cuenta se comparte con `panter`. El despertador usa 2.
 - No se recomienda dejarlo 24 horas: gastaría casi todas las horas del mes.
 - `/salud` responde sin consultar la base de datos.
 
@@ -149,7 +150,7 @@ No hay que crear nada a mano: el workflow crea los recursos la primera vez. Como
 - El proyecto de Pages `conta-app` se crea con `develop` como rama de producción.
 - La API acepta llamadas del navegador solo desde estos orígenes (más `localhost`). Para otro origen se agrega en la variable `ORIGENES_PERMITIDOS` de Render, separada por comas.
 
-El despertador se activa cuando la API ya responda `/salud`: `cd herramientas/despertador && npx wrangler deploy`.
+El despertador se despliega desde el workflow (ver la sección 3).
 
 Ninguno de estos valores va en el repositorio, en el texto de un PR ni en un chat.
 
