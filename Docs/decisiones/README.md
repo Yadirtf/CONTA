@@ -5,7 +5,7 @@ Cada decisión de nivel 3 (ver la [guía del coordinador](../forma-de-trabajo/gu
 | ADR | Título | Estado |
 | --- | --- | --- |
 | [0001](0001-monolito-modular-con-arquitectura-limpia.md) | Monolito modular con arquitectura limpia | Aceptado |
-| [0002](0002-entorno-de-pruebas-cloudflare-y-neon.md) | Entorno de pruebas en Cloudflare con Neon y carpetas api, web y app | Propuesto |
+| [0002](0002-entorno-de-pruebas-render-cloudflare-neon.md) | Entorno de pruebas: API NestJS en Render, web y app en Cloudflare, Neon | Aceptado |
 
 ## Plantilla
 

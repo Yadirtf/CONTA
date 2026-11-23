@@ -78,12 +78,15 @@ Como dueño, quiero que ninguna otra empresa pueda ver mis datos, para confiar m
 - Dada una consulta SQL sin `app.empresa_id` fijado, entonces PostgreSQL no devuelve filas.
 - Una prueba de aislamiento corre en CI para cada tabla nueva.
 
-**HU-01.06 Entorno de pruebas en Cloudflare con Neon** (M, M) **[VS]**
-Como administrador, quiero que cada PR se despliegue en Cloudflare con su propia base de datos en Neon, para probar cada implementación sin tocar datos de otros.
-- Dado un PR hacia `develop`, cuando cambia `api/`, `web/` o `app/`, entonces se despliega su vista previa y el PR muestra las URLs.
+**HU-01.06 Entorno de pruebas en Render, Cloudflare y Neon** (M, M) **[VS]**
+Como administrador, quiero que cada PR se pruebe con su propia base de datos en Neon, la API en Render y la web y la app en Cloudflare, usando solo capas gratuitas, para probar cada implementación sin tocar datos de otros.
+- Dado un PR hacia `develop` que cambia `api/`, cuando se abre, entonces las pruebas de integración y e2e de NestJS corren en Actions contra la rama de Neon del PR; con la etiqueta `render-preview`, además existe su vista previa en Render.
+- Dado un PR que cambia `web/` o `app/`, entonces se despliega su vista previa en Cloudflare y el PR muestra las URLs.
+- Dado un push a `develop`, entonces se migran la rama `develop` de Neon y se despliega la API en Render con el deploy hook.
+- El despertador de 14 minutos queda documentado y se puede prender o apagar sin tocar la API.
 - Dado un PR, entonces existe la rama `preview/pr-<n>` en Neon con las migraciones aplicadas; al cerrar el PR se borra.
 - La API se conecta con un rol sin `BYPASSRLS`; la prueba de aislamiento corre contra la rama de Neon.
-- Decisión [VS]: cómo corre la API en Cloudflare (ADR-0002).
+- Decisión [VS]: dónde corre la API en pruebas (ADR-0002, aceptado: NestJS en Render).
 
 **HU-01.07 Retención de artefactos de 2 días** (M, S) — Hecha
 Como administrador, quiero que los artefactos de Actions duren 2 días y solo se conserven las versiones, para no acumular almacenamiento.

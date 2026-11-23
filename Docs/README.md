@@ -11,7 +11,7 @@ Plataforma multiempresa de facturación electrónica DIAN y contabilidad para mi
 | [Guía del coordinador](forma-de-trabajo/guia-del-coordinador.md) | Cómo se trabaja: Verbalized Sampling, roles de agentes, Definición de Hecho y revisiones |
 | [Plantillas de prompts](forma-de-trabajo/plantillas-de-prompts.md) | Prompts listos para pedir y evaluar alternativas |
 | [Flujo de ramas](forma-de-trabajo/flujo-de-ramas.md) | `main`, `develop`, ramas de trabajo, versiones y retención de artefactos |
-| [Entorno de pruebas](despliegue/entorno-de-pruebas.md) | Carpetas `api/`, `web/` y `app/`, despliegue por PR en Cloudflare con Neon |
+| [Entorno de pruebas](despliegue/entorno-de-pruebas.md) | Carpetas `api/`, `web/` y `app/`, pruebas por PR con la API en Render, web y app en Cloudflare y Neon |
 | [Decisiones (ADR)](decisiones/README.md) | Registro de decisiones de arquitectura con sus alternativas |
 
 ## Orden de lectura para alguien nuevo (persona o agente)

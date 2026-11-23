@@ -1,0 +1,13 @@
+# Despertador de la API de pruebas en Render (capa gratuita).
+# Llama a /salud cada 14 minutos de lunes a sábado, de 7 a. m. a 11 p. m. hora de Colombia (UTC-5),
+# que en UTC es de 12:00 a 03:59 del día siguiente.
+name = "conta-despertador"
+main = "index.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+URL_SALUD = "https://conta-api-develop.onrender.com/salud"
+
+[triggers]
+# Cloudflare usa UTC. Lunes a sábado 12:00–23:59 UTC y martes a domingo 00:00–03:59 UTC.
+crons = ["*/14 12-23 * * MON-SAT", "*/14 0-3 * * TUE-SUN"]

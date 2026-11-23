@@ -21,7 +21,7 @@ Este documento fija cómo se organiza el código de la plataforma. Parte del [pl
 | **Infraestructura** | Repositorios con PostgreSQL, adaptador DIAN directo, adaptador de proveedor de respaldo, Wompi, KMS, S3, colas BullMQ, correo | Aplicación y dominio (implementa sus puertos) | Presentación |
 | **Presentación** | Controladores REST, validación de entrada, guardas de autenticación y rol, mapeo a OpenAPI, manejadores de webhooks y de colas | Aplicación | Infraestructura directamente (la recibe por inyección) |
 
-La **composición** (qué adaptador implementa qué puerto) vive solo en el archivo de composición de cada módulo (`composicion.ts`, o `*.module.ts` si se usa NestJS), que es el único archivo que conoce todas las capas.
+La **composición** (qué adaptador implementa qué puerto) vive solo en el módulo NestJS de cada funcionalidad (`*.module.ts`), que es el único archivo que conoce todas las capas.
 
 ### Diagrama de dependencias
 
@@ -55,8 +55,9 @@ Monorepo con tres carpetas independientes. Cada una tiene su propio pipeline en 
 CONTA/
   Docs/                         # esta documentación
   app/                          # Flutter: Android, iPhone y web del cliente
-  api/                          # API TypeScript + PostgreSQL (Neon); runtime según ADR-0002
+  api/                          # NestJS + PostgreSQL (Neon); pruebas en Render
   web/                          # Next.js: consola de administración y sitio público
+  herramientas/despertador/     # Worker de Cloudflare que mantiene despierta la API de pruebas
   contratos/                    # openapi.yaml generado por la API; fuente de los clientes de API
   .github/workflows/            # ci-app.yml, ci-api.yml, ci-web.yml, vista-previa.yml, limpiar-artefactos.yml
   CLAUDE.md                     # instrucciones cortas para agentes; apunta a Docs/
@@ -64,7 +65,7 @@ CONTA/
 
 ### 4.1 API
 
-El framework HTTP (Hono en Workers o NestJS en Containers) lo fija el [ADR-0002](../decisiones/0002-entorno-de-pruebas-cloudflare-y-neon.md). Solo afecta a `presentacion/` y al archivo de composición de cada módulo; dominio y aplicación no cambian.
+La API usa NestJS y en pruebas corre en Render ([ADR-0002](../decisiones/0002-entorno-de-pruebas-render-cloudflare-neon.md)). NestJS solo aparece en `presentacion/`, en `infraestructura/` y en el `*.module.ts` de cada módulo; dominio y aplicación no lo conocen.
 
 ```
 api/
@@ -72,7 +73,7 @@ api/
     compartido/                       # núcleo transversal, sin lógica de negocio
       dominio/                        # Dinero, Nit, Fecha fiscal, Resultado<T,E>, EventoDominio, ErrorDominio
       aplicacion/                     # UnidadDeTrabajo, Reloj, GeneradorId, ContextoEmpresa (puertos)
-      infraestructura/                # Postgres/Neon (pool, RLS, migraciones), colas (Cloudflare Queues), llaves, R2, logger, Sentry
+      infraestructura/                # Postgres/Neon (pool, RLS, migraciones), colas (adaptador según HU-06.04), llaves, R2, logger, Sentry
       presentacion/                   # filtros de error, guardas de rol y modo, interceptores de auditoría
     modulos/
       identidad/
@@ -96,7 +97,7 @@ api/
           colas/                      # trabajos de envío y reintento
         presentacion/
           http/                       # controladores y DTO de entrada validados
-        composicion.ts                # composición: puerto → adaptador (facturacion.module.ts si es NestJS)
+        facturacion.module.ts         # composición: puerto → adaptador
         index.ts                      # API pública del módulo para otros módulos
       caja/ inventario/ cartera/ contabilidad/ impuestos/
       habilitacion-dian/ suscripciones/ notificaciones/ auditoria/
@@ -152,7 +153,7 @@ La consola no tiene lógica fiscal ni contable propia: todo pasa por la API.
 | --- | --- |
 | Caso de uso que cambia estado | Comando → valida → carga agregado → aplica regla de dominio → guarda en una sola transacción → publica eventos (outbox) |
 | Comunicación entre módulos | Eventos de dominio por **outbox transaccional** (p. ej. `DocumentoEmitido` → contabilidad genera el asiento). Nada de llamar al repositorio de otro módulo |
-| Llamadas a la DIAN y a Wompi | Siempre en cola (puerto de colas; Cloudflare Queues en pruebas), idempotentes, con reintentos exponenciales y registro de cada intento |
+| Llamadas a la DIAN y a Wompi | Siempre en cola (puerto de colas; adaptador durable según HU-06.04), idempotentes, con reintentos exponenciales y registro de cada intento |
 | Webhooks de Wompi | Verificar firma, guardar el evento crudo, procesar en cola de forma idempotente por id de evento |
 | Errores esperables | `Resultado<T, Error>` en dominio y aplicación; las excepciones quedan para fallas técnicas |
 | Lecturas pesadas (informes) | Consultas dedicadas (lado de lectura) que pueden leer directo de vistas SQL; no cargan agregados |
@@ -191,7 +192,7 @@ La consola no tiene lógica fiscal ni contable propia: todo pasa por la API.
 
 ## 9. Despliegue de pruebas
 
-Cada PR se prueba en Cloudflare con su propia rama de Neon. Detalle en [entorno de pruebas](../despliegue/entorno-de-pruebas.md) y [ADR-0002](../decisiones/0002-entorno-de-pruebas-cloudflare-y-neon.md).
+Cada PR se prueba con su propia rama de Neon: la API en GitHub Actions y, bajo pedido, en una vista previa de Render; la web y la app en Cloudflare. Detalle en [entorno de pruebas](../despliegue/entorno-de-pruebas.md) y [ADR-0002](../decisiones/0002-entorno-de-pruebas-render-cloudflare-neon.md).
 
 ## 10. Decisiones abiertas
 

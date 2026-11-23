@@ -1,5 +1,6 @@
-# Entorno de pruebas: una rama de Neon y un despliegue en Cloudflare por PR hacia develop,
-# y el entorno estable de pruebas en cada push a develop.
+# Entorno de pruebas (capas gratuitas): por cada PR hacia develop, una rama de Neon y pruebas de la API
+# en Actions, vista previa de web y app en Cloudflare, y vista previa de la API en Render con la etiqueta
+# render-preview. En cada push a develop: migraciones en Neon, deploy hook de Render y despliegue en Cloudflare.
 # Cada trabajo se salta solo mientras falte la configuración (Docs/despliegue/entorno-de-pruebas.md)
 # o mientras su carpeta no tenga proyecto.
 name: Vista previa
@@ -7,7 +8,7 @@ name: Vista previa
 on:
   pull_request:
     branches: [develop]
-    types: [opened, reopened, synchronize, closed]
+    types: [opened, reopened, synchronize, labeled, unlabeled, closed]
   push:
     branches: [develop]
 
@@ -22,6 +23,8 @@ concurrency:
 env:
   PR: ${{ github.event.pull_request.number }}
   ES_PR: ${{ github.event_name == 'pull_request' }}
+  # La API de pruebas vive en Render. Con la etiqueta render-preview, el PR usa su vista previa.
+  API_URL: ${{ contains(github.event.pull_request.labels.*.name, 'render-preview') && format('https://conta-api-develop-pr-{0}.onrender.com', github.event.pull_request.number) || vars.API_URL_DEVELOP }}
 
 jobs:
   cambios:
@@ -88,11 +91,13 @@ jobs:
 
   api:
     needs: [cambios, base-de-datos]
-    if: vars.CLOUDFLARE_ACCOUNT_ID != '' && needs.cambios.outputs.api == 'true'
+    if: needs.cambios.outputs.api == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: api
+    env:
+      DATABASE_URL: ${{ needs.base-de-datos.outputs.db_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -103,20 +108,17 @@ jobs:
       - run: npm ci
       - name: Migraciones sobre la rama de Neon
         run: npm run migrar
+      - name: Pruebas de integración y e2e de NestJS contra la rama de Neon
+        if: env.ES_PR == 'true'
+        run: npm run test:e2e
+      - name: Desplegar en Render (deploy hook)
+        if: env.ES_PR != 'true'
         env:
-          DATABASE_URL: ${{ needs.base-de-datos.outputs.db_url }}
-      - name: Desplegar Worker
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          DATABASE_URL: ${{ needs.base-de-datos.outputs.db_url }}
-          MASTER_KEY: ${{ secrets.MASTER_KEY_PRUEBAS }}
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
-          nombre="conta-api-develop"
-          [ "$ES_PR" = "true" ] && nombre="conta-api-pr-$PR"
-          npx wrangler deploy --name "$nombre"
-          printf '%s' "$DATABASE_URL" | npx wrangler secret put DATABASE_URL --name "$nombre"
-          printf '%s' "$MASTER_KEY" | npx wrangler secret put MASTER_KEY --name "$nombre"
+          if [ -z "$HOOK" ]; then echo "Sin RENDER_DEPLOY_HOOK_URL; no se despliega."; exit 0; fi
+          curl -fsS -X POST "$HOOK" > /dev/null
+          echo "Despliegue pedido a Render."
 
   web:
     needs: [cambios, api]
@@ -139,13 +141,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
+          export NEXT_PUBLIC_API_URL="$API_URL"
+          npx opennextjs-cloudflare build
           if [ "$ES_PR" = "true" ]; then
-            export NEXT_PUBLIC_API_URL="https://conta-api-pr-$PR.${{ vars.CLOUDFLARE_SUBDOMINIO }}.workers.dev"
-            npx opennextjs-cloudflare build
             npx wrangler versions upload --preview-alias "pr-$PR"
           else
-            export NEXT_PUBLIC_API_URL="https://conta-api-develop.${{ vars.CLOUDFLARE_SUBDOMINIO }}.workers.dev"
-            npx opennextjs-cloudflare build
             npx wrangler deploy
           fi
 
@@ -165,9 +165,7 @@ jobs:
       - run: flutter pub get
       - name: Construir Flutter web
         run: |
-          api="https://conta-api-develop.${{ vars.CLOUDFLARE_SUBDOMINIO }}.workers.dev"
-          [ "$ES_PR" = "true" ] && api="https://conta-api-pr-$PR.${{ vars.CLOUDFLARE_SUBDOMINIO }}.workers.dev"
-          flutter build web --release --dart-define=API_URL="$api"
+          flutter build web --release --dart-define=API_URL="$API_URL"
       - name: Desplegar en Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -179,17 +177,18 @@ jobs:
 
   comentar:
     needs: [cambios, api, web, app]
-    if: always() && github.event_name == 'pull_request' && github.event.action != 'closed' && vars.CLOUDFLARE_ACCOUNT_ID != ''
+    if: always() && github.event_name == 'pull_request' && github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v7
         with:
           script: |
             const pr = context.payload.pull_request.number;
-            const sub = "${{ vars.CLOUDFLARE_SUBDOMINIO }}";
             const r = (j) => "${{ needs.api.result }},${{ needs.web.result }},${{ needs.app.result }}".split(",")[j];
+            const etiquetas = (context.payload.pull_request.labels || []).map((l) => l.name);
             const filas = [
-              ["API", `https://conta-api-pr-${pr}.${sub}.workers.dev`, r(0)],
+              ["API (pruebas en Actions)", "rama de Neon preview/pr-" + pr, r(0)],
+              ["API en Render", etiquetas.includes("render-preview") ? `https://conta-api-develop-pr-${pr}.onrender.com` : "sin vista previa (agrega la etiqueta render-preview)", r(0)],
               ["Consola y sitio", `alias pr-${pr} en los Workers de web`, r(1)],
               ["App web", `https://pr-${pr}.conta-app.pages.dev`, r(2)],
             ].filter((f) => f[2] === "success");
@@ -197,7 +196,7 @@ jobs:
             const marca = "<!-- vista-previa -->";
             const cuerpo = `${marca}\n### Entorno de pruebas del PR\n\n| Parte | URL |\n| --- | --- |\n` +
               filas.map((f) => `| ${f[0]} | ${f[1]} |`).join("\n") +
-              `\n\nBase de datos: rama \`preview/pr-${pr}\` de Neon.`;
+              `\n\nLa primera llamada a Render puede tardar cerca de 1 minuto si la API estaba dormida.`;
             const { owner, repo } = context.repo;
             const comentarios = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: pr });
             const previo = comentarios.find((c) => c.body && c.body.startsWith(marca));
@@ -216,9 +215,3 @@ jobs:
           branch: preview/pr-${{ env.PR }}
           api_key: ${{ secrets.NEON_API_KEY }}
         continue-on-error: true
-      - name: Borrar Worker de la API del PR
-        if: vars.CLOUDFLARE_ACCOUNT_ID != ''
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx --yes wrangler delete --name "conta-api-pr-$PR" --force || true
