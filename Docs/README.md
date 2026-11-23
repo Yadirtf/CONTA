@@ -15,6 +15,7 @@ Plataforma multiempresa de facturación electrónica DIAN y contabilidad para mi
 | [Decisiones (ADR)](decisiones/README.md) | Registro de decisiones de arquitectura con sus alternativas |
 | [Sistema de diseño](producto/sistema-de-diseno.md) | Paleta 60/30/10, estados, tipografía, espaciado, tokens compartidos y principios anti-fricción por superficie |
 | [Prototipo del modo simple](producto/prototipo-modo-simple.md) | Las 5 pantallas del modo simple, los 3 flujos de venta y el guion de prueba con pilotos |
+| [Guía de entrevista](producto/guia-de-entrevista.md) y [registro de pilotos](producto/registro-de-pilotos.md) | Cómo entrevistar a dueños de negocio sin sesgo y dónde anotar lo que dicen, sin datos personales |
 
 ## Orden de lectura para alguien nuevo (persona o agente)
 
