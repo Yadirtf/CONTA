@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { RELOJ, type Reloj } from '../../compartido/aplicacion/index.js';
 import { RelojDelSistema } from '../../compartido/infraestructura/reloj-del-sistema.js';
+import { PROVEEDORES_DE_ENVIO_DIAN } from './composicion-envio-dian.js';
+import { SolicitarEnvioDian } from './aplicacion/comandos/solicitar-envio-dian.js';
 import { FirmarDocumentoElectronico } from './aplicacion/comandos/firmar-documento-electronico.js';
 import { GenerarXmlFactura } from './aplicacion/comandos/generar-xml-factura.js';
 import { FIRMADOR_DE_DOCUMENTOS, type FirmadorDeDocumentos } from './aplicacion/puertos/firmador-de-documentos.js';
@@ -10,11 +12,15 @@ import {
 } from './aplicacion/puertos/generador-de-documento-electronico.js';
 import { FirmadorXadesDian } from './infraestructura/dian-directa/firma/firmador-xades-dian.js';
 import { GeneradorUblDian } from './infraestructura/dian-directa/ubl/generador-ubl-dian.js';
+import { TrabajosInternosController } from './presentacion/http/trabajos-internos.controller.js';
 
 // Composición: los puertos del generador y del firmador apuntan a la conexión directa con la DIAN
 // (UBL 2.1 y XAdES-EPES). El proveedor de respaldo (HU-06.06) será otro adaptador de los mismos puertos.
+// El envío a la DIAN se compone aparte, en composicion-envio-dian.ts.
 @Module({
+  controllers: [TrabajosInternosController],
   providers: [
+    ...PROVEEDORES_DE_ENVIO_DIAN,
     { provide: RELOJ, useClass: RelojDelSistema },
     { provide: GENERADOR_DE_DOCUMENTO_ELECTRONICO, useClass: GeneradorUblDian },
     {
@@ -33,6 +39,6 @@ import { GeneradorUblDian } from './infraestructura/dian-directa/ubl/generador-u
       inject: [FIRMADOR_DE_DOCUMENTOS],
     },
   ],
-  exports: [GenerarXmlFactura, FirmarDocumentoElectronico],
+  exports: [GenerarXmlFactura, FirmarDocumentoElectronico, SolicitarEnvioDian],
 })
 export class FacturacionModule {}

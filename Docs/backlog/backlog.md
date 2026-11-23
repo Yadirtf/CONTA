@@ -113,10 +113,11 @@ Como administrador, quiero firmar el XML con el certificado del facturador, para
 - Decisión [VS]: librería existente frente a implementación propia.
 - Implementación: [`api/src/modulos/facturacion`](../../api/src/modulos/facturacion/README.md); decisión en [ADR-0007](../decisiones/0007-firma-xades-con-xml-crypto.md).
 
-**HU-02.03 Enviar al ambiente de habilitación** (M, M)
+**HU-02.03 Enviar al ambiente de habilitación** (M, M) — Implementada; falta validar en habilitación
 Como administrador, quiero enviar la factura firmada al ambiente de habilitación y leer la respuesta, para probar de punta a punta.
 - Dada una factura válida, cuando se envía, entonces se guarda la respuesta de la DIAN y el estado queda en «aceptada».
 - Dada una factura con error, entonces se guardan los códigos de rechazo legibles.
+- Implementación: [`api/src/modulos/facturacion`](../../api/src/modulos/facturacion/README.md#envío-a-la-dian-hu-0203); decisión en [ADR-0008](../decisiones/0008-envio-dian-con-cola-en-tabla-y-despertador.md). Pasa a «Hecha» cuando el workflow «Habilitación DIAN» responda «aceptada».
 
 **HU-02.04 Cotizar proveedor de respaldo** (S, S)
 Como administrador, quiero tener cotizado un proveedor externo, para activarlo si la conexión directa se retrasa.

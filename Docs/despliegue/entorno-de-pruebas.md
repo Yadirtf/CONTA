@@ -118,6 +118,9 @@ En Render: **New → Web Service → Yadirtf/CONTA**.
 | `DATABASE_URL` | Cadena *pooled* de Neon, rama `develop`, rol `conta_api` |
 | `DATABASE_URL_PREVIEW` | Cadena *pooled* de Neon, rama `preview`, rol `conta_api` |
 | `MASTER_KEY` | Botón **Generate** de Render (crea un valor aleatorio). Solo para pruebas |
+| `TOKEN_TRABAJOS_INTERNOS` | Al menos 32 caracteres al azar (`openssl rand -hex 32`). El mismo valor va en GitHub (4.3). Protege `POST /interno/trabajos/procesar` ([ADR-0008](../decisiones/0008-envio-dian-con-cola-en-tabla-y-despertador.md)) |
+| `DIAN_HAB_EMPRESA_ID` | Opcional. Id de la única empresa que puede enviar a habilitación mientras llega HU-07.02 |
+| `DIAN_HAB_P12_BASE64`, `DIAN_HAB_P12_CONTRASENA`, `DIAN_HAB_TEST_SET_ID` | Opcionales. Certificado de habilitación en base64, su contraseña y el TestSetId del set de pruebas |
 
 No se pone `NODE_ENV=production` en Render: haría que `npm ci` omita las herramientas de compilación y el build fallaría. La API lo fija al arrancar.
 
@@ -140,6 +143,14 @@ En el repositorio: **Settings → Environments → SECRETOS**, en sus secciones 
 | Secret | `NEON_CONTA_API_PASSWORD` | La contraseña del rol `conta_api` (sección 4.1, paso 3) |
 | Secret | `CLOUDFLARE_API_TOKEN` | Cloudflare → My Profile → API Tokens → plantilla «Edit Cloudflare Workers» + permiso de Pages |
 | Variable | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare → Workers & Pages → panel derecho |
+| Secret | `TOKEN_TRABAJOS_INTERNOS` | El mismo de Render. El job `despertador` lo copia al Worker como `TOKEN_TRABAJOS` |
+| Secret | `DIAN_HAB_P12_BASE64` | El .p12 de habilitación en base64 (`base64 -w0 certificado.p12`) |
+| Secret | `DIAN_HAB_P12_CONTRASENA` | Su contraseña |
+| Secret | `DIAN_HAB_TEST_SET_ID` | TestSetId que da el portal de habilitación de la DIAN |
+| Secret | `DIAN_HAB_ID_SOFTWARE` y `DIAN_HAB_PIN` | Id y PIN del software registrado en habilitación |
+| Variable | `DIAN_HAB_NIT` | NIT del facturador, sin dígito de verificación |
+
+Los `DIAN_HAB_*` solo los usa el workflow manual **Habilitación DIAN** (Actions → Habilitación DIAN → Run workflow), que envía una factura real al set de pruebas.
 
 ### 4.4 Cloudflare
 

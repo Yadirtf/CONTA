@@ -10,7 +10,8 @@ Cada decisión de nivel 3 (ver la [guía del coordinador](../forma-de-trabajo/gu
 | [0004](0004-flutter-para-la-app-del-cliente.md) | Flutter para la app del cliente | Aceptado |
 | [0005](0005-dinero-con-decimal-exacto-propio.md) | Dinero con un decimal exacto propio sobre bigint | Aceptado |
 | [0006](0006-aislamiento-multiempresa-con-rls.md) | Aislamiento multiempresa: contexto explícito, RLS forzado y llaves con empresa_id | Aceptado |
-| [0007](0007-firma-xades-con-xml-crypto.md) | Firma XAdES-EPES: xml-crypto, propiedades XAdES propias y node-forge para el .p12 | Propuesto |
+| [0007](0007-firma-xades-con-xml-crypto.md) | Firma XAdES-EPES: xml-crypto, propiedades XAdES propias y node-forge para el .p12 | Aceptado |
+| [0008](0008-envio-dian-con-cola-en-tabla-y-despertador.md) | Envío a la DIAN: agregado EnvioDian, cola en una tabla, despertador en proceso y recuperación por el Worker | Propuesto |
 
 ## Plantilla
 
