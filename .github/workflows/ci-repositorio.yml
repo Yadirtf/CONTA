@@ -1,14 +1,15 @@
 # CI de lo que no es de una carpeta de producto (HU-01.03): workflows y herramientas de CI.
-# Revisa que todo actions/upload-artifact use retention-days: 2 (Docs/forma-de-trabajo/flujo-de-ramas.md).
+# Revisa que todo actions/upload-artifact use retention-days: 2 (Docs/forma-de-trabajo/flujo-de-ramas.md)
+# y que los tokens de diseño (ADR-0009) cumplan contraste AA y estén generados al día en app/ y web/.
 name: CI repositorio
 
 on:
   pull_request:
     branches: [develop, main]
-    paths: ['.github/workflows/**', 'herramientas/ci/**']
+    paths: ['.github/workflows/**', 'herramientas/ci/**', 'herramientas/diseno/**', 'contratos/diseno/**', 'app/lib/nucleo/tema/**', 'web/*/src/compartido/estilos/**']
   push:
     branches: [develop]
-    paths: ['.github/workflows/**', 'herramientas/ci/**']
+    paths: ['.github/workflows/**', 'herramientas/ci/**', 'herramientas/diseno/**', 'contratos/diseno/**', 'app/lib/nucleo/tema/**', 'web/*/src/compartido/estilos/**']
   workflow_dispatch:
 
 permissions:
@@ -32,3 +33,17 @@ jobs:
         run: node --test herramientas/ci/*.test.mjs
       - name: Todo upload-artifact usa retention-days 2
         run: node herramientas/ci/revisar-artefactos.mjs .github/workflows
+
+  tokens:
+    name: tokens de diseño (contraste AA y al día)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Pruebas de los generadores
+        run: node --test herramientas/diseno/*.test.mjs
+      - name: Contrastes AA y archivos generados al día
+        run: node herramientas/diseno/tokens.mjs --revisar

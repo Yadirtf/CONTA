@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'funcionalidades/salud/dominio/estado_api.dart';
 import 'funcionalidades/salud/presentacion/pantalla_inicio.dart';
+import 'nucleo/tema/tema_conta.dart';
 
 class ContaApp extends StatelessWidget {
   const ContaApp({super.key, required this.repositorioSalud});
@@ -13,7 +14,8 @@ class ContaApp extends StatelessWidget {
     return MaterialApp(
       title: 'CONTA',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorSchemeSeed: const Color(0xFF1A7F37)),
+      theme: TemaConta.claro,
+      darkTheme: TemaConta.oscuro,
       home: PantallaInicio(repositorio: repositorioSalud),
     );
   }

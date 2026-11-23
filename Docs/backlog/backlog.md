@@ -132,6 +132,14 @@ Como dueño, quiero probar las 5 pantallas del modo simple antes de que se progr
 - Queda registrada la alternativa elegida y lo que dijo el piloto.
 - Prototipo y guion de prueba: [prototipo del modo simple](../producto/prototipo-modo-simple.md). Pasa a «Hecha» cuando se anote el resultado del piloto.
 
+**HU-03.03 Sistema visual y tokens de diseño** (M, S) **[VS]** — Propuesta; espera la aprobación de Inge
+Como dueño, quiero que la app, el sitio y la consola se vean claros, frescos y tranquilos, para usarlos sin dudar y sin ansiedad por el dinero.
+- Existe una paleta de 3 colores de marca con proporción 60/30/10, elegida con Verbalized Sampling y evaluada por otro agente, y colores de estado aparte.
+- Dado cualquier par de texto o componente declarado, entonces cumple WCAG AA en modo claro y oscuro (lo comprueba CI).
+- Caso de error: dado un cambio en `contratos/diseno/tokens.json` sin regenerar, entonces el job `tokens` de CI falla.
+- Decisión en [ADR-0009](../decisiones/0009-sistema-visual-y-tokens-compartidos.md); guía en [sistema de diseño](../producto/sistema-de-diseno.md). Pasa a «Hecha» cuando Inge apruebe la paleta.
+- Módulo y capas: `contratos/diseno/`, `herramientas/diseno/`, `app/lib/nucleo/tema/`, `web/*/src/compartido/estilos/`.
+
 **HU-03.02 Guía de entrevista y registro de pilotos** (M, S)
 Como administrador, quiero una guía de entrevista y un registro de pilotos, para decidir con datos.
 - Existe la guía en `Docs/` y el registro de 10 entrevistas con hallazgos.

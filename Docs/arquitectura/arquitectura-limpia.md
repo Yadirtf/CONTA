@@ -58,7 +58,8 @@ CONTA/
   api/                          # NestJS + PostgreSQL (Neon); pruebas en Render
   web/                          # Next.js: consola de administración y sitio público
   herramientas/despertador/     # Worker de Cloudflare que mantiene despierta la API de pruebas
-  contratos/                    # openapi.yaml generado por la API; fuente de los clientes de API
+  contratos/                    # openapi.yaml generado por la API (clientes de API) y diseno/tokens.json (ADR-0009)
+  herramientas/diseno/          # genera los tokens de diseño para app/ y web/ y revisa su contraste
   .github/workflows/            # ci-app.yml, ci-api.yml, ci-web.yml, vista-previa.yml, limpiar-artefactos.yml
   CLAUDE.md                     # instrucciones cortas para agentes; apunta a Docs/
 ```

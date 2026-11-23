@@ -15,7 +15,7 @@ Ningún pedido de Inge llega crudo a un agente. Cada pedido (implementar, ajusta
 
 ## Carpetas
 
-`api/`, `web/` y `app/` son aplicaciones separadas, cada una con su propia lógica. Ninguna importa código de otra; solo comparten `contratos/openapi.yaml`. Toda regla fiscal o contable vive en `api/`.
+`api/`, `web/` y `app/` son aplicaciones separadas, cada una con su propia lógica. Ninguna importa código de otra; solo comparten datos de `contratos/`: `openapi.yaml` y `diseno/tokens.json` (colores, espacios y tipografía, [ADR-0009](Docs/decisiones/0009-sistema-visual-y-tokens-compartidos.md)). Ningún componente lleva un color suelto: usa los tokens. Toda regla fiscal o contable vive en `api/`.
 
 ## Reglas que nunca se negocian
 

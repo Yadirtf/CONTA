@@ -1,0 +1,108 @@
+/* Generado desde contratos/diseno/tokens.json con herramientas/diseno/tokens.mjs. No se edita a mano. */
+:root {
+  color-scheme: light dark;
+  --conta-espacio-s1: 4px;
+  --conta-espacio-s2: 8px;
+  --conta-espacio-s3: 12px;
+  --conta-espacio-s4: 16px;
+  --conta-espacio-s6: 24px;
+  --conta-espacio-s8: 32px;
+  --conta-espacio-s12: 48px;
+  --conta-espacio-s16: 64px;
+  --conta-radio-consola: 6px;
+  --conta-radio-campo: 8px;
+  --conta-radio-boton: 12px;
+  --conta-radio-tarjeta: 16px;
+  --conta-radio-hoja: 20px;
+  --conta-radio-pildora: 999px;
+  --conta-tamano-etiqueta: 13px;
+  --conta-tamano-pequeno: 15px;
+  --conta-tamano-cuerpo: 17px;
+  --conta-tamano-subtitulo: 20px;
+  --conta-tamano-titulo: 24px;
+  --conta-tamano-monto: 28px;
+  --conta-tamano-total: 36px;
+  --conta-duracion-rapida: 120ms;
+  --conta-duracion-normal: 200ms;
+  --conta-duracion-lenta: 320ms;
+  --conta-curva: cubic-bezier(0.2, 0, 0, 1);
+  --conta-altura-fila: 40px;
+  --conta-altura-toque: 48px;
+  --conta-altura-boton-principal: 56px;
+  --conta-altura-producto: 72px;
+  --conta-fuente: 'Inter', Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --conta-fuente-cifras: tabular-nums;
+  --conta-color-fondo: #F5F8F9;
+  --conta-color-superficie: #EAF1F3;
+  --conta-color-tarjeta: #FFFFFF;
+  --conta-color-borde: #D3DEE2;
+  --conta-color-borde-control: #6E8790;
+  --conta-color-texto: #0F1E24;
+  --conta-color-texto-suave: #4B5F67;
+  --conta-color-estructura: #0C4A5E;
+  --conta-color-sobre-estructura: #FFFFFF;
+  --conta-color-acento: #4F46E5;
+  --conta-color-sobre-acento: #FFFFFF;
+  --conta-color-foco: #4F46E5;
+  --conta-color-exito: #00695C;
+  --conta-color-exito-fondo: #E3F4EF;
+  --conta-color-error: #A3123A;
+  --conta-color-error-fondo: #FCEBEF;
+  --conta-color-advertencia: #8A4B00;
+  --conta-color-advertencia-fondo: #FFF3DC;
+  --conta-color-pendiente: #54647C;
+  --conta-color-pendiente-fondo: #EEF1F5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema='claro']) {
+    --conta-color-fondo: #0D171B;
+    --conta-color-superficie: #13222A;
+    --conta-color-tarjeta: #182A33;
+    --conta-color-borde: #2B414B;
+    --conta-color-borde-control: #5F7A85;
+    --conta-color-texto: #E4EEF1;
+    --conta-color-texto-suave: #9FB3BA;
+    --conta-color-estructura: #1B3E4A;
+    --conta-color-sobre-estructura: #E4EEF1;
+    --conta-color-acento: #8C93FF;
+    --conta-color-sobre-acento: #0D171B;
+    --conta-color-foco: #8C93FF;
+    --conta-color-exito: #2DD4BF;
+    --conta-color-exito-fondo: #0F2E2B;
+    --conta-color-error: #FF7A8A;
+    --conta-color-error-fondo: #3A1419;
+    --conta-color-advertencia: #FBBF24;
+    --conta-color-advertencia-fondo: #33270B;
+    --conta-color-pendiente: #949CB0;
+    --conta-color-pendiente-fondo: #20262E;
+  }
+}
+
+:root[data-tema='oscuro'] {
+  color-scheme: dark;
+  --conta-color-fondo: #0D171B;
+  --conta-color-superficie: #13222A;
+  --conta-color-tarjeta: #182A33;
+  --conta-color-borde: #2B414B;
+  --conta-color-borde-control: #5F7A85;
+  --conta-color-texto: #E4EEF1;
+  --conta-color-texto-suave: #9FB3BA;
+  --conta-color-estructura: #1B3E4A;
+  --conta-color-sobre-estructura: #E4EEF1;
+  --conta-color-acento: #8C93FF;
+  --conta-color-sobre-acento: #0D171B;
+  --conta-color-foco: #8C93FF;
+  --conta-color-exito: #2DD4BF;
+  --conta-color-exito-fondo: #0F2E2B;
+  --conta-color-error: #FF7A8A;
+  --conta-color-error-fondo: #3A1419;
+  --conta-color-advertencia: #FBBF24;
+  --conta-color-advertencia-fondo: #33270B;
+  --conta-color-pendiente: #949CB0;
+  --conta-color-pendiente-fondo: #20262E;
+}
+
+:root[data-tema='claro'] {
+  color-scheme: light;
+}
