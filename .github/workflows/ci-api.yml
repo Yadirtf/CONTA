@@ -1,0 +1,54 @@
+# CI de la API (HU-01.03). Corre solo cuando cambian api/, contratos/ o este archivo.
+# Lint, tipos, reglas de dependencia, compilación, pruebas unitarias y contrato OpenAPI al día.
+# Las pruebas e2e contra la rama de Neon del PR y el despliegue viven en vista-previa.yml (HU-01.06).
+name: CI api
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths: ['api/**', 'contratos/**', '.github/workflows/ci-api.yml']
+  push:
+    branches: [develop]
+    paths: ['api/**', 'contratos/**', '.github/workflows/ci-api.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-api-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: api (lint, tipos, dependencias, pruebas)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: api/.node-version
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Tipos
+        run: npm run tipos
+      - name: Reglas de dependencia
+        run: npm run dependencias
+      - name: Compilación
+        run: npm run build
+      - name: Pruebas unitarias y de arquitectura
+        run: npm test
+      - name: Contrato OpenAPI al día
+        run: |
+          npm run contrato
+          if ! git diff --exit-code -- ../contratos/openapi.yaml; then
+            echo "::error::contratos/openapi.yaml no coincide con la API. Corre en api/: npm run build && npm run contrato, y sube el cambio."
+            exit 1
+          fi

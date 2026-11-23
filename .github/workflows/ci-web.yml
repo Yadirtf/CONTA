@@ -1,0 +1,48 @@
+# CI de la consola y el sitio (HU-01.03). Corre solo cuando cambian web/, contratos/ o este archivo.
+# Lint, tipos, reglas de dependencia y pruebas de cada proyecto. El despliegue vive en vista-previa.yml.
+name: CI web
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths: ['web/**', 'contratos/**', '.github/workflows/ci-web.yml']
+  push:
+    branches: [develop]
+    paths: ['web/**', 'contratos/**', '.github/workflows/ci-web.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-web-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: web/${{ matrix.proyecto }} (lint, tipos, dependencias, pruebas)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        proyecto: [consola, sitio]
+    defaults:
+      run:
+        working-directory: web/${{ matrix.proyecto }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/${{ matrix.proyecto }}/.node-version
+          cache: npm
+          cache-dependency-path: web/${{ matrix.proyecto }}/package-lock.json
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Tipos
+        run: npm run tipos
+      - name: Reglas de dependencia
+        run: npm run dependencias
+      - name: Pruebas unitarias y de arquitectura
+        run: npm test

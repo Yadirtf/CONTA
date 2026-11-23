@@ -62,10 +62,11 @@ Como administrador, quiero que el pipeline falle si una capa importa lo que no d
 - Dado un import de `@nestjs/*` en `dominio/`, cuando corre CI, entonces el pipeline falla con un mensaje que nombra la regla.
 - Dado un import entre `datos/` de dos funcionalidades Flutter, entonces el análisis de Dart falla.
 
-**HU-01.03 Pipelines por carpeta** (M, S)
+**HU-01.03 Pipelines por carpeta** (M, S) — Hecha
 Como administrador, quiero un workflow por carpeta, para que un cambio en `web/` no corra las pruebas de `app/`.
 - Dado un PR que solo toca `web/`, cuando se abre, entonces solo corre `ci-web.yml`.
 - Cada workflow corre lint, tipos, pruebas y reglas de dependencia.
+- Todo `upload-artifact` usa `retention-days: 2` (lo revisa `ci-repositorio.yml`).
 
 **HU-01.04 Objeto de valor Dinero** (M, S)
 Como contador, quiero que los montos se calculen sin errores de redondeo, para que los totales cuadren con la DIAN.

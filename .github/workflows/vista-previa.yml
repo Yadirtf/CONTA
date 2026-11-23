@@ -3,6 +3,8 @@
 # render-preview. En cada push a develop: migraciones en Neon, deploy hook de Render y despliegue en Cloudflare.
 # Cada trabajo se salta solo mientras falte la configuración (Docs/despliegue/entorno-de-pruebas.md)
 # o mientras su carpeta no tenga proyecto.
+# Lint, tipos, reglas de dependencia y pruebas unitarias no corren aquí: viven en ci-api.yml, ci-web.yml y
+# ci-app.yml, que corren solo cuando cambia su carpeta (HU-01.03).
 # Los secrets y variables viven en el environment SECRETOS de GitHub (Settings → Environments).
 name: Vista previa
 
@@ -126,12 +128,6 @@ jobs:
           cache: npm
           cache-dependency-path: api/package-lock.json
       - run: npm ci
-      - name: Tipos, reglas de dependencia, compilación y pruebas unitarias
-        run: |
-          npm run tipos
-          npm run dependencias
-          npm run build
-          npm test
       - name: Rama de Neon del PR
         if: env.CON_NEON == 'true' && env.ES_PR == 'true'
         id: rama-pr
@@ -190,10 +186,6 @@ jobs:
           cache: npm
           cache-dependency-path: web/${{ matrix.sitio }}/package-lock.json
       - run: npm ci
-      - name: Tipos y pruebas
-        run: |
-          npm run tipos
-          npm test
       - name: Construir y desplegar con OpenNext
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -233,11 +225,6 @@ jobs:
           flutter-version-file: app/pubspec.yaml
           cache: true
       - run: flutter pub get
-      - name: Análisis, reglas de dependencia y pruebas
-        run: |
-          flutter analyze
-          dart run tool/reglas_de_dependencia.dart
-          flutter test
       - name: Construir Flutter web
         run: |
           flutter build web --release --dart-define=API_URL="${{ needs.cambios.outputs.api_url }}"

@@ -41,6 +41,20 @@ Nota: GitHub corre los workflows programados solo desde la rama por defecto (`ma
 
 En **Settings → Branches** (o Rulesets), para `main` y `develop`:
 - Exigir PR antes de fusionar.
-- Exigir que pasen los checks de CI de la carpeta tocada.
+- Exigir que pasen los checks de CI de la carpeta tocada (ver abajo).
 - Bloquear el push forzado y el borrado de la rama.
 - En `main`, exigir la aprobación de Inge.
+
+### Workflows de CI por carpeta (HU-01.03)
+
+| Workflow | Corre cuando cambia | Qué revisa |
+| --- | --- | --- |
+| `ci-api.yml` | `api/`, `contratos/` | Lint, tipos, reglas de dependencia, compilación, pruebas unitarias y de arquitectura, contrato OpenAPI al día |
+| `ci-web.yml` | `web/`, `contratos/` | Lint, tipos, reglas de dependencia y pruebas de `consola/` y `sitio/` |
+| `ci-app.yml` | `app/`, `contratos/` | `flutter analyze` (lint y tipos), reglas de dependencia y pruebas |
+| `ci-repositorio.yml` | `.github/workflows/`, `herramientas/ci/` | Todo `upload-artifact` usa `retention-days: 2` |
+| `vista-previa.yml` | Siempre (detecta la carpeta) | Pruebas e2e contra Neon y despliegues; no repite lo anterior |
+
+Cada workflow corre también cuando cambia su propio archivo. Un PR que solo toca `web/` corre `ci-web.yml` (y `vista-previa.yml` para su vista previa), nunca `ci-app.yml` ni `ci-api.yml`.
+
+Ojo al marcar checks como requeridos: GitHub deja **pendiente para siempre** un check requerido cuyo workflow no corrió por el filtro de carpetas, y el PR no se puede fusionar. Mientras el repositorio use la protección de ramas clásica, no marques como requeridos los checks de `ci-*.yml`; revisa que estén en verde antes de fusionar. Si más adelante se quiere exigirlos, se agrega un job agregador que corra siempre (o un ruleset de organización con *Require workflows to pass*).
