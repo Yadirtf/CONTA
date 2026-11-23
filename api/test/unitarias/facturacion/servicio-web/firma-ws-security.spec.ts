@@ -23,13 +23,13 @@ const sobre = firmarSobre(
 
 describe('sobre SOAP con WS-Security para la DIAN (HU-02.03)', () => {
   it.runIf(hayXmlsec || exigirXmlsec)('la firma valida con xmlsec1 (C14N exclusivo con wsa, soap y wcf incluidos)', () => {
-    const r = verificarSobreConXmlsec(sobre, juego.certificadoPem);
+    const r = verificarSobreConXmlsec(sobre, juego.caPem);
     expect(r.salida).toContain('OK');
     expect(r.valida).toBe(true);
   });
 
   it.runIf(hayXmlsec || exigirXmlsec)('xmlsec1 la rechaza si se cambia el destino firmado', () => {
-    expect(verificarSobreConXmlsec(sobre.replace(`>${DESTINO}<`, '>https://otro.test/<'), juego.certificadoPem).valida).toBe(false);
+    expect(verificarSobreConXmlsec(sobre.replace(`>${DESTINO}<`, '>https://otro.test/<'), juego.caPem).valida).toBe(false);
   });
 
   it('firma solo wsa:To y apunta al BinarySecurityToken', () => {

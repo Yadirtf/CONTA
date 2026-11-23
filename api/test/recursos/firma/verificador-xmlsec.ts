@@ -30,12 +30,16 @@ export function verificarConXmlsec(xmlFirmado: string, caPem: string): Resultado
 
 /**
  * Sobre SOAP con firma WS-Security (HU-02.03). xmlsec1 no resuelve la referencia al BinarySecurityToken
- * (la versión 1.3 responde KEY-NOT-FOUND), así que se le quita el KeyInfo, que no está firmado, y recibe
- * el certificado firmante. Se comprueba la canonicalización exclusiva y la firma.
+ * (KEY-NOT-FOUND), así que el KeyInfo, que no está firmado, se cambia por el mismo certificado en
+ * X509Data. Como en la factura, xmlsec1 lo acepta solo si viene de la CA de prueba.
  */
-export function verificarSobreConXmlsec(sobreFirmado: string, certificadoPem: string): ResultadoDeVerificacion {
-  const sinKeyInfo = sobreFirmado.replace(/<ds:KeyInfo>[\s\S]*?<\/ds:KeyInfo>/, '');
-  return xmlsec(sinKeyInfo, certificadoPem, (documento, pem) => ['--pubkey-cert-pem', pem, '--id-attr:Id', 'To', documento]);
+export function verificarSobreConXmlsec(sobreFirmado: string, caPem: string): ResultadoDeVerificacion {
+  const token = /<wsse:BinarySecurityToken[^>]*>([^<]+)</.exec(sobreFirmado)?.[1] ?? '';
+  const conX509 = sobreFirmado.replace(
+    /<ds:KeyInfo>[\s\S]*?<\/ds:KeyInfo>/,
+    `<ds:KeyInfo><ds:X509Data><ds:X509Certificate>${token}</ds:X509Certificate></ds:X509Data></ds:KeyInfo>`,
+  );
+  return xmlsec(conX509, caPem, (documento, pem) => ['--trusted-pem', pem, '--id-attr:Id', 'To', documento]);
 }
 
 function xmlsec(xml: string, pem: string, argumentos: (documento: string, pem: string) => string[]): ResultadoDeVerificacion {
