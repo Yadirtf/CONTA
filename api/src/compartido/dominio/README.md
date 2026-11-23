@@ -1,6 +1,6 @@
 # compartido/dominio
 
-Núcleo transversal sin frameworks. Se importa desde `compartido/dominio/index.ts`.
+Núcleo transversal sin frameworks. Se importa desde `compartido/dominio/index.ts`: `Dinero` y `DecimalExacto` (HU-01.04), `IdEmpresa` (HU-01.05) y `Nit` con su dígito de verificación (HU-02.01).
 Este directorio no importa `@nestjs/*`, `drizzle-orm`, `pg` ni ningún SDK (la regla se verifica en CI desde HU-01.02).
 
 ## Dinero (HU-01.04, [ADR-0005](../../../../Docs/decisiones/0005-dinero-con-decimal-exacto-propio.md))

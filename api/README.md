@@ -39,8 +39,11 @@ src/
   compartido/               # núcleo transversal: dominio, aplicacion (puertos), infraestructura, presentacion
   modulos/salud/            # módulo de ejemplo con las cuatro capas: GET /salud sin base de datos
   modulos/empresas/         # primera tabla de negocio con RLS: GET /empresas/:id (HU-01.05)
+  modulos/facturacion/      # factura electrónica: XML UBL 2.1 y CUFE del anexo técnico 1.9 (HU-02.01)
 migraciones/                # SQL versionado (registro en conta_sistema.migraciones)
 scripts/                    # migrar.mjs, generar-contrato.mjs
 test/e2e/                   # pruebas de la API completa
+test/unitarias/             # dominio y adaptadores sin red ni base (incluye la validación contra los XSD de la DIAN)
+test/recursos/dian/         # esquemas XSD oficiales, solo para pruebas
 test/integracion/           # pruebas contra PostgreSQL (rol sin BYPASSRLS, catálogo y aislamiento por tabla)
 ```

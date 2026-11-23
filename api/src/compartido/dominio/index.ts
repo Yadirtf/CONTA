@@ -2,3 +2,4 @@
 export * from './dinero/index.js';
 export { ErrorDominio } from './error-dominio.js';
 export { IdEmpresa } from './id-empresa.js';
+export { Nit } from './nit.js';
