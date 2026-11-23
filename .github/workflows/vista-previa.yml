@@ -3,6 +3,7 @@
 # render-preview. En cada push a develop: migraciones en Neon, deploy hook de Render y despliegue en Cloudflare.
 # Cada trabajo se salta solo mientras falte la configuración (Docs/despliegue/entorno-de-pruebas.md)
 # o mientras su carpeta no tenga proyecto.
+# Los secrets y variables viven en el environment SECRETOS de GitHub (Settings → Environments).
 name: Vista previa
 
 on:
@@ -11,6 +12,9 @@ on:
     types: [opened, reopened, synchronize, labeled, unlabeled, closed]
   push:
     branches: [develop]
+  # Despliega todo develop a mano (Actions → Vista previa → Run workflow). GitHub solo muestra el botón
+  # cuando este archivo ya está en la rama por defecto (main).
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -23,23 +27,28 @@ concurrency:
 env:
   PR: ${{ github.event.pull_request.number }}
   ES_PR: ${{ github.event_name == 'pull_request' }}
-  # La API de pruebas vive en Render. Con la etiqueta render-preview, el PR usa su vista previa.
-  API_URL: ${{ contains(github.event.pull_request.labels.*.name, 'render-preview') && format('https://conta-api-develop-pr-{0}.onrender.com', github.event.pull_request.number) || vars.API_URL_DEVELOP }}
 
 jobs:
   cambios:
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
+    environment: SECRETOS
     outputs:
       api: ${{ steps.detectar.outputs.api }}
       web: ${{ steps.detectar.outputs.web }}
       app: ${{ steps.detectar.outputs.app }}
+      neon: ${{ steps.configuracion.outputs.neon }}
+      cloudflare: ${{ steps.configuracion.outputs.cloudflare }}
+      api_url: ${{ steps.configuracion.outputs.api_url }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Revisar la configuración de Docs/despliegue/entorno-de-pruebas.md (sección 4.3)
+        id: configuracion
         env:
+          # La API de pruebas vive en Render. Con la etiqueta render-preview, el PR usa su vista previa.
+          URL_VISTA_PREVIA: ${{ contains(github.event.pull_request.labels.*.name, 'render-preview') && format('https://conta-api-develop-pr-{0}.onrender.com', github.event.pull_request.number) || '' }}
           V_API_URL_DEVELOP: ${{ vars.API_URL_DEVELOP }}
           V_NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
           V_CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
@@ -51,22 +60,34 @@ jobs:
           faltan=0
           for n in API_URL_DEVELOP NEON_PROJECT_ID CLOUDFLARE_ACCOUNT_ID; do
             v="V_$n"
-            if [ -z "${!v}" ]; then echo "::warning::Falta la variable $n (pestaña Variables de Actions)"; faltan=1; fi
+            if [ -z "${!v}" ]; then echo "::warning::Falta la variable $n (environment SECRETOS, Variables)"; faltan=1; fi
           done
           for n in NEON_API_KEY CLOUDFLARE_API_TOKEN RENDER_DEPLOY_HOOK_URL; do
             v="S_$n"
-            if [ -z "${!v}" ]; then echo "::warning::Falta el secret $n (pestaña Secrets de Actions)"; faltan=1; fi
+            if [ -z "${!v}" ]; then echo "::warning::Falta el secret $n (environment SECRETOS, Secrets)"; faltan=1; fi
           done
           [ "$faltan" = 0 ] && echo "Configuración completa."
+          # Las variables del environment no existen en el "if" de un job: se pasan como salidas.
+          [ -n "$V_NEON_PROJECT_ID" ] && [ -n "$S_NEON_API_KEY" ] && echo "neon=true" >> "$GITHUB_OUTPUT"
+          [ -n "$V_CLOUDFLARE_ACCOUNT_ID" ] && [ -n "$S_CLOUDFLARE_API_TOKEN" ] && echo "cloudflare=true" >> "$GITHUB_OUTPUT"
+          echo "api_url=${URL_VISTA_PREVIA:-$V_API_URL_DEVELOP}" >> "$GITHUB_OUTPUT"
           exit 0
       - id: detectar
         run: |
-          if [ "$ES_PR" = "true" ]; then
-            base="${{ github.event.pull_request.base.sha }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            cambiados="$(git ls-files)"
           else
-            base="${{ github.event.before }}"
+            if [ "$ES_PR" = "true" ]; then
+              base="${{ github.event.pull_request.base.sha }}"
+            else
+              base="${{ github.event.before }}"
+            fi
+            cambiados="$(git diff --name-only "$base" HEAD 2>/dev/null || git ls-files)"
           fi
-          cambiados="$(git diff --name-only "$base" HEAD 2>/dev/null || git ls-files)"
+          # Si cambia este workflow, se prueba y despliega todo para validarlo de punta a punta.
+          if echo "$cambiados" | grep -qx ".github/workflows/vista-previa.yml"; then
+            cambiados="$(git ls-files)"
+          fi
           for c in api web app; do
             proyecto=false
             case "$c" in
@@ -81,45 +102,18 @@ jobs:
             fi
           done
 
-  base-de-datos:
-    needs: cambios
-    if: vars.NEON_PROJECT_ID != '' && needs.cambios.outputs.api == 'true'
-    runs-on: ubuntu-latest
-    outputs:
-      db_url: ${{ steps.rama.outputs.db_url }}
-    steps:
-      - name: Rama de Neon del PR
-        if: env.ES_PR == 'true'
-        id: rama-pr
-        uses: neondatabase/create-branch-action@v6
-        with:
-          project_id: ${{ vars.NEON_PROJECT_ID }}
-          branch_name: preview/pr-${{ env.PR }}
-          parent_branch: develop
-          role: conta_app
-          api_key: ${{ secrets.NEON_API_KEY }}
-      - name: Rama de Neon de develop
-        if: env.ES_PR != 'true'
-        id: rama-develop
-        uses: neondatabase/create-branch-action@v6
-        with:
-          project_id: ${{ vars.NEON_PROJECT_ID }}
-          branch_name: develop
-          parent_branch: main
-          role: conta_app
-          api_key: ${{ secrets.NEON_API_KEY }}
-      - id: rama
-        run: echo "db_url=${{ steps.rama-pr.outputs.db_url || steps.rama-develop.outputs.db_url }}" >> "$GITHUB_OUTPUT"
-
+  # La rama de Neon se crea dentro del mismo job: su cadena de conexión lleva la contraseña y GitHub no deja
+  # pasar valores secretos de un job a otro.
   api:
-    needs: [cambios, base-de-datos]
+    needs: cambios
     if: needs.cambios.outputs.api == 'true'
     runs-on: ubuntu-latest
+    environment: SECRETOS
     defaults:
       run:
         working-directory: api
     env:
-      DATABASE_URL: ${{ needs.base-de-datos.outputs.db_url }}
+      CON_NEON: ${{ needs.cambios.outputs.neon }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -133,13 +127,38 @@ jobs:
           npm run tipos
           npm run build
           npm test
+      - name: Rama de Neon del PR
+        if: env.CON_NEON == 'true' && env.ES_PR == 'true'
+        id: rama-pr
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: preview/pr-${{ env.PR }}
+          parent_branch: develop
+          role: conta_app
+          api_key: ${{ secrets.NEON_API_KEY }}
+      - name: Rama de Neon de develop
+        if: env.CON_NEON == 'true' && env.ES_PR != 'true'
+        id: rama-develop
+        uses: neondatabase/create-branch-action@v6
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch_name: develop
+          parent_branch: main
+          role: conta_app
+          api_key: ${{ secrets.NEON_API_KEY }}
       - name: Migraciones sobre la rama de Neon
+        if: env.CON_NEON == 'true'
+        env:
+          DATABASE_URL: ${{ steps.rama-pr.outputs.db_url || steps.rama-develop.outputs.db_url }}
         run: npm run migrar
       - name: Pruebas de integración y e2e de NestJS contra la rama de Neon
         if: env.ES_PR == 'true'
+        env:
+          DATABASE_URL: ${{ steps.rama-pr.outputs.db_url }}
         run: npm run test:e2e
       - name: Desplegar en Render (deploy hook)
-        if: env.ES_PR != 'true'
+        if: env.CON_NEON == 'true' && env.ES_PR != 'true'
         env:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
@@ -149,8 +168,9 @@ jobs:
 
   web:
     needs: [cambios, api]
-    if: always() && vars.CLOUDFLARE_ACCOUNT_ID != '' && needs.cambios.outputs.web == 'true' && needs.api.result != 'failure'
+    if: always() && needs.cambios.outputs.cloudflare == 'true' && needs.cambios.outputs.web == 'true' && needs.api.result != 'failure'
     runs-on: ubuntu-latest
+    environment: SECRETOS
     strategy:
       matrix:
         sitio: [consola, sitio]
@@ -175,7 +195,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -o pipefail
-          export NEXT_PUBLIC_API_URL="$API_URL"
+          export NEXT_PUBLIC_API_URL="${{ needs.cambios.outputs.api_url }}"
           npx opennextjs-cloudflare build
           if [ "$ES_PR" = "true" ]; then
             # Una versión de vista previa exige que el Worker ya exista. La primera vez se crea con deploy.
@@ -193,8 +213,11 @@ jobs:
 
   app:
     needs: [cambios, api]
-    if: always() && vars.CLOUDFLARE_ACCOUNT_ID != '' && needs.cambios.outputs.app == 'true' && needs.api.result != 'failure'
+    if: always() && needs.cambios.outputs.cloudflare == 'true' && needs.cambios.outputs.app == 'true' && needs.api.result != 'failure'
     runs-on: ubuntu-latest
+    environment: SECRETOS
+    outputs:
+      url: ${{ steps.desplegar.outputs.url }}
     defaults:
       run:
         working-directory: app
@@ -211,8 +234,9 @@ jobs:
           flutter test
       - name: Construir Flutter web
         run: |
-          flutter build web --release --dart-define=API_URL="$API_URL"
+          flutter build web --release --dart-define=API_URL="${{ needs.cambios.outputs.api_url }}"
       - name: Desplegar en Cloudflare Pages
+        id: desplegar
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
@@ -224,7 +248,13 @@ jobs:
           fi
           rama="develop"
           [ "$ES_PR" = "true" ] && rama="pr-$PR"
-          $WRANGLER pages deploy build/web --project-name conta-app --branch "$rama" --commit-dirty=true
+          set -o pipefail
+          $WRANGLER pages deploy build/web --project-name conta-app --branch "$rama" --commit-dirty=true | tee subida.log
+          # Cloudflare puede añadir un sufijo al subdominio (conta-app-xxx.pages.dev): se lee la URL real.
+          url="$(grep -oE 'https://[a-z0-9-]+\.conta-app[a-z0-9-]*\.pages\.dev' subida.log | tail -1)"
+          echo "URL de la app: ${url:-no encontrada}"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "### app: ${url:-sin URL}" >> "$GITHUB_STEP_SUMMARY"
 
   comentar:
     needs: [cambios, api, web, app]
@@ -241,7 +271,7 @@ jobs:
               ["API (pruebas en Actions)", "rama de Neon preview/pr-" + pr, r(0)],
               ["API en Render", etiquetas.includes("render-preview") ? `https://conta-api-develop-pr-${pr}.onrender.com` : "sin vista previa (agrega la etiqueta render-preview)", r(0)],
               ["Consola y sitio", `https://pr-${pr}-conta-consola.<subdominio>.workers.dev y pr-${pr}-conta-sitio (enlaces exactos en el resumen del workflow)`, r(1)],
-              ["App web", `https://pr-${pr}.conta-app.pages.dev`, r(2)],
+              ["App web", "${{ needs.app.outputs.url }}" || "enlace en el resumen del workflow", r(2)],
             ].filter((f) => f[2] === "success");
             if (!filas.length) return;
             const marca = "<!-- vista-previa -->";
@@ -257,6 +287,7 @@ jobs:
   limpiar:
     if: github.event.action == 'closed'
     runs-on: ubuntu-latest
+    environment: SECRETOS
     steps:
       - name: Borrar rama de Neon del PR
         if: vars.NEON_PROJECT_ID != ''

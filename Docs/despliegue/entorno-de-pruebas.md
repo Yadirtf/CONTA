@@ -36,7 +36,7 @@ Push a develop
   └─ todo apunta a https://conta-api-develop.onrender.com
 ```
 
-El workflow es [`vista-previa.yml`](../../.github/workflows/vista-previa.yml). Cada trabajo se salta solo mientras su carpeta no tenga proyecto (`package.json` o `pubspec.yaml`) o falte la configuración de la sección 4, así que no falla antes de tiempo.
+El workflow es [`vista-previa.yml`](../../.github/workflows/vista-previa.yml). También se puede correr a mano (**Actions → Vista previa → Run workflow** sobre `develop`) para desplegar todo `develop`; GitHub muestra ese botón solo cuando el workflow ya está en `main`. Además, un PR o push que cambia `vista-previa.yml` prueba y despliega las tres carpetas. Cada trabajo se salta solo mientras su carpeta no tenga proyecto (`package.json` o `pubspec.yaml`) o falte la configuración de la sección 4, así que no falla antes de tiempo.
 
 ## 3. Render: reglas de la capa gratuita
 
@@ -122,7 +122,7 @@ No se pone `NODE_ENV=production` en Render: haría que `npm ci` omita las herram
 
 ### 4.3 GitHub
 
-En el repositorio: **Settings → Secrets and variables → Actions**. Los *secrets* van en la pestaña **Secrets** y las *variables* en la pestaña **Variables**.
+En el repositorio: **Settings → Environments → SECRETOS**, en sus secciones *Environment secrets* y *Environment variables*. El workflow declara `environment: SECRETOS` en cada job que los usa y pasa a los demás solo lo que no es secreto.
 
 | Tipo | Nombre | Valor |
 | --- | --- | --- |
@@ -141,9 +141,10 @@ No hay que crear nada a mano: el workflow crea los recursos la primera vez. Como
 | --- | --- | --- | --- |
 | `conta-consola` | Worker (OpenNext) | `https://conta-consola.<subdominio>.workers.dev` | `https://pr-<n>-conta-consola.<subdominio>.workers.dev` |
 | `conta-sitio` | Worker (OpenNext) | `https://conta-sitio.<subdominio>.workers.dev` | `https://pr-<n>-conta-sitio.<subdominio>.workers.dev` |
-| `conta-app` | Pages (Flutter web) | `https://conta-app.pages.dev` | `https://pr-<n>.conta-app.pages.dev` |
+| `conta-app` | Pages (Flutter web) | `https://conta-app-uka.pages.dev` | `https://pr-<n>.conta-app-uka.pages.dev` |
 
-- `<subdominio>` es el subdominio `workers.dev` de la cuenta (Workers & Pages → panel derecho). Si la cuenta nunca lo eligió, hay que elegirlo una vez.
+- `<subdominio>` es el subdominio `workers.dev` de la cuenta; hoy es `panter`, porque la cuenta se comparte con ese proyecto.
+- Cloudflare le añadió el sufijo `-uka` al subdominio de Pages porque `conta-app.pages.dev` ya estaba tomado. El workflow lee la URL real de la salida de wrangler.
 - Una versión de vista previa de un Worker exige que el Worker ya exista. Si el primer PR llega antes que el primer push a `develop`, el workflow hace un despliegue inicial y luego sube la vista previa.
 - El proyecto de Pages `conta-app` se crea con `develop` como rama de producción.
 - La API acepta llamadas del navegador solo desde estos orígenes (más `localhost`). Para otro origen se agrega en la variable `ORIGENES_PERMITIDOS` de Render, separada por comas.
