@@ -106,11 +106,12 @@ Como administrador, quiero generar el XML de una factura según el anexo técnic
 - El CUFE calculado coincide con el ejemplo del anexo técnico.
 - Implementación: [`api/src/modulos/facturacion`](../../api/src/modulos/facturacion/README.md); los XSD de prueba y su origen en [`api/test/recursos/dian`](../../api/test/recursos/dian/README.md).
 
-**HU-02.02 Firmar con XAdES** (M, L) **[VS]**
+**HU-02.02 Firmar con XAdES** (M, L) **[VS]** — Hecha
 Como administrador, quiero firmar el XML con el certificado del facturador, para que la DIAN lo acepte.
 - Dado un certificado .p12 de prueba, cuando se firma, entonces la firma valida con un verificador XAdES externo.
 - El certificado se descifra solo en memoria y nunca se escribe en disco ni en logs.
 - Decisión [VS]: librería existente frente a implementación propia.
+- Implementación: [`api/src/modulos/facturacion`](../../api/src/modulos/facturacion/README.md); decisión en [ADR-0007](../decisiones/0007-firma-xades-con-xml-crypto.md).
 
 **HU-02.03 Enviar al ambiente de habilitación** (M, M)
 Como administrador, quiero enviar la factura firmada al ambiente de habilitación y leer la respuesta, para probar de punta a punta.

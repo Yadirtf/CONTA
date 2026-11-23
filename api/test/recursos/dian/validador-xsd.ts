@@ -30,3 +30,11 @@ export function erroresDeExtensionesDian(xml: string): Promise<string[]> {
   const extensiones = xml.slice(inicio, fin).replace('<sts:DianExtensions>', `<sts:DianExtensions${declaraciones}>`);
   return validar(extensiones, 'maindoc/DIAN_UBL_Structures.xsd', []);
 }
+
+/** Errores de la ds:Signature (con sus propiedades XAdES 1.3.2) contra los esquemas XMLDSig y XAdES de UBL 2.1. */
+export function erroresDeLaFirma(xml: string): Promise<string[]> {
+  const inicio = xml.indexOf('<ds:Signature ');
+  const fin = xml.indexOf('</ds:Signature>') + '</ds:Signature>'.length;
+  if (inicio < 0 || fin < inicio) return Promise.resolve(['No hay ds:Signature']);
+  return validar(xml.slice(inicio, fin), 'common/UBL-XAdESv132-2.1.xsd', []);
+}
