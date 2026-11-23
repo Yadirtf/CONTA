@@ -38,11 +38,11 @@ Estas reglas se comprueban en CI, no solo en la revisión:
 
 | Regla | Cómo se verifica |
 | --- | --- |
-| `dominio/` no importa nada de `hono`, `@nestjs/*`, `@cloudflare/*`, `@neondatabase/*`, `typeorm`/`prisma`/`kysely`, `axios`, SDKs ni de `aplicacion/`, `infraestructura/`, `presentacion/` | `dependency-cruiser` (o `eslint-plugin-boundaries`) en `api/` |
-| `aplicacion/` no importa de `infraestructura/` ni de `presentacion/` | Igual |
-| Un módulo no importa el dominio interno de otro módulo; se comunica por su API pública (`index.ts` del módulo) o por eventos de dominio | Igual, con reglas por carpeta `modulos/*` |
-| En Flutter, `dominio/` no importa `package:flutter`, `dio`, `drift` ni `riverpod` | `import_lint` / `custom_lint` en el análisis de Dart |
-| En Flutter, una funcionalidad no importa `datos/` de otra funcionalidad | Igual |
+| `dominio/` no importa nada de `hono`, `@nestjs/*`, `@cloudflare/*`, `@neondatabase/*`, `typeorm`/`prisma`/`kysely`/`drizzle-orm`, `pg`, `axios`, SDKs ni de `aplicacion/`, `infraestructura/`, `presentacion/` | `dependency-cruiser` en `api/` (`npm run dependencias`, reglas en `api/.dependency-cruiser.cjs`): el dominio no importa ningún paquete npm ni módulo de Node |
+| `aplicacion/` no importa frameworks, ni de `infraestructura/` ni de `presentacion/`; `presentacion/` no importa `infraestructura/` | Igual |
+| Un módulo no importa el dominio interno de otro módulo; se comunica por su API pública (`index.ts` del módulo) o por eventos de dominio | Igual, regla `modulos-solo-por-su-index` |
+| En Flutter, `dominio/` no importa `package:flutter`, `material_ui`, `dio`, `http`, `drift` ni `riverpod` | `app/tool/reglas_de_dependencia.dart`, que corre en CI junto a `flutter analyze` y tiene pruebas en `app/test/arquitectura/` |
+| En Flutter, una funcionalidad no importa `datos/` de otra funcionalidad | Igual, regla `funcionalidad-sin-datos-ajenos` |
 | Ningún `float`/`double` para dinero | Regla de lint propia y pruebas de propiedad sobre `Dinero` |
 
 Romper una regla hace fallar el pipeline. La excepción solo se permite con un ADR aprobado y queda anotada en el archivo de configuración con el número del ADR.

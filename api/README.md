@@ -19,6 +19,7 @@ Requiere Node 22 (`.node-version`) y npm 10.9 o superior.
 | `npm ci` | Instala las dependencias exactas de `package-lock.json` |
 | `npm run start:dev` | API local en `http://localhost:3000` (prueba `GET /salud`) |
 | `npm test` | Pruebas unitarias (dominio y casos de uso, sin red ni base de datos) |
+| `npm run dependencias` | Reglas de capas y módulos (dependency-cruiser); falla con el nombre de la regla |
 | `npm run test:e2e` | Pruebas e2e de la API completa (en CI, contra la rama de Neon del PR) |
 | `npm run build` / `npm run start:prod` | Compilar a `dist/` y arrancar como en Render |
 | `npm run migrar` | Aplica `migraciones/*.sql` sobre `DATABASE_URL` (Drizzle, [ADR-0003](../Docs/decisiones/0003-drizzle-para-persistencia-y-migraciones.md)) |

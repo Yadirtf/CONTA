@@ -57,7 +57,7 @@ Como administrador, quiero las carpetas `app/`, `api/`, `web/` y `contratos/` co
 - Dado `api/`, entonces sigue la estructura de módulos y capas de la arquitectura.
 - Decisión [VS]: ORM o constructor de consultas (ADR-0003, Drizzle, aceptado); gestor de versiones de herramientas (nota en el PR: `.node-version` + `engines` + versión de Flutter en `pubspec.yaml`); framework de la app (ADR-0004, Flutter, aceptado).
 
-**HU-01.02 Reglas de dependencia en CI** (M, S)
+**HU-01.02 Reglas de dependencia en CI** (M, S) — Hecha
 Como administrador, quiero que el pipeline falle si una capa importa lo que no debe, para que la arquitectura no se degrade.
 - Dado un import de `@nestjs/*` en `dominio/`, cuando corre CI, entonces el pipeline falla con un mensaje que nombra la regla.
 - Dado un import entre `datos/` de dos funcionalidades Flutter, entonces el análisis de Dart falla.
