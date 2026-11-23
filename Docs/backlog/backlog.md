@@ -9,7 +9,7 @@ El backlog traduce el [plan del proyecto](../Plan%20del%20proyecto%20plataforma%
 - **Prioridad (MoSCoW):** **M** debe estar para cumplir la meta de la fase; **S** debería, si cabe; **C** podría, si sobra tiempo; **W** no ahora.
 - **Tamaño:** S (≤ 1 día), M (2–3 días), L (≤ 1 semana). Una historia L que no se puede partir se revisa antes de empezar.
 - **Estado:** Por refinar → Lista → En curso → En revisión → Hecha. «Lista» exige cumplir la Definición de Listo (abajo).
-- **Dónde vive:** este archivo es la fuente de verdad del alcance. Cada épica e historia tiene su issue en GitHub con el mismo id en el título (`HU-03.02 …`), etiquetas de fase, prioridad, tamaño y `vs`. El PR enlaza su issue con `Closes #<n>`. Si una historia cambia aquí, se actualiza también su issue.
+- **Dónde vive:** este archivo es la fuente de verdad del alcance. Cada épica e historia tiene su issue en GitHub con el mismo id en el título (`HU-03.02 …`), etiquetas de fase, prioridad, tamaño y `vs`. El PR enlaza su issue con `Closes #<n>`. Si una historia cambia aquí, se actualiza también su issue. Épicas: issues #3 a #21; historias: #22 a #84, enlazadas a su épica como sub-issues ([ver issues](https://github.com/Yadirtf/CONTA/issues)).
 - **Marca VS:** las historias con **[VS]** tienen una decisión de diseño, UX, seguridad o escalabilidad que se resuelve con el proceso de Verbalized Sampling de la [guía de trabajo](../forma-de-trabajo/guia-del-coordinador.md) antes de programar.
 
 ### Roles
@@ -51,7 +51,7 @@ La Definición de Hecho está en la [guía de trabajo](../forma-de-trabajo/guia-
 
 Objetivo: que cualquier agente pueda trabajar sobre una estructura que ya impone la arquitectura limpia.
 
-**HU-01.01 Estructura del monorepo** (M, tamaño M) **[VS]**
+**HU-01.01 Estructura del monorepo** (M, M) **[VS]**
 Como administrador, quiero las carpetas `app/`, `api/`, `web/` y `contratos/` con su configuración base, para empezar a construir sin rehacer la estructura.
 - Dado el repositorio, cuando se clona, entonces existen las tres aplicaciones con un «hola mundo» que compila y sus pruebas pasan.
 - Dado `api/`, entonces sigue la estructura de módulos y capas de la arquitectura.
