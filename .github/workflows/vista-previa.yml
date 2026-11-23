@@ -11,6 +11,9 @@ on:
     types: [opened, reopened, synchronize, labeled, unlabeled, closed]
   push:
     branches: [develop]
+  # Despliega todo develop a mano (Actions → Vista previa → Run workflow), por ejemplo después de cargar
+  # la configuración por primera vez o si Render o Cloudflare quedaron en una versión vieja.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -61,12 +64,16 @@ jobs:
           exit 0
       - id: detectar
         run: |
-          if [ "$ES_PR" = "true" ]; then
-            base="${{ github.event.pull_request.base.sha }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            cambiados="$(git ls-files)"
           else
-            base="${{ github.event.before }}"
+            if [ "$ES_PR" = "true" ]; then
+              base="${{ github.event.pull_request.base.sha }}"
+            else
+              base="${{ github.event.before }}"
+            fi
+            cambiados="$(git diff --name-only "$base" HEAD 2>/dev/null || git ls-files)"
           fi
-          cambiados="$(git diff --name-only "$base" HEAD 2>/dev/null || git ls-files)"
           for c in api web app; do
             proyecto=false
             case "$c" in

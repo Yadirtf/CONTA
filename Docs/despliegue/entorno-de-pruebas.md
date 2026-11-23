@@ -36,7 +36,7 @@ Push a develop
   └─ todo apunta a https://conta-api-develop.onrender.com
 ```
 
-El workflow es [`vista-previa.yml`](../../.github/workflows/vista-previa.yml). Cada trabajo se salta solo mientras su carpeta no tenga proyecto (`package.json` o `pubspec.yaml`) o falte la configuración de la sección 4, así que no falla antes de tiempo.
+El workflow es [`vista-previa.yml`](../../.github/workflows/vista-previa.yml). También se puede correr a mano (**Actions → Vista previa → Run workflow** sobre `develop`) para desplegar todo `develop`, por ejemplo después de cargar la configuración por primera vez. Cada trabajo se salta solo mientras su carpeta no tenga proyecto (`package.json` o `pubspec.yaml`) o falte la configuración de la sección 4, así que no falla antes de tiempo.
 
 ## 3. Render: reglas de la capa gratuita
 
