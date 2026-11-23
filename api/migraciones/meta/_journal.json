@@ -8,6 +8,13 @@
       "when": 1795401074752,
       "tag": "0000_base",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795454587663,
+      "tag": "0001_aislamiento_multiempresa",
+      "breakpoints": true
     }
   ]
 }

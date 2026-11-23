@@ -74,11 +74,12 @@ Como contador, quiero que los montos se calculen sin errores de redondeo, para q
 - Las reglas de redondeo del anexo técnico 1.9 están cubiertas con pruebas de propiedad.
 - Decisión: [ADR-0005](../decisiones/0005-dinero-con-decimal-exacto-propio.md), decimal exacto propio sobre `bigint` con mitad al par.
 
-**HU-01.05 Aislamiento multiempresa con RLS** (M, M) **[VS]**
+**HU-01.05 Aislamiento multiempresa con RLS** (M, M) **[VS]** — Hecha
 Como dueño, quiero que ninguna otra empresa pueda ver mis datos, para confiar mis ventas a la plataforma.
 - Dadas dos empresas A y B, cuando un usuario de A consulta cualquier endpoint con el id de un recurso de B, entonces recibe 404 y no hay fuga de datos.
 - Dada una consulta SQL sin `app.empresa_id` fijado, entonces PostgreSQL no devuelve filas.
 - Una prueba de aislamiento corre en CI para cada tabla nueva.
+- Decisión: [ADR-0006](../decisiones/0006-aislamiento-multiempresa-con-rls.md), contexto explícito con `UnidadDeTrabajo`, RLS forzado y llaves con `empresa_id`; guía en [Multiempresa](../arquitectura/multiempresa.md).
 
 **HU-01.06 Entorno de pruebas en Render, Cloudflare y Neon** (M, M) **[VS]** — Hecha
 Como administrador, quiero que cada PR se pruebe con su propia base de datos en Neon, la API en Render y la web y la app en Cloudflare, usando solo capas gratuitas, para probar cada implementación sin tocar datos de otros.

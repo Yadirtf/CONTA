@@ -1,6 +1,6 @@
 # ADR-0005. Dinero con un decimal exacto propio sobre bigint
 
-- Estado: Propuesto
+- Estado: Aceptado
 - Fecha: 2026-11-23
 - Historia: HU-01.04
 - Decide: Inge
