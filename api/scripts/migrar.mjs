@@ -19,8 +19,11 @@ try {
   });
   console.log('Migraciones aplicadas.');
 } catch (error) {
-  // Solo el mensaje: la cadena de conexión nunca se imprime.
+  // Solo el mensaje y el código de PostgreSQL (el de la causa, que Drizzle envuelve): la cadena de
+  // conexión nunca se imprime.
+  const causa = error instanceof Error && error.cause instanceof Error ? error.cause : undefined;
   console.error(`Fallaron las migraciones: ${error instanceof Error ? error.message : String(error)}`);
+  if (causa) console.error(`Causa${'code' in causa ? ` (SQLSTATE ${String(causa.code)})` : ''}: ${causa.message}`);
   process.exitCode = 1;
 } finally {
   await pool.end();
