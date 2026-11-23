@@ -13,6 +13,14 @@ Cada decisión de nivel 3 (ver la [guía del coordinador](../forma-de-trabajo/gu
 | [0007](0007-firma-xades-con-xml-crypto.md) | Firma XAdES-EPES: xml-crypto, propiedades XAdES propias y node-forge para el .p12 | Aceptado |
 | [0008](0008-envio-dian-con-cola-en-tabla-y-despertador.md) | Envío a la DIAN: agregado EnvioDian, cola en una tabla, despertador en proceso y recuperación por el Worker | Propuesto |
 
+## Notas
+
+Investigaciones y cotizaciones que preparan una decisión posterior. No son ADR.
+
+| Nota | Historia | Qué decide después |
+| --- | --- | --- |
+| [Proveedor de respaldo](nota-proveedor-de-respaldo.md) | HU-02.04 | Proveedor y adaptador del puerto `ProveedorFacturacion` (HU-06.06) |
+
 ## Plantilla
 
 ```markdown
