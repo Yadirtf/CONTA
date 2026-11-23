@@ -122,7 +122,7 @@ No se pone `NODE_ENV=production` en Render: haría que `npm ci` omita las herram
 
 ### 4.3 GitHub
 
-En el repositorio: **Settings → Secrets and variables → Actions**. Los *secrets* van en la pestaña **Secrets** y las *variables* en la pestaña **Variables**.
+En el repositorio: **Settings → Environments → SECRETOS**, en sus secciones *Environment secrets* y *Environment variables*. El workflow declara `environment: SECRETOS` en cada job que los usa y pasa a los demás solo lo que no es secreto.
 
 | Tipo | Nombre | Valor |
 | --- | --- | --- |
