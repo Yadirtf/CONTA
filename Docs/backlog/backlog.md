@@ -126,10 +126,11 @@ Como administrador, quiero tener cotizado un proveedor externo, para activarlo s
 
 #### EP-03. Validación con clientes — Prioridad M
 
-**HU-03.01 Prototipo en papel del modo simple** (M, M) **[VS]**
+**HU-03.01 Prototipo en papel del modo simple** (M, M) **[VS]** — Prototipo listo; falta la prueba con el piloto
 Como dueño, quiero probar las 5 pantallas del modo simple antes de que se programen, para que la app se entienda sin explicación.
 - Se diseñan al menos 3 alternativas de flujo para «factura en 3 toques» y se prueban con un piloto.
 - Queda registrada la alternativa elegida y lo que dijo el piloto.
+- Prototipo y guion de prueba: [prototipo del modo simple](../producto/prototipo-modo-simple.md). Pasa a «Hecha» cuando se anote el resultado del piloto.
 
 **HU-03.02 Guía de entrevista y registro de pilotos** (M, S)
 Como administrador, quiero una guía de entrevista y un registro de pilotos, para decidir con datos.
