@@ -8,6 +8,7 @@ API única de CONTA en **NestJS**. Aquí viven **todas** las reglas del negocio:
 - En vistas previas de Render (`IS_PULL_REQUEST=true`) usa `DATABASE_URL_PREVIEW`.
 - Gestor de paquetes: npm (`package-lock.json`). Scripts que esperan el CI y Render: `build`, `start:prod`, `migrar`, `test`, `test:e2e`.
 - Publica el contrato en `../contratos/openapi.yaml`.
+- Multiempresa: toda consulta pasa por `UnidadDeTrabajo.ejecutar(contexto, fn)` y RLS filtra por empresa; antes de crear una tabla lee [Multiempresa](../Docs/arquitectura/multiempresa.md).
 - No importa nada de `web/` ni de `app/`.
 
 ## Comandos
@@ -37,8 +38,9 @@ src/
   app.module.ts             # importa los módulos
   compartido/               # núcleo transversal: dominio, aplicacion (puertos), infraestructura, presentacion
   modulos/salud/            # módulo de ejemplo con las cuatro capas: GET /salud sin base de datos
+  modulos/empresas/         # primera tabla de negocio con RLS: GET /empresas/:id (HU-01.05)
 migraciones/                # SQL versionado (registro en conta_sistema.migraciones)
 scripts/                    # migrar.mjs, generar-contrato.mjs
 test/e2e/                   # pruebas de la API completa
-test/integracion/           # pruebas contra PostgreSQL (rol sin BYPASSRLS, RLS)
+test/integracion/           # pruebas contra PostgreSQL (rol sin BYPASSRLS, catálogo y aislamiento por tabla)
 ```

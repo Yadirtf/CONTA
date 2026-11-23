@@ -15,6 +15,29 @@ paths:
       summary: Indica si la API está viva. No consulta la base de datos.
       tags:
         - salud
+  /empresas/{id}:
+    get:
+      operationId: EmpresasController_obtener
+      parameters:
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaEmpresa"
+        "401":
+          description: La petición no pertenece a ninguna empresa.
+        "404":
+          description: "No existe o es de otra empresa: la API no distingue los dos casos."
+      summary: Datos de la empresa. Solo responde por la empresa de quien pregunta.
+      tags:
+        - empresas
 info:
   title: CONTA API
   description: "API única de CONTA: facturación electrónica DIAN, contabilidad y
@@ -47,3 +70,15 @@ components:
         - servicio
         - version
         - hora
+    RespuestaEmpresa:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        razonSocial:
+          type: string
+          example: Tienda Doña Rosa S.A.S.
+      required:
+        - id
+        - razonSocial

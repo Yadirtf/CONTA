@@ -65,6 +65,12 @@ describe('reglas de dependencia', () => {
     );
   });
 
+  it('prohíbe usar pg fuera de compartido/infraestructura/persistencia (HU-01.05)', () => {
+    expect(reglas('ventas/infraestructura/repositorio-postgres.ts')).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^pool-solo-en-persistencia → pg\//)]),
+    );
+  });
+
   it('el código real de src/ cumple todas las reglas', () => {
     const real = cruzar('src');
     expect(real.violaciones).toEqual([]);

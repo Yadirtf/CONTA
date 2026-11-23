@@ -2,8 +2,8 @@ import pg from 'pg';
 import { urlBaseDeDatos } from '../../src/compartido/infraestructura/config/base-de-datos.js';
 
 // HU-01.06: la API se conecta a Neon con un rol sin BYPASSRLS, y Row Level Security filtra por
-// app.empresa_id en la rama de Neon del PR. La prueba de aislamiento por tabla llega con HU-01.05;
-// esta comprueba que el rol y la base dejan que esa prueba tenga sentido.
+// app.empresa_id en la rama de Neon del PR. Las pruebas de aislamiento por tabla (HU-01.05) están en
+// ./aislamiento/; esta comprueba que el rol y la base dejan que esas pruebas tengan sentido.
 //
 // Sin DATABASE_URL se salta (en local). En CI, con Neon configurado, REQUIERE_BASE=true la vuelve obligatoria.
 const url = urlBaseDeDatos();

@@ -66,6 +66,14 @@ module.exports = {
       },
     },
     {
+      name: 'pool-solo-en-persistencia',
+      comment:
+        'Solo compartido/infraestructura/persistencia/ usa pg: todo acceso a la base pasa por la unidad de trabajo, que fija la empresa de la transacción (HU-01.05, ADR-0006).',
+      severity: 'error',
+      from: { pathNot: '(^|/)compartido/infraestructura/persistencia/' },
+      to: { path: '(^|/)node_modules/pg/' },
+    },
+    {
       name: 'importacion-resuelta',
       comment: 'Todo import debe resolverse; uno que no se resuelve esconde una dependencia que las reglas no ven.',
       severity: 'error',

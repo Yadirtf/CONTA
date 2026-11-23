@@ -157,7 +157,7 @@ La consola no tiene lógica fiscal ni contable propia: todo pasa por la API.
 | Webhooks de Wompi | Verificar firma, guardar el evento crudo, procesar en cola de forma idempotente por id de evento |
 | Errores esperables | `Resultado<T, Error>` en dominio y aplicación; las excepciones quedan para fallas técnicas |
 | Lecturas pesadas (informes) | Consultas dedicadas (lado de lectura) que pueden leer directo de vistas SQL; no cargan agregados |
-| Multiempresa | `ContextoEmpresa` en cada caso de uso; la infraestructura fija `app.empresa_id` con `SET LOCAL` en cada transacción; la app usa un rol sin `BYPASSRLS` y las tablas tienen `FORCE ROW LEVEL SECURITY` |
+| Multiempresa | `ContextoEmpresa` en cada caso de uso; la infraestructura fija `app.empresa_id` con `SET LOCAL` en cada transacción; la app usa un rol sin `BYPASSRLS` y las tablas tienen `FORCE ROW LEVEL SECURITY`, FK e índices únicos con `empresa_id` ([Multiempresa](multiempresa.md), ADR-0006) |
 | Auditoría | Interceptor de presentación + evento `AccionAuditada`; obligatorio al "entrar como cliente" |
 | Secretos | Certificados cifrados con KMS; solo el adaptador `FirmadorDocumentos` los descifra en memoria |
 

@@ -4,6 +4,19 @@ import js from '@eslint/js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+// Aislamiento multiempresa (HU-01.05, ADR-0006): en src/ nadie arma SQL con texto ni toca la empresa de la conexión.
+// La única forma de fijar la empresa es UnidadDeTrabajoPostgres, que llama a conta_sistema.fijar_empresa().
+const SQL_SEGURO = [
+  {
+    selector: "MemberExpression[object.name='sql'][property.name='raw']",
+    message: 'sql.raw arma SQL con texto y abre la puerta a inyección: usa parámetros de la plantilla sql`...`.',
+  },
+  {
+    selector: 'Literal[value=/set_config|app\\.empresa_id/i], TemplateElement[value.raw=/set_config|app\\.empresa_id/i]',
+    message: 'La empresa de la conexión solo la fija UnidadDeTrabajoPostgres con conta_sistema.fijar_empresa().',
+  },
+];
+
 export default tseslint.config(
   { ignores: ['dist/**', 'coverage/**', 'migraciones/**', 'node_modules/**'] },
   js.configs.recommended,
@@ -23,6 +36,11 @@ export default tseslint.config(
     },
   },
   {
+    files: ['src/**/*.ts'],
+    ignores: ['src/**/dominio/**'],
+    rules: { 'no-restricted-syntax': ['error', ...SQL_SEGURO] },
+  },
+  {
     // Dinero exacto (HU-01.04, ADR-0005): en el dominio no hay decimales de punto flotante.
     // Los montos, tarifas y cantidades se escriben como texto ('0.19') y se operan con Dinero o DecimalExacto.
     files: ['src/**/dominio/**/*.ts'],
@@ -30,6 +48,7 @@ export default tseslint.config(
     rules: {
       'no-restricted-syntax': [
         'error',
+        ...SQL_SEGURO,
         {
           selector: 'Literal[raw=/^[0-9_]*\\.[0-9]/]',
           message: 'Sin decimales en number dentro del dominio: usa Dinero.de(\'0.19\') o DecimalExacto.desde(\'0.19\').',
