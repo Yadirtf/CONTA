@@ -12,8 +12,8 @@ on:
     types: [opened, reopened, synchronize, labeled, unlabeled, closed]
   push:
     branches: [develop]
-  # Despliega todo develop a mano (Actions → Vista previa → Run workflow), por ejemplo después de cargar
-  # la configuración por primera vez o si Render o Cloudflare quedaron en una versión vieja.
+  # Despliega todo develop a mano (Actions → Vista previa → Run workflow). GitHub solo muestra el botón
+  # cuando este archivo ya está en la rama por defecto (main).
   workflow_dispatch:
 
 permissions:
@@ -83,6 +83,10 @@ jobs:
               base="${{ github.event.before }}"
             fi
             cambiados="$(git diff --name-only "$base" HEAD 2>/dev/null || git ls-files)"
+          fi
+          # Si cambia este workflow, se prueba y despliega todo para validarlo de punta a punta.
+          if echo "$cambiados" | grep -qx ".github/workflows/vista-previa.yml"; then
+            cambiados="$(git ls-files)"
           fi
           for c in api web app; do
             proyecto=false
