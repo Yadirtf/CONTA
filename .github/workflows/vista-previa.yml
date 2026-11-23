@@ -58,6 +58,7 @@ jobs:
           S_NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           S_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           S_RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          S_NEON_CONTA_API_PASSWORD: ${{ secrets.NEON_CONTA_API_PASSWORD }}
         run: |
           # Solo dice qué falta; nunca imprime valores.
           faltan=0
@@ -65,7 +66,7 @@ jobs:
             v="V_$n"
             if [ -z "${!v}" ]; then echo "::warning::Falta la variable $n (environment SECRETOS, Variables)"; faltan=1; fi
           done
-          for n in NEON_API_KEY CLOUDFLARE_API_TOKEN RENDER_DEPLOY_HOOK_URL; do
+          for n in NEON_API_KEY CLOUDFLARE_API_TOKEN RENDER_DEPLOY_HOOK_URL NEON_CONTA_API_PASSWORD; do
             v="S_$n"
             if [ -z "${!v}" ]; then echo "::warning::Falta el secret $n (environment SECRETOS, Secrets)"; faltan=1; fi
           done
@@ -156,8 +157,24 @@ jobs:
       - name: Pruebas de integración y e2e de NestJS contra la rama de Neon
         if: env.ES_PR == 'true'
         env:
-          DATABASE_URL: ${{ steps.rama-pr.outputs.db_url }}
-        run: npm run test:e2e
+          # La acción de Neon entrega la cadena de conta_app (dueño, corre migraciones). La API y sus pruebas
+          # usan conta_api, creado por SQL sin BYPASSRLS (Docs/despliegue/entorno-de-pruebas.md, sección 4.1).
+          DATABASE_URL_DUENO: ${{ steps.rama-pr.outputs.db_url }}
+          ROL_API: conta_api
+          ROL_API_CLAVE: ${{ secrets.NEON_CONTA_API_PASSWORD }}
+          # Con Neon configurado, la prueba del rol (sin BYPASSRLS) y de RLS no puede saltarse.
+          REQUIERE_BASE: ${{ env.CON_NEON }}
+        run: |
+          if [ "$CON_NEON" = "true" ]; then
+            if [ -z "$ROL_API_CLAVE" ]; then
+              echo "::error::Falta el secret NEON_CONTA_API_PASSWORD (environment SECRETOS). Ver Docs/despliegue/entorno-de-pruebas.md, sección 4.1."
+              exit 1
+            fi
+            DATABASE_URL="$(DATABASE_URL="$DATABASE_URL_DUENO" node scripts/url-con-rol.mjs)"
+            echo "::add-mask::$DATABASE_URL"
+            export DATABASE_URL
+          fi
+          npm run test:e2e
       - name: Desplegar en Render (deploy hook)
         if: env.CON_NEON == 'true' && env.ES_PR != 'true'
         env:
@@ -172,6 +189,10 @@ jobs:
     if: always() && needs.cambios.outputs.cloudflare == 'true' && needs.cambios.outputs.web == 'true' && needs.api.result != 'failure'
     runs-on: ubuntu-latest
     environment: SECRETOS
+    # Cada pata de la matriz escribe una salida con su nombre (consola o sitio), así no se pisan.
+    outputs:
+      consola: ${{ steps.desplegar.outputs.consola }}
+      sitio: ${{ steps.desplegar.outputs.sitio }}
     strategy:
       matrix:
         sitio: [consola, sitio]
@@ -187,6 +208,7 @@ jobs:
           cache-dependency-path: web/${{ matrix.sitio }}/package-lock.json
       - run: npm ci
       - name: Construir y desplegar con OpenNext
+        id: desplegar
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
@@ -203,6 +225,7 @@ jobs:
             fi
             url="$(grep -oE 'https://pr-[0-9]+-[a-z0-9.-]+\.workers\.dev' subida.log | head -1)"
             echo "URL de vista previa: ${url:-no encontrada}"
+            echo "${{ matrix.sitio }}=$url" >> "$GITHUB_OUTPUT"
             echo "### ${{ matrix.sitio }}: ${url:-sin URL}" >> "$GITHUB_STEP_SUMMARY"
           else
             npx wrangler deploy
@@ -284,7 +307,8 @@ jobs:
             const filas = [
               ["API (pruebas en Actions)", "rama de Neon preview/pr-" + pr, r(0)],
               ["API en Render", etiquetas.includes("render-preview") ? `https://conta-api-develop-pr-${pr}.onrender.com` : "sin vista previa (agrega la etiqueta render-preview)", r(0)],
-              ["Consola y sitio", `https://pr-${pr}-conta-consola.<subdominio>.workers.dev y pr-${pr}-conta-sitio (enlaces exactos en el resumen del workflow)`, r(1)],
+              ["Consola", "${{ needs.web.outputs.consola }}" || "enlace en el resumen del workflow", r(1)],
+              ["Sitio", "${{ needs.web.outputs.sitio }}" || "enlace en el resumen del workflow", r(1)],
               ["App web", "${{ needs.app.outputs.url }}" || "enlace en el resumen del workflow", r(2)],
             ].filter((f) => f[2] === "success");
             if (!filas.length) return;
