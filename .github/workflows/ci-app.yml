@@ -1,0 +1,41 @@
+# CI de la app Flutter (HU-01.03). Corre solo cuando cambian app/, contratos/ o este archivo.
+# flutter analyze cubre lint y tipos; luego reglas de dependencia y pruebas. El despliegue vive en vista-previa.yml.
+name: CI app
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths: ['app/**', 'contratos/**', '.github/workflows/ci-app.yml']
+  push:
+    branches: [develop]
+    paths: ['app/**', 'contratos/**', '.github/workflows/ci-app.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-app-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: app (lint, tipos, dependencias, pruebas)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: app/pubspec.yaml
+          cache: true
+      - run: flutter pub get
+      - name: Lint y tipos (flutter analyze)
+        run: flutter analyze
+      - name: Reglas de dependencia
+        run: dart run tool/reglas_de_dependencia.dart
+      - name: Pruebas
+        run: flutter test

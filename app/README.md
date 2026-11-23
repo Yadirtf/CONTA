@@ -20,3 +20,5 @@ Requiere Flutter 3.50.1 (fijado en `pubspec.yaml`, `environment.flutter`).
 | `dart run tool/reglas_de_dependencia.dart` | Reglas de capas y funcionalidades; falla con el nombre de la regla |
 | `flutter run -d chrome --dart-define=API_URL=http://localhost:3000` | App web local contra la API local |
 | `flutter build web --release --dart-define=API_URL=<url>` | Versión web, como en CI |
+
+En CI, [`ci-app.yml`](../.github/workflows/ci-app.yml) corre `flutter analyze` (lint y tipos), reglas de dependencia y pruebas, solo cuando cambian `app/` o `contratos/`.
