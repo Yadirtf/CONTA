@@ -121,6 +121,12 @@ En Render: **New → Web Service → Yadirtf/CONTA**.
 | `TOKEN_TRABAJOS_INTERNOS` | Al menos 32 caracteres al azar (`openssl rand -hex 32`). El mismo valor va en GitHub (4.3). Protege `POST /interno/trabajos/procesar` ([ADR-0008](../decisiones/0008-envio-dian-con-cola-en-tabla-y-despertador.md)) |
 | `DIAN_HAB_EMPRESA_ID` | Opcional. Id de la única empresa que puede enviar a habilitación mientras llega HU-07.02 |
 | `DIAN_HAB_P12_BASE64`, `DIAN_HAB_P12_CONTRASENA`, `DIAN_HAB_TEST_SET_ID` | Opcionales. Certificado de habilitación en base64, su contraseña y el TestSetId del set de pruebas |
+| `SECRETO_CODIGOS_ACCESO` | Al menos 32 caracteres al azar (`openssl rand -hex 32`). Firma los códigos de acceso ([ADR-0010](../decisiones/0010-acceso-con-celular-y-codigo-por-whatsapp.md)). Sin él, la API usa uno al azar por proceso y los códigos pendientes se pierden al reiniciar |
+| `CONTA_ENTORNO` | `pruebas`. Es lo único que permite `CELULARES_DE_PRUEBA` |
+| `CELULARES_DE_PRUEBA` | Opcional, solo en pruebas. Pares `celular:código` separados por coma (ejemplo: `3000000001:<6 dígitos>`). A esos números no se les envía nada y entran con su código fijo. Usa números que no sean de nadie |
+| `WHATSAPP_TOKEN`, `WHATSAPP_ID_NUMERO` | Opcionales. Token de acceso y id del número de WhatsApp Cloud API (Meta). Sin ellos, pedir un código a un número real responde 503 |
+| `WHATSAPP_PLANTILLA_CODIGO`, `WHATSAPP_IDIOMA` | Opcionales. Nombre de la plantilla de autenticación aprobada (por defecto `codigo_de_acceso`) y su idioma (por defecto `es`) |
+| `ACCESO_ENVIOS_POR_HORA` | Opcional. Tope de códigos por hora para todo CONTA (por defecto 200) |
 
 No se pone `NODE_ENV=production` en Render: haría que `npm ci` omita las herramientas de compilación y el build fallaría. La API lo fija al arrancar.
 
@@ -151,6 +157,22 @@ En el repositorio: **Settings → Environments → SECRETOS**, en sus secciones 
 | Variable | `DIAN_HAB_NIT` | NIT del facturador, sin dígito de verificación |
 
 Los `DIAN_HAB_*` solo los usa el workflow manual **Habilitación DIAN** (Actions → Habilitación DIAN → Run workflow), que envía una factura real al set de pruebas.
+
+### 4.5 WhatsApp para los códigos de acceso (HU-04.01)
+
+Mientras no esté listo, la app de pruebas entra con los celulares de `CELULARES_DE_PRUEBA` (sección 4.2). Para enviar códigos reales ([ADR-0010](../decisiones/0010-acceso-con-celular-y-codigo-por-whatsapp.md)):
+
+1. En [Meta for Developers](https://developers.facebook.com/), crear una app de tipo **Negocio** y agregarle **WhatsApp**. Meta da un número de prueba que solo envía a los destinatarios que se registren ahí; para clientes reales hay que verificar el negocio y agregar un número propio.
+2. En **WhatsApp → Plantillas de mensajes**, crear una plantilla de categoría **Autenticación**:
+   - nombre `codigo_de_acceso`, idioma español;
+   - botón «Copiar código»;
+   - aviso de seguridad («No compartas este código») activado;
+   - vencimiento de 10 minutos.
+
+   Esperar a que Meta la apruebe.
+3. Crear un **usuario del sistema** con un token permanente y permiso `whatsapp_business_messaging`. Copiar el **id del número** (Phone number ID), no el número.
+4. En Render, poner `WHATSAPP_TOKEN` y `WHATSAPP_ID_NUMERO`, y redesplegar.
+5. Confirmar la tarifa vigente de las plantillas de autenticación para Colombia en la página de precios de Meta. El ADR la dejó sin verificar.
 
 ### 4.4 Cloudflare
 

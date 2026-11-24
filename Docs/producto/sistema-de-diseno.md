@@ -98,7 +98,7 @@ Reglas:
 
 | Dónde | Qué se usa |
 | --- | --- |
-| `app/` | `TemaConta.claro` / `TemaConta.oscuro` (`lib/nucleo/tema/tema_conta.dart`) y, para estados, `PaletaConta`, `EspacioConta`, `RadioConta`, `AlturaConta`, `TextoConta` del archivo generado |
+| `app/` | Se importa solo `lib/nucleo/tema/tema_conta.dart`. Da `TemaConta.claro` / `TemaConta.oscuro`, el color del modo activo con `context.paleta.<papel>` (por ejemplo `context.paleta.errorFondo`) y las medidas `EspacioConta`, `RadioConta`, `AlturaConta` y `TextoConta`. Los componentes compartidos viven en `lib/nucleo/componentes/` |
 | `web/sitio` y `web/consola` | Variables `--conta-color-*`, `--conta-espacio-*`, `--conta-radio-*`, `--conta-altura-*`, `--conta-tamano-*`, `--conta-duracion-*`, `--conta-curva`, `--conta-fuente` de `src/compartido/estilos/tokens.css`, importado en `globals.css` |
 
 **Para cambiar un valor:**
@@ -107,3 +107,10 @@ Reglas:
 3. Sube los archivos generados en el mismo PR. El job `tokens` de CI falla si un contraste no llega a AA o si algo quedó sin generar.
 
 Nunca se escribe un hex suelto en un componente: si falta un papel, se agrega como token.
+
+**Lo vigila CI.** `node herramientas/diseno/revisar-estilos.mjs` falla si, fuera del módulo de tema, aparece a mano:
+- un color (`Color(0x…)`, `Colors.*`, `#hex`, `rgb()`, `hsl()` o un nombre como `white`);
+- un espacio (`EdgeInsets` o `SizedBox` con número; `padding` o `margin` en px o rem);
+- un radio o un tamaño de letra.
+
+El módulo de tema es `app/lib/nucleo/tema/` y `web/*/src/compartido/estilos/`. Se corre en el job `tokens` de *CI repositorio*. Una excepción de verdad (el logo de un banco, por ejemplo) se marca en la misma línea con `// estilo-permitido: <motivo>`.
