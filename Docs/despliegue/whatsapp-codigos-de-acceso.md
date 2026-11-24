@@ -60,7 +60,7 @@ En [WhatsApp Manager](https://business.facebook.com/wa/manage/message-templates/
 | --- | --- |
 | Categoría | **Autenticación** |
 | Nombre | `codigo_de_acceso` (exacto: es el que usa la API) |
-| Idioma | **Español** (código `es`) |
+| Idioma | **Español** (código `es`). Si eliges «Spanish (COL)», el código es `es_CO` y debes ponerlo en `WHATSAPP_IDIOMA` (paso 6) |
 | Método de entrega del código | **Copiar código** |
 | Texto del botón | `Copiar código` |
 | Aviso de seguridad | **Activado** («Por tu seguridad, no compartas este código») |
@@ -97,7 +97,7 @@ En Render → `conta-api-develop` → **Environment**:
 | `WHATSAPP_ID_NUMERO` | El *Phone number ID* del paso 3 (solo números) |
 | `SECRETO_CODIGOS_ACCESO` | 32 caracteres o más al azar (`openssl rand -hex 32`), si aún no está |
 | `WHATSAPP_PLANTILLA_CODIGO` | No hace falta si la plantilla se llama `codigo_de_acceso` |
-| `WHATSAPP_IDIOMA` | No hace falta si el idioma es `es` |
+| `WHATSAPP_IDIOMA` | No hace falta si el idioma es `es`. Si la plantilla quedó en «Spanish (COL)», pon `es_CO` |
 
 Guarda los cambios; Render redespliega solo.
 
@@ -115,7 +115,8 @@ Si funciona, avísame el tiempo que tardó: con eso se marca HU-04.01 como «Hec
 | Lo que ves | Qué revisar |
 | --- | --- |
 | La app dice «No pudimos enviar el código» | Faltan `WHATSAPP_TOKEN` o `WHATSAPP_ID_NUMERO`, el token venció, o el celular no está entre los destinatarios del número de prueba |
-| No llega nada, sin error | La plantilla aún no está aprobada, o el nombre o el idioma no coinciden (`codigo_de_acceso`, `es`) |
+| No llega nada, sin error | La plantilla sigue «En revisión» (Meta no la entrega hasta que diga «Activa»), o el nombre o el idioma no coinciden: «Spanish (COL)» es `es_CO`, no `es` |
+| Llega a un celular y a otro no | El número de prueba solo envía a los destinatarios registrados en «Para»; agrega el otro y confírmalo |
 | Llega, pero tarda más de 1 minuto | La API estaba dormida (Render gratis tarda hasta 1 minuto en despertar). Repite la prueba con la API despierta y anota los dos tiempos |
 | «Pediste muchos códigos» | Es el límite de 5 por hora por celular: espera o usa otro número |
 
