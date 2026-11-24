@@ -28,9 +28,17 @@ export class EnviadorWhatsAppCloud implements EnviadorDeCodigos {
         signal: AbortSignal.timeout(LIMITE_MS),
       });
     } catch {
+      console.warn(`Acceso: WhatsApp no respondió (${celular.enmascarado()})`);
       throw new FallaDeEnvio('WhatsApp no respondió');
     }
-    if (!respuesta.ok) throw new FallaDeEnvio(`WhatsApp respondió ${respuesta.status}`);
+    const cuerpo = await leerJson(respuesta);
+    if (!respuesta.ok) {
+      const motivo = `WhatsApp respondió ${respuesta.status}${codigoDeError(cuerpo)}`;
+      console.warn(`Acceso: ${motivo} (${celular.enmascarado()})`);
+      throw new FallaDeEnvio(motivo);
+    }
+    // El id de Meta (wamid) permite rastrear la entrega en WhatsApp Manager. No es secreto ni lleva el código.
+    console.warn(`Acceso: WhatsApp aceptó el mensaje ${idDelMensaje(cuerpo)} (${celular.enmascarado()})`);
   }
 
   private mensaje(celular: Celular, codigo: string) {
@@ -50,4 +58,24 @@ export class EnviadorWhatsAppCloud implements EnviadorDeCodigos {
       },
     };
   }
+}
+
+/** El cuerpo de la respuesta de Meta, o null si no es JSON. */
+async function leerJson(respuesta: Response): Promise<unknown> {
+  try {
+    return await respuesta.json();
+  } catch {
+    return null;
+  }
+}
+
+/** Solo el código numérico del error de Meta (por ejemplo 131030), nunca su mensaje, que puede repetir parámetros. */
+function codigoDeError(cuerpo: unknown): string {
+  const error = (cuerpo as { error?: { code?: unknown } } | null)?.error;
+  return typeof error?.code === 'number' ? ` (código ${error.code})` : '';
+}
+
+function idDelMensaje(cuerpo: unknown): string {
+  const id = (cuerpo as { messages?: { id?: unknown }[] } | null)?.messages?.[0]?.id;
+  return typeof id === 'string' && /^[\w.=:-]{1,200}$/.test(id) ? id : 'sin id';
 }

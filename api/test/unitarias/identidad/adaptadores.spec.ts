@@ -62,7 +62,7 @@ describe('enviadores', () => {
       { token: 'tok', idDelNumero: '42', plantilla: 'codigo_de_acceso', idioma: 'es' },
       (url, init) => {
         pedidos.push({ url, init });
-        return Promise.resolve(new Response('{}', { status: 200 }));
+        return Promise.resolve(new Response('{"messages":[{"id":"wamid.1"}]}', { status: 200 }));
       },
     );
     await enviador.enviar(celular, '482913');
@@ -72,14 +72,30 @@ describe('enviadores', () => {
     expect(cuerpo.template.components.map((c) => c.parameters[0]?.text)).toEqual(['482913', '482913']);
   });
 
-  it('si WhatsApp responde error, la falla trae el estado pero nunca el código', async () => {
+  it('si WhatsApp responde error, la falla y el registro traen el estado y el código de Meta, nunca el código de acceso', async () => {
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const enviador = new EnviadorWhatsAppCloud(
       { token: 'tok', idDelNumero: '42', plantilla: 'p', idioma: 'es' },
-      () => Promise.resolve(new Response('{"error":"482913"}', { status: 400 })),
+      () => Promise.resolve(new Response('{"error":{"code":131030,"message":"482913"}}', { status: 400 })),
     );
     const error = await enviador.enviar(celular, '482913').catch((e: unknown) => e);
     expect(error).toBeInstanceOf(FallaDeEnvio);
-    expect((error as Error).message).toBe('WhatsApp respondió 400');
+    expect((error as Error).message).toBe('WhatsApp respondió 400 (código 131030)');
+    const registro = String(aviso.mock.calls[0]?.[0]);
+    expect(registro).toContain('+57 300 *** 4567');
+    expect(registro).not.toContain('482913');
+    aviso.mockRestore();
+  });
+
+  it('cuando Meta acepta, registra el id del mensaje para rastrear la entrega', async () => {
+    const aviso = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const enviador = new EnviadorWhatsAppCloud(
+      { token: 'tok', idDelNumero: '42', plantilla: 'p', idioma: 'es' },
+      () => Promise.resolve(new Response('{"messages":[{"id":"wamid.HBgM=="}]}', { status: 200 })),
+    );
+    await enviador.enviar(celular, '482913');
+    expect(String(aviso.mock.calls[0]?.[0])).toBe('Acceso: WhatsApp aceptó el mensaje wamid.HBgM== (+57 300 *** 4567)');
+    aviso.mockRestore();
   });
 
   it('a los celulares de prueba no se les envía nada', async () => {
