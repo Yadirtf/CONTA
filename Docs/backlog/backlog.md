@@ -154,7 +154,7 @@ Como dueño, quiero entrar con mi celular y un código, para no recordar contras
 - Dado un número válido, cuando pido el código, entonces llega en menos de 1 minuto y vence en 10.
 - Tras 5 intentos fallidos, la cuenta se bloquea 15 minutos.
 - Decisión [VS]: método de autenticación (OTP por SMS, por WhatsApp, enlace mágico, contraseña + 2FA).
-- Decisión en [ADR-0010](../decisiones/0010-acceso-con-celular-y-codigo-por-whatsapp.md): WhatsApp primero detrás de un puerto, con SMS de respaldo para después y celulares de prueba en el entorno de pruebas. El envío real se activa cuando Meta apruebe la plantilla ([entorno de pruebas, 4.5](../despliegue/entorno-de-pruebas.md)). Pasa a «Hecha» cuando un código real llegue en menos de 1 minuto.
+- Decisión en [ADR-0010](../decisiones/0010-acceso-con-celular-y-codigo-por-whatsapp.md): WhatsApp primero detrás de un puerto, con SMS de respaldo para después y celulares de prueba en el entorno de pruebas. El envío real se activa cuando Meta apruebe la plantilla ([guía de WhatsApp](../despliegue/whatsapp-codigos-de-acceso.md)). Pasa a «Hecha» cuando un código real llegue en menos de 1 minuto.
 - Módulos: `api/src/modulos/identidad/` y `app/lib/funcionalidades/acceso/`.
 
 **HU-04.02 Pertenecer a varias empresas** (M, M)

@@ -158,22 +158,6 @@ En el repositorio: **Settings → Environments → SECRETOS**, en sus secciones 
 
 Los `DIAN_HAB_*` solo los usa el workflow manual **Habilitación DIAN** (Actions → Habilitación DIAN → Run workflow), que envía una factura real al set de pruebas.
 
-### 4.5 WhatsApp para los códigos de acceso (HU-04.01)
-
-Mientras no esté listo, la app de pruebas entra con los celulares de `CELULARES_DE_PRUEBA` (sección 4.2). Para enviar códigos reales ([ADR-0010](../decisiones/0010-acceso-con-celular-y-codigo-por-whatsapp.md)):
-
-1. En [Meta for Developers](https://developers.facebook.com/), crear una app de tipo **Negocio** y agregarle **WhatsApp**. Meta da un número de prueba que solo envía a los destinatarios que se registren ahí; para clientes reales hay que verificar el negocio y agregar un número propio.
-2. En **WhatsApp → Plantillas de mensajes**, crear una plantilla de categoría **Autenticación**:
-   - nombre `codigo_de_acceso`, idioma español;
-   - botón «Copiar código»;
-   - aviso de seguridad («No compartas este código») activado;
-   - vencimiento de 10 minutos.
-
-   Esperar a que Meta la apruebe.
-3. Crear un **usuario del sistema** con un token permanente y permiso `whatsapp_business_messaging`. Copiar el **id del número** (Phone number ID), no el número.
-4. En Render, poner `WHATSAPP_TOKEN` y `WHATSAPP_ID_NUMERO`, y redesplegar.
-5. Confirmar la tarifa vigente de las plantillas de autenticación para Colombia en la página de precios de Meta. El ADR la dejó sin verificar.
-
 ### 4.4 Cloudflare
 
 No hay que crear nada a mano: el workflow crea los recursos la primera vez. Como la cuenta se comparte con otro proyecto, todos llevan el prefijo `conta-`.
@@ -193,6 +177,14 @@ No hay que crear nada a mano: el workflow crea los recursos la primera vez. Como
 El despertador se despliega desde el workflow (ver la sección 3).
 
 Ninguno de estos valores va en el repositorio, en el texto de un PR ni en un chat.
+
+### 4.5 WhatsApp para los códigos de acceso (HU-04.01)
+
+Mientras no esté listo, la app de pruebas entra con los celulares de `CELULARES_DE_PRUEBA` (sección 4.2). Para enviar códigos reales, sigue la [guía de WhatsApp para los códigos de acceso](whatsapp-codigos-de-acceso.md). En resumen:
+1. Crear la app de Meta.
+2. Aprobar la plantilla de autenticación `codigo_de_acceso` en español.
+3. Generar un token permanente con un usuario del sistema.
+4. Poner `WHATSAPP_TOKEN` y `WHATSAPP_ID_NUMERO` en Render.
 
 ## 5. Reglas del entorno de pruebas
 
