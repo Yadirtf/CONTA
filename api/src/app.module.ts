@@ -3,9 +3,10 @@ import { PersistenciaModule } from './compartido/infraestructura/persistencia/pe
 import { ContextoDeEmpresaModule } from './compartido/presentacion/empresa/empresa.module.js';
 import { EmpresasModule } from './modulos/empresas/index.js';
 import { FacturacionModule } from './modulos/facturacion/index.js';
+import { IdentidadModule } from './modulos/identidad/index.js';
 import { SaludModule } from './modulos/salud/index.js';
 
 @Module({
-  imports: [PersistenciaModule, ContextoDeEmpresaModule, SaludModule, EmpresasModule, FacturacionModule],
+  imports: [PersistenciaModule, ContextoDeEmpresaModule, SaludModule, IdentidadModule, EmpresasModule, FacturacionModule],
 })
 export class AppModule {}

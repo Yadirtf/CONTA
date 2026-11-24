@@ -149,11 +149,13 @@ Como administrador, quiero una guía de entrevista y un registro de pilotos, par
 
 #### EP-04. Identidad, empresas y roles — Prioridad M
 
-**HU-04.01 Registro e inicio de sesión** (M, M) **[VS]**
+**HU-04.01 Registro e inicio de sesión** (M, M) **[VS]** — Implementada; falta probar la llegada real del código por WhatsApp
 Como dueño, quiero entrar con mi celular y un código, para no recordar contraseñas.
 - Dado un número válido, cuando pido el código, entonces llega en menos de 1 minuto y vence en 10.
 - Tras 5 intentos fallidos, la cuenta se bloquea 15 minutos.
 - Decisión [VS]: método de autenticación (OTP por SMS, por WhatsApp, enlace mágico, contraseña + 2FA).
+- Decisión en [ADR-0010](../decisiones/0010-acceso-con-celular-y-codigo-por-whatsapp.md): WhatsApp primero detrás de un puerto, con SMS de respaldo para después y celulares de prueba en el entorno de pruebas. El envío real se activa cuando Meta apruebe la plantilla ([entorno de pruebas, 4.5](../despliegue/entorno-de-pruebas.md)). Pasa a «Hecha» cuando un código real llegue en menos de 1 minuto.
+- Módulos: `api/src/modulos/identidad/` y `app/lib/funcionalidades/acceso/`.
 
 **HU-04.02 Pertenecer a varias empresas** (M, M)
 Como contador, quiero cambiar entre las empresas que llevo, para no tener varias cuentas.

@@ -1,5 +1,4 @@
 import 'package:conta_app/nucleo/tema/tema_conta.dart';
-import 'package:conta_app/nucleo/tema/tokens_conta.g.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -23,5 +22,19 @@ void main() {
   test('el botón principal mide al menos 56 dp de alto', () {
     final estilo = TemaConta.claro.filledButtonTheme.style!;
     expect(estilo.minimumSize!.resolve({})!.height, greaterThanOrEqualTo(AlturaConta.botonPrincipal));
+  });
+
+  testWidgets('la paleta del modo activo llega a las pantallas con context.paleta', (tester) async {
+    late PaletaConta vista;
+    await tester.pumpWidget(MaterialApp(
+      theme: TemaConta.claro,
+      darkTheme: TemaConta.oscuro,
+      themeMode: ThemeMode.dark,
+      home: Builder(builder: (context) {
+        vista = context.paleta;
+        return const SizedBox.shrink();
+      }),
+    ));
+    expect(vista.acento, PaletaConta.oscuro.acento);
   });
 }

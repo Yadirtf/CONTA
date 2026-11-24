@@ -1,15 +1,16 @@
 # CI de lo que no es de una carpeta de producto (HU-01.03): workflows y herramientas de CI.
 # Revisa que todo actions/upload-artifact use retention-days: 2 (Docs/forma-de-trabajo/flujo-de-ramas.md)
 # y que los tokens de diseño (ADR-0009) cumplan contraste AA y estén generados al día en app/ y web/.
+# También falla si una pantalla o componente escribe a mano un color, espacio, radio o tamaño de letra.
 name: CI repositorio
 
 on:
   pull_request:
     branches: [develop, main]
-    paths: ['.github/workflows/**', 'herramientas/ci/**', 'herramientas/diseno/**', 'contratos/diseno/**', 'app/lib/nucleo/tema/**', 'web/*/src/compartido/estilos/**']
+    paths: ['.github/workflows/**', 'herramientas/ci/**', 'herramientas/diseno/**', 'contratos/diseno/**', 'app/lib/**', 'web/*/src/**']
   push:
     branches: [develop]
-    paths: ['.github/workflows/**', 'herramientas/ci/**', 'herramientas/diseno/**', 'contratos/diseno/**', 'app/lib/nucleo/tema/**', 'web/*/src/compartido/estilos/**']
+    paths: ['.github/workflows/**', 'herramientas/ci/**', 'herramientas/diseno/**', 'contratos/diseno/**', 'app/lib/**', 'web/*/src/**']
   workflow_dispatch:
 
 permissions:
@@ -47,3 +48,5 @@ jobs:
         run: node --test herramientas/diseno/*.test.mjs
       - name: Contrastes AA y archivos generados al día
         run: node herramientas/diseno/tokens.mjs --revisar
+      - name: Sin colores, espacios ni letras sueltas fuera del módulo de tema
+        run: node herramientas/diseno/revisar-estilos.mjs

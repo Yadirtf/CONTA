@@ -19,8 +19,13 @@ export function configurarApp(app: INestApplication): void {
   app.enableCors({ origin: [...ORIGENES_POR_DEFECTO, ...extra] });
   app.enableShutdownHooks();
   // No anunciar el framework en las respuestas.
-  const servidor = app.getHttpAdapter().getInstance() as { disable?: (opcion: string) => void };
+  const servidor = app.getHttpAdapter().getInstance() as {
+    disable?: (opcion: string) => void;
+    set?: (opcion: string, valor: unknown) => void;
+  };
   servidor.disable?.('x-powered-by');
+  // Render pone un proxy delante: la IP real del cliente llega en X-Forwarded-For (límite por origen, HU-04.01).
+  servidor.set?.('trust proxy', 1);
 }
 
 export function documentoOpenApi(app: INestApplication, version: string): OpenAPIObject {

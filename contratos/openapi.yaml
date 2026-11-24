@@ -15,6 +15,116 @@ paths:
       summary: Indica si la API está viva. No consulta la base de datos.
       tags:
         - salud
+  /acceso/codigos:
+    post:
+      operationId: AccesoController_pedirCodigo
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PedirCodigo"
+      responses:
+        "202":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CodigoEnviado"
+        "400":
+          description: El celular no es de Colombia o está mal escrito.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+        "429":
+          description: Bloqueado, muy seguido o demasiados códigos. Trae Retry-After.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+        "503":
+          description: El canal de envío no aceptó el mensaje.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+      summary: Envía un código de 6 dígitos al celular. Responde igual para números
+        nuevos y registrados.
+      tags:
+        - acceso
+  /acceso/sesiones:
+    post:
+      operationId: AccesoController_entrar
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Entrar"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SesionAbierta"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+        "401":
+          description: Código incorrecto (con intentos restantes), vencido o ya usado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+        "429":
+          description: Celular bloqueado 15 minutos tras 5 fallos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+      summary: Verifica el código y abre una sesión. La primera vez registra a la
+        persona.
+      tags:
+        - acceso
+  /acceso/yo:
+    get:
+      operationId: AccesoController_yo
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsuarioAutenticado"
+        "401":
+          description: Sin sesión, vencida o cerrada.
+      security:
+        - bearer: []
+      summary: Quién es la persona de la sesión.
+      tags:
+        - acceso
+  /acceso/sesiones/actual:
+    delete:
+      operationId: AccesoController_salir
+      parameters: []
+      responses:
+        "204":
+          description: ""
+        "401":
+          description: Sin sesión, vencida o cerrada.
+      security:
+        - bearer: []
+      summary: Cierra la sesión de este dispositivo.
+      tags:
+        - acceso
   /empresas/{id}:
     get:
       operationId: EmpresasController_obtener
@@ -70,6 +180,92 @@ components:
         - servicio
         - version
         - hora
+    PedirCodigo:
+      type: object
+      properties:
+        celular:
+          type: string
+          example: 300 123 4567
+          description: Celular de Colombia. Acepta espacios y +57.
+      required:
+        - celular
+    CodigoEnviado:
+      type: object
+      properties:
+        venceEn:
+          type: string
+          format: date-time
+          description: El código vence a los 10 minutos.
+        otroCodigoDesde:
+          type: string
+          format: date-time
+          description: Desde cuándo se puede pedir otro código.
+      required:
+        - venceEn
+        - otroCodigoDesde
+    RechazoDeAcceso:
+      type: object
+      properties:
+        codigo:
+          type: string
+          example: acceso.codigo-incorrecto
+        mensaje:
+          type: string
+          example: El código no coincide. Revísalo e intenta de nuevo.
+        reintentarDesde:
+          type: string
+          format: date-time
+        intentosRestantes:
+          type: number
+          example: 3
+      required:
+        - codigo
+        - mensaje
+    Entrar:
+      type: object
+      properties:
+        celular:
+          type: string
+          example: 300 123 4567
+        codigo:
+          type: string
+          example: "482913"
+          pattern: ^\d{6}$
+      required:
+        - celular
+        - codigo
+    UsuarioAutenticado:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        celular:
+          type: string
+          example: "+573001234567"
+      required:
+        - id
+        - celular
+    SesionAbierta:
+      type: object
+      properties:
+        token:
+          type: string
+          description: "Va en Authorization: Bearer <token>. Guárdalo en el almacén seguro
+            del dispositivo."
+        venceEn:
+          type: string
+          format: date-time
+        usuario:
+          $ref: "#/components/schemas/UsuarioAutenticado"
+        nuevo:
+          type: boolean
+          description: true si este acceso registró a la persona.
+      required:
+        - token
+        - venceEn
+        - usuario
+        - nuevo
     RespuestaEmpresa:
       type: object
       properties:
