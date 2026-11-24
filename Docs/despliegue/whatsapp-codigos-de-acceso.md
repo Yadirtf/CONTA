@@ -37,7 +37,15 @@ Con los pasos 1 a 6 ya se puede probar HU-04.01 en el entorno de pruebas, envian
 
 ## 3. Probar con el número de prueba
 
-En el panel de la app: **WhatsApp → Configuración de la API** (*API Setup*).
+En el panel de la app (developers.facebook.com → **Mis apps** → tu app):
+
+1. En el menú de la izquierda, entra a **Casos de uso**.
+2. En «Conectarte con los clientes a través de WhatsApp», toca **Personalizar** (o **Editar**). Si Meta pide elegir o crear una cuenta de WhatsApp Business o un portafolio, acéptalo: ahí crea el número de prueba.
+3. En el menú propio de WhatsApp, entra a **Configuración de la API** (también puede llamarse **Inicio rápido** o *API Setup*).
+
+No hace falta **Publicar** la app: para probar, puede quedar «Sin publicar».
+
+En esa pantalla:
 
 1. En **«Para»** (*To*), agrega tu celular y confírmalo con el código que te llega. El número de prueba solo envía a los celulares que registres ahí, y Meta permite pocos destinatarios (alrededor de 5; confírmalo en la pantalla).
 2. Pulsa **«Generar token de acceso»**. Ese token es temporal y vence en horas: sirve solo para esta prueba.
