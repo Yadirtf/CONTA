@@ -27,7 +27,7 @@ Las calificó un agente evaluador que no generó las alternativas. Los criterios
 | Cambiar de proveedor y probar sin red | 15 % |
 | Simplicidad | 15 % |
 
-El evaluador **no pudo verificar los precios**, así que calificó el costo por orden relativo: WhatsApp autenticación < SMS. Antes de activar el canal hay que confirmar la tarifa vigente de Meta para Colombia.
+El evaluador **no pudo verificar los precios**, así que calificó el costo por orden relativo: WhatsApp autenticación < SMS. Después, dos tablas de terceros (octubre y noviembre de 2026) dieron unos USD 0,0008 por código de autenticación en Colombia. Falta confirmarlo en la tabla oficial de Meta ([guía de WhatsApp](../despliegue/whatsapp-codigos-de-acceso.md#7-método-de-pago)).
 
 | # | Alternativa | Prob. | Ronda | Puntaje | Resultado |
 | - | ----------- | ----- | ----- | ------- | --------- |
@@ -80,7 +80,7 @@ Se eligió la alternativa **6, de la cola**. Su núcleo, la 2, es casi la típic
 
 ## Consecuencias
 
-- **Para activar el canal real**, Inge debe hacer tres cosas: crear la app de Meta con WhatsApp Cloud API y un número; aprobar la plantilla de autenticación `codigo_de_acceso` en español; y poner `WHATSAPP_TOKEN` y `WHATSAPP_ID_NUMERO` en Render. Mientras tanto, el entorno de pruebas funciona con celulares de prueba. Los pasos están en [entorno de pruebas](../despliegue/entorno-de-pruebas.md).
+- **Para activar el canal real**, Inge debe hacer tres cosas: crear la app de Meta con WhatsApp Cloud API y un número; aprobar la plantilla de autenticación `codigo_de_acceso` en español; y poner `WHATSAPP_TOKEN` y `WHATSAPP_ID_NUMERO` en Render. Mientras tanto, el entorno de pruebas funciona con celulares de prueba. Los pasos están en la [guía de WhatsApp para los códigos de acceso](../despliegue/whatsapp-codigos-de-acceso.md).
 - **Pendiente para HU-04.04 o después:**
   - avisar por el canal anterior cuando entra un dispositivo nuevo;
   - impedir que el OTP solo permita cambiar de número;
