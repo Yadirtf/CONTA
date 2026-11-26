@@ -50,14 +50,16 @@ describe('casos de uso de clientes', () => {
       const datos = ferreteria();
       await crear.ejecutar(miembro('cajero'), datos);
       const otraVez = await crear.ejecutar(miembro('cajero'), datos);
-      expect(otraVez.creado).toBe(false);
+      expect(otraVez).toMatchObject({ creado: false, esReintento: true });
       expect(catalogo.guardados).toHaveLength(1);
     });
 
     it('un documento que ya existe devuelve el guardado sin cambiarlo', async () => {
       await crear.ejecutar(miembro('dueno'), ferreteria({ nombre: 'Nombre original' }));
-      const { cliente, creado } = await crear.ejecutar(miembro('cajero'), ferreteria({ nombre: 'Otro nombre' }));
+      const { cliente, creado, esReintento } = await crear.ejecutar(miembro('cajero'), ferreteria({ nombre: 'Otro nombre' }));
       expect(creado).toBe(false);
+      // Otro id: no es un reintento, así que la presentación no devuelve los datos de contacto.
+      expect(esReintento).toBe(false);
       expect(cliente.datos.nombre).toBe('Nombre original');
     });
 

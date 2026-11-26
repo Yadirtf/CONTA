@@ -36,7 +36,14 @@ describe('CrearEmpresa', () => {
   it('una razón social vacía no abre ninguna transacción', async () => {
     const { base, crear } = preparar();
     await expect(crear.ejecutar(persona, '   ')).rejects.toMatchObject({ codigo: 'empresa.razon-social-invalida' });
+    await expect(crear.ejecutar(persona, '\u0000\u200b')).rejects.toMatchObject({ codigo: 'empresa.razon-social-invalida' });
     expect(base.transacciones).toEqual([]);
+  });
+
+  it('la razón social queda sin controles ni caracteres invisibles: va como emisor en cada factura (ataque N4)', async () => {
+    const { crear } = preparar();
+    const { empresa } = await crear.ejecutar(persona, 'Tienda\u0085 Doña\u0000 Rosa\u202e');
+    expect(empresa.razonSocial).toBe('Tienda Doña Rosa');
   });
 
   it(`al llegar a ${MAXIMO_DE_EMPRESAS_POR_PERSONA} empresas no crea otra`, async () => {

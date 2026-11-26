@@ -21,6 +21,8 @@ import { NuevoCliente } from './cuerpo-de-cliente.js';
 import { LimiteDeBusquedas } from './limite-de-busquedas.js';
 import { clienteNuevoDe } from './lectura-de-cliente.js';
 import {
+  CompradorEncontrado,
+  compradorEncontrado,
   RespuestaBusqueda,
   RespuestaCliente,
   respuestaDeBusqueda,
@@ -79,16 +81,23 @@ export class ClientesController {
   @ApiOperation({ summary: 'Crea un comprador. Si su documento ya existe, devuelve el guardado (200) sin cambiarlo.' })
   @ApiBody({ type: NuevoCliente })
   @ApiCreatedResponse({ type: RespuestaCliente, description: 'Creado.' })
-  @ApiOkResponse({ type: RespuestaCliente, description: 'Ya existía un comprador con ese documento.' })
+  @ApiOkResponse({
+    type: RespuestaCliente,
+    description:
+      'Ya existía: con el mismo id (reintento), el comprador completo; con otro id, solo lo de CompradorEncontrado, y cuenta como búsqueda.',
+  })
   @ApiConflictResponse({ description: 'El id ya es de otro comprador (cliente.id-en-uso).' })
   @ApiTooManyRequestsResponse({ description: 'Tope de compradores nuevos del día (cliente.limite-diario).' })
   async crear(
     @EmpresaDeLaPeticion() miembro: ContextoDeMiembro,
     @Body() cuerpo: unknown,
     @Res({ passthrough: true }) respuesta: RespuestaConEstado,
-  ): Promise<RespuestaCliente> {
-    const { cliente, creado } = await this.crearCliente.ejecutar(miembro, clienteNuevoDe(cuerpo));
+  ): Promise<RespuestaCliente | CompradorEncontrado> {
+    const { cliente, creado, esReintento } = await this.crearCliente.ejecutar(miembro, clienteNuevoDe(cuerpo));
     respuesta.status(creado ? 201 : 200);
-    return respuestaDeCliente(cliente);
+    if (creado || esReintento) return respuestaDeCliente(cliente);
+    // Otro id con un documento que ya existe: dice quién es, como una búsqueda, y se limita igual (hallazgo N1).
+    this.limiteDeBusquedas.exigir(miembro);
+    return compradorEncontrado(cliente);
   }
 }

@@ -93,7 +93,11 @@ class _PantallaCompradorNuevoState extends State<PantallaCompradorNuevo> {
             ),
             const SizedBox(height: EspacioConta.s3),
             SegmentedButton<TipoDePersona>(
-              segments: [for (final p in TipoDePersona.values) ButtonSegment(value: p, label: Text(p.nombre))],
+              // Una empresa se identifica con NIT: con otro documento solo se puede elegir «Persona».
+              segments: [
+                for (final p in TipoDePersona.values)
+                  ButtonSegment(value: p, label: Text(p.nombre), enabled: p == TipoDePersona.natural || _tipo.esDeEmpresa),
+              ],
               selected: {_persona},
               onSelectionChanged: (elegido) => setState(() => _persona = elegido.single),
             ),

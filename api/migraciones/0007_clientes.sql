@@ -17,8 +17,8 @@ CREATE TABLE conta.clientes (
     AND (tipo_identificacion NOT IN ('12', '13', '22') OR numero ~ '^[1-9][0-9]{0,19}$')
   ),
   digito_verificacion smallint CHECK (digito_verificacion BETWEEN 0 AND 9),
-  -- Los textos llegan limpios del dominio (sin controles C0 ni C1); la tabla lo vuelve a exigir.
-  nombre text NOT NULL CHECK (char_length(nombre) BETWEEN 1 AND 450 AND nombre !~ '[\x01-\x1f\x7f-\x9f]'),
+  -- Los textos llegan limpios del dominio (sin controles C0 ni C1 ni «no caracteres»); la tabla lo vuelve a exigir.
+  nombre text NOT NULL CHECK (char_length(nombre) BETWEEN 1 AND 450 AND nombre !~ '[\x01-\x1f\x7f-\x9f\uFDD0-\uFDEF\uFFFE\uFFFF]'),
   -- Una persona jurídica se identifica con NIT (31) o NIT de otro país (50).
   tipo_de_persona text NOT NULL CHECK (tipo_de_persona = 'natural' OR tipo_identificacion IN ('31', '50')),
   -- Lista cerrada de responsabilidades de la factura electrónica.
@@ -32,9 +32,9 @@ CREATE TABLE conta.clientes (
     char_length(correo) <= 254 AND correo ~ '^[A-Za-z0-9.!#$%&''*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$'
   ),
   codigo_municipio text CHECK (codigo_municipio ~ '^[0-9]{5}$' AND right(codigo_municipio, 3) <> '000'),
-  ciudad text CHECK (char_length(ciudad) BETWEEN 1 AND 200 AND ciudad !~ '[\x01-\x1f\x7f-\x9f]'),
-  departamento text CHECK (char_length(departamento) BETWEEN 1 AND 200 AND departamento !~ '[\x01-\x1f\x7f-\x9f]'),
-  direccion text CHECK (char_length(direccion) BETWEEN 1 AND 200 AND direccion !~ '[\x01-\x1f\x7f-\x9f]'),
+  ciudad text CHECK (char_length(ciudad) BETWEEN 1 AND 200 AND ciudad !~ '[\x01-\x1f\x7f-\x9f\uFDD0-\uFDEF\uFFFE\uFFFF]'),
+  departamento text CHECK (char_length(departamento) BETWEEN 1 AND 200 AND departamento !~ '[\x01-\x1f\x7f-\x9f\uFDD0-\uFDEF\uFFFE\uFFFF]'),
+  direccion text CHECK (char_length(direccion) BETWEEN 1 AND 200 AND direccion !~ '[\x01-\x1f\x7f-\x9f\uFDD0-\uFDEF\uFFFE\uFFFF]'),
   creado_en timestamptz NOT NULL DEFAULT now(),
   creado_por uuid NOT NULL REFERENCES conta_identidad.usuarios (id),
   PRIMARY KEY (empresa_id, id),
@@ -64,3 +64,8 @@ CREATE POLICY clientes_de_la_empresa_actual ON conta.clientes
 --> statement-breakpoint
 -- Sin UPDATE ni DELETE por ahora: esta historia solo busca y crea. Editar y borrar (Ley 1581) llegan con su historia.
 GRANT SELECT, INSERT ON conta.clientes TO conta_api;
+--> statement-breakpoint
+-- Prueba de ataque de HU-05.01 (hallazgo N4): la razón social de la empresa va como emisor en cada factura.
+-- NOT VALID: no revisa las filas que ya existen (el dominio ya las limpiaba con trim); sí todas las nuevas.
+ALTER TABLE conta.empresas ADD CONSTRAINT empresas_razon_social_sin_controles
+  CHECK (razon_social !~ '[\x01-\x1f\x7f-\x9f\uFDD0-\uFDEF\uFFFE\uFFFF]') NOT VALID;

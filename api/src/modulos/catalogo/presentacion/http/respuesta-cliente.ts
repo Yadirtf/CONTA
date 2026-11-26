@@ -98,7 +98,7 @@ export const respuestaDeBusqueda = ({ nit, clientes }: ResultadoDeBusqueda): Res
   clientes: clientes.map(compradorEncontrado),
 });
 
-const compradorEncontrado = ({ datos }: Cliente): CompradorEncontrado => ({
+export const compradorEncontrado = ({ datos }: Cliente): CompradorEncontrado => ({
   id: datos.id,
   tipoDocumento: datos.identificacion.tipo,
   numero: datos.identificacion.numero,

@@ -1,9 +1,8 @@
-import { ErrorDominio, Identificacion, type TipoDeIdentificacion } from '../../../../compartido/dominio/index.js';
+import { ErrorDominio, Identificacion, textoLimpio, type TipoDeIdentificacion } from '../../../../compartido/dominio/index.js';
 import { correoDe, type Direccion, direccionDe } from './contacto.js';
 import { esConsumidorFinal } from './consumidor-final.js';
 import { datosTributarios, type DatosTributarios, type TipoDePersona } from './datos-tributarios.js';
 import { digitoEscritoEn, numeroDeDocumentoLimpio } from './numero-de-documento.js';
-import { textoLimpio } from './texto-limpio.js';
 
 const LARGO_MAXIMO_DEL_NOMBRE = 450;
 

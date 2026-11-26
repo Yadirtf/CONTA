@@ -559,6 +559,8 @@ paths:
                 $ref: "#/components/schemas/RespuestaBusqueda"
         "403":
           description: "El rol no tiene el permiso (permiso.denegado: «No tienes permiso»)."
+        "429":
+          description: Demasiadas búsquedas seguidas (cliente.limite-de-busquedas).
       security:
         - bearer: []
       summary: Busca compradores por el comienzo de su documento y calcula el dígito
@@ -992,6 +994,63 @@ components:
       required:
         - numero
         - digitoVerificacion
+    CompradorEncontrado:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tipoDocumento:
+          type: string
+          enum:
+            - "11"
+            - "12"
+            - "13"
+            - "21"
+            - "22"
+            - "31"
+            - "41"
+            - "42"
+            - "50"
+            - "91"
+        numero:
+          type: string
+          example: "900373076"
+        digitoVerificacion:
+          type: object
+          nullable: true
+          example: 4
+        nombre:
+          type: string
+        tipoDePersona:
+          type: string
+          enum: &a3
+            - natural
+            - juridica
+      required:
+        - id
+        - tipoDocumento
+        - numero
+        - digitoVerificacion
+        - nombre
+        - tipoDePersona
+    RespuestaBusqueda:
+      type: object
+      properties:
+        nit:
+          nullable: true
+          description: "Si lo escrito es un NIT posible: su dígito de verificación."
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/NitCalculado"
+        clientes:
+          description: Hasta 10, ordenados por número.
+          type: array
+          items:
+            $ref: "#/components/schemas/CompradorEncontrado"
+      required:
+        - nit
+        - clientes
     DireccionDeCliente:
       type: object
       properties:
@@ -1049,9 +1108,7 @@ components:
           type: string
         tipoDePersona:
           type: string
-          enum: &a3
-            - natural
-            - juridica
+          enum: *a3
         responsabilidadesFiscales:
           example:
             - R-99-PN
@@ -1079,23 +1136,6 @@ components:
         - responsabilidadesFiscales
         - responsableDeIva
         - correo
-    RespuestaBusqueda:
-      type: object
-      properties:
-        nit:
-          nullable: true
-          description: "Si lo escrito es un NIT posible: su dígito de verificación."
-          type: object
-          allOf:
-            - $ref: "#/components/schemas/NitCalculado"
-        clientes:
-          description: Hasta 10, ordenados por número.
-          type: array
-          items:
-            $ref: "#/components/schemas/RespuestaCliente"
-      required:
-        - nit
-        - clientes
     NuevoCliente:
       type: object
       properties:

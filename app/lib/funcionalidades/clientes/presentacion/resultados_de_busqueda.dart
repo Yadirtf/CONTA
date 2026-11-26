@@ -28,8 +28,8 @@ class ResultadosDeBusqueda extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (resultado.nit case final nit?) ...[
-          Text('Si es NIT, con su dígito queda: $nit', style: const TextStyle(fontSize: TextoConta.subtitulo)),
+        if (_nitParaMostrar(resultado) case final nit?) ...[
+          Text('Si es un NIT, con su dígito queda: $nit', style: TextStyle(color: context.paleta.textoSuave)),
           const SizedBox(height: EspacioConta.s3),
         ],
         if (resultado.compradores.isEmpty)
@@ -40,5 +40,13 @@ class ResultadosDeBusqueda extends StatelessWidget {
         FilledButton.tonalIcon(onPressed: alCrear, icon: const Icon(Icons.person_add_alt), label: const Text('Crear comprador nuevo')),
       ],
     );
+  }
+
+  /// El dígito solo ayuda con un número completo (los NIT tienen 9 dígitos o más) que aún no es un comprador:
+  /// si ya existe, su tarjeta lo muestra.
+  static NitCalculado? _nitParaMostrar(ResultadoDeBusqueda resultado) {
+    final nit = resultado.nit;
+    if (nit == null || nit.numero.length < 9) return null;
+    return resultado.compradores.any((c) => c.numero == nit.numero) ? null : nit;
   }
 }

@@ -18,6 +18,9 @@ enum TipoDeDocumento {
   final String codigo;
   final String nombre;
 
+  /// Una empresa (persona jurídica) solo se identifica con NIT o con el NIT de su país. Lo exige la API.
+  bool get esDeEmpresa => this == nit || this == nitDeOtroPais;
+
   static TipoDeDocumento? de(Object? codigo) => values.where((t) => t.codigo == codigo).firstOrNull;
 }
 

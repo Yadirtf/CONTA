@@ -1,6 +1,5 @@
-import { ErrorDominio } from '../../../../compartido/dominio/index.js';
+import { ErrorDominio, textoLimpio } from '../../../../compartido/dominio/index.js';
 import { esMunicipioDane } from './municipio-dane.js';
-import { textoLimpio } from './texto-limpio.js';
 
 /** Dirección con el código DANE del municipio (5 dígitos; los 2 primeros son el departamento). */
 export interface Direccion {

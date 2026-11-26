@@ -7,6 +7,11 @@ export interface ClienteCreado {
   readonly cliente: Cliente;
   /** false si ya existía un comprador con ese documento: se devuelve ese y no se cambia nada. */
   readonly creado: boolean;
+  /**
+   * true si es la misma petición repetida (mismo id): quien la repite ya tenía esos datos. Si es otro id con un
+   * documento que ya existe, la presentación no devuelve los datos de contacto (hallazgo N1, prueba de ataque).
+   */
+  readonly esReintento: boolean;
 }
 
 /**
@@ -27,13 +32,15 @@ export class CrearCliente {
     return this.catalogo.ejecutar(contexto, async ({ clientes }) => {
       await clientes.bloquearAltas();
       const existente = await clientes.conIdentificacion(nuevo.identificacion);
-      if (existente) return { cliente: existente, creado: false };
+      if (existente) return yaExistia(existente, datos.id);
       comprobarQuePuedeCrear(await clientes.contarCreadosDesde(new Date(ahora.getTime() - UN_DIA_EN_MS)));
-      if (await clientes.agregarSiNoExiste(nuevo)) return { cliente: nuevo, creado: true };
+      if (await clientes.agregarSiNoExiste(nuevo)) return { cliente: nuevo, creado: true, esReintento: false };
       // Chocó: otra petición guardó el mismo documento entre la lectura y la escritura, o el id ya es de otro.
       const ganador = await clientes.conIdentificacion(nuevo.identificacion);
-      if (ganador) return { cliente: ganador, creado: false };
+      if (ganador) return yaExistia(ganador, datos.id);
       throw new ErrorDominio('cliente.id-en-uso', 'Ese id ya es de otro comprador');
     });
   }
 }
+
+const yaExistia = (cliente: Cliente, idPedido: string): ClienteCreado => ({ cliente, creado: false, esReintento: cliente.id === idPedido });

@@ -27,7 +27,8 @@ paso 2, y sección 4 «Seguridad»), llevada a la práctica: no solo imaginar at
    los endpoints nuevos y la ruta del informe. En Claude Code es un subagente del repositorio: se invoca por
    su nombre.
 3. Corregir cada hallazgo con una prueba (unitaria, de aislamiento o e2e) que falle antes y pase después.
-4. Resumir en el PR: ataques ejecutados, hallazgos y cómo se cerraron.
+4. Guardar el informe en `Docs/seguridad/informes/hu-xx-yy.md` con una sección «Cierre» (hallazgo → corrección
+   → prueba) y resumirlo en el PR. Si las correcciones son grandes, una segunda corrida las ataca también.
 5. Apagar el entorno: `herramientas/ataque/levantar-entorno-local.sh --detener`.
 
 ## 3. Qué revisa siempre
@@ -41,4 +42,4 @@ definición del agente.
 
 | Historia | PR | Ataques | Hallazgos | Estado |
 | --- | --- | --- | --- | --- |
-| HU-05.01 Buscar cliente por cédula o NIT | por abrir | ver PR | ver PR | — |
+| HU-05.01 Buscar cliente por cédula o NIT | este PR | 147 + 162 | 11 (1 alta, 6 medias, 4 bajas) | Todos cerrados ([informe](informes/hu-05-01.md)) |

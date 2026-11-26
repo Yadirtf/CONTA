@@ -6,3 +6,4 @@ export { IdUsuario } from './id-usuario.js';
 export * from './identificacion/index.js';
 export { Nit } from './nit.js';
 export * from './permisos/index.js';
+export { textoLimpio } from './texto-limpio.js';

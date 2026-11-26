@@ -38,12 +38,20 @@ void main() {
     expect(elegidos.single?.esConsumidorFinal, isTrue);
   });
 
-  testWidgets('al escribir un NIT muestra su dígito y el comprador encontrado', (tester) async {
+  testWidgets('un NIT nuevo muestra su dígito; uno que ya es comprador muestra su tarjeta', (tester) async {
     final elegidos = await _abrir(tester, RepositorioDeClientesFalso([ferreteria]));
+    await tester.enterText(find.byType(TextField), '900373076');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.text('Si es un NIT, con su dígito queda: 900373076-7'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '800');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Si es un NIT'), findsNothing);
     await tester.enterText(find.byType(TextField), '800197268');
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
-    expect(find.text('Si es NIT, con su dígito queda: 800197268-7'), findsOneWidget);
+    expect(find.textContaining('Si es un NIT'), findsNothing);
     await tester.tap(find.text('Ferretería El Tornillo'));
     await tester.pumpAndSettle();
     expect(elegidos.single, ferreteria);

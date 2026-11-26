@@ -79,6 +79,8 @@ describe.skipIf(!hayBase)('clientes (e2e)', () => {
   it('crear otra vez el mismo documento devuelve el guardado (200) sin duplicarlo', async () => {
     const { body } = await como('dueno').post('/clientes', ferreteria({ nombre: 'Otro nombre' })).expect(200);
     expect((body as Respuesta).nombre).toBe('Ferretería El Tornillo S.A.S.');
+    // Con otro id no es un reintento: dice quién es, pero sin datos de contacto (ataque N1).
+    expect(body).not.toHaveProperty('correo');
     const { body: encontrados } = await buscar('cajero', nit.slice(0, 5)).expect(200);
     const iguales = (encontrados as { clientes: Respuesta[] }).clientes.filter((c) => c.numero === nit);
     expect(iguales).toHaveLength(1);

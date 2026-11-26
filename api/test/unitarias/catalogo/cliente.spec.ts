@@ -52,6 +52,11 @@ describe('Cliente', () => {
     });
   });
 
+  it('quita los «no caracteres» que el XML de la factura no admite (prueba de ataque N2)', () => {
+    expect(Cliente.crear(vecina({ nombre: 'Rosa\ufffe \uffffPérez\ufdd0' }), CAJERO, AHORA).datos.nombre).toBe('Rosa Pérez');
+    expect(codigoAlCrear(vecina({ nombre: '\ufffe' }))).toBe('cliente.nombre-invalido');
+  });
+
   it('un número con más de un guion no se corta en silencio (prueba de ataque H3)', () => {
     expect(codigoAlCrear(vecina({ numero: '103456-23456' }))).toBe('identificacion.numero-invalido');
     expect(codigoAlCrear(vecina({ numero: '103456-2' }))).toBe('identificacion.digito-sin-nit');
