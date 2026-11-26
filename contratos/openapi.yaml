@@ -534,6 +534,103 @@ paths:
         último dueño.
       tags:
         - miembros
+  /clientes/busqueda:
+    post:
+      operationId: ClientesController_buscar
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Busqueda"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaBusqueda"
+        "403":
+          description: "El rol no tiene el permiso (permiso.denegado: «No tienes permiso»)."
+      security:
+        - bearer: []
+      summary: Busca compradores por el comienzo de su documento y calcula el dígito
+        de verificación si es un NIT.
+      tags:
+        - clientes
+  /clientes/consumidor-final:
+    get:
+      operationId: ClientesController_consumidorFinal
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaCliente"
+        "403":
+          description: "El rol no tiene el permiso (permiso.denegado: «No tienes permiso»)."
+      security:
+        - bearer: []
+      summary: El comprador «consumidor final» de la DIAN, para quien no pide factura
+        a su nombre.
+      tags:
+        - clientes
+  /clientes:
+    post:
+      operationId: ClientesController_crear
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NuevoCliente"
+      responses:
+        "200":
+          description: Ya existía un comprador con ese documento.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaCliente"
+        "201":
+          description: Creado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaCliente"
+        "403":
+          description: "El rol no tiene el permiso (permiso.denegado: «No tienes permiso»)."
+        "409":
+          description: El id ya es de otro comprador (cliente.id-en-uso).
+        "429":
+          description: Tope de compradores nuevos del día (cliente.limite-diario).
+      security:
+        - bearer: []
+      summary: Crea un comprador. Si su documento ya existe, devuelve el guardado
+        (200) sin cambiarlo.
+      tags:
+        - clientes
 info:
   title: CONTA API
   description: "API única de CONTA: facturación electrónica DIAN, contabilidad y
@@ -874,3 +971,192 @@ components:
         - usuarioId
         - rol
         - modo
+    Busqueda:
+      type: object
+      properties:
+        documento:
+          type: string
+          example: "900373"
+          description: "El comienzo del documento: 3 letras o números como mínimo."
+      required:
+        - documento
+    NitCalculado:
+      type: object
+      properties:
+        numero:
+          type: string
+          example: "900373076"
+        digitoVerificacion:
+          type: number
+          example: 4
+      required:
+        - numero
+        - digitoVerificacion
+    DireccionDeCliente:
+      type: object
+      properties:
+        codigoMunicipio:
+          type: string
+          example: "11001"
+          description: Código DANE del municipio (5 dígitos).
+        ciudad:
+          type: string
+          example: Bogotá D.C.
+        departamento:
+          type: string
+          example: Bogotá
+        linea:
+          type: string
+          example: "Calle 12 # 3-45"
+      required:
+        - codigoMunicipio
+        - ciudad
+        - departamento
+        - linea
+    RespuestaCliente:
+      type: object
+      properties:
+        id:
+          type: object
+          format: uuid
+          nullable: true
+          description: null en el consumidor final, que no se guarda.
+        esConsumidorFinal:
+          type: boolean
+          description: true solo en el consumidor final (222222222222).
+        tipoDocumento:
+          type: string
+          enum:
+            - "11"
+            - "12"
+            - "13"
+            - "21"
+            - "22"
+            - "31"
+            - "41"
+            - "42"
+            - "50"
+            - "91"
+        numero:
+          type: string
+          example: "900373076"
+        digitoVerificacion:
+          type: object
+          nullable: true
+          example: 4
+          description: Solo con NIT; siempre calculado.
+        nombre:
+          type: string
+        tipoDePersona:
+          type: string
+          enum: &a3
+            - natural
+            - juridica
+        responsabilidadesFiscales:
+          example:
+            - R-99-PN
+          type: array
+          items:
+            type: string
+        responsableDeIva:
+          type: boolean
+        correo:
+          type: object
+          nullable: true
+        direccion:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/DireccionDeCliente"
+      required:
+        - id
+        - esConsumidorFinal
+        - tipoDocumento
+        - numero
+        - digitoVerificacion
+        - nombre
+        - tipoDePersona
+        - responsabilidadesFiscales
+        - responsableDeIva
+        - correo
+    RespuestaBusqueda:
+      type: object
+      properties:
+        nit:
+          nullable: true
+          description: "Si lo escrito es un NIT posible: su dígito de verificación."
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/NitCalculado"
+        clientes:
+          description: Hasta 10, ordenados por número.
+          type: array
+          items:
+            $ref: "#/components/schemas/RespuestaCliente"
+      required:
+        - nit
+        - clientes
+    NuevoCliente:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: "Lo elige la app: repetir la petición con el mismo id no crea dos."
+        tipoDocumento:
+          type: string
+          enum:
+            - "11"
+            - "12"
+            - "13"
+            - "21"
+            - "22"
+            - "31"
+            - "41"
+            - "42"
+            - "50"
+            - "91"
+          example: "13"
+          description: 13 cédula, 31 NIT, 22 cédula de extranjería…
+        numero:
+          type: string
+          example: "900373076"
+          description: Se aceptan puntos y espacios. Con NIT, «900373076-4» también sirve.
+        digitoVerificacion:
+          type: number
+          minimum: 0
+          maximum: 9
+          description: Si se escribe, debe coincidir con el calculado.
+        nombre:
+          type: string
+          example: Ferretería El Tornillo S.A.S.
+          description: Nombre de la persona o razón social.
+        tipoDePersona:
+          type: string
+          enum: *a3
+        responsabilidadesFiscales:
+          example:
+            - O-13
+          description: "Del RUT (casilla 53). Si no viene: R-99-PN."
+          type: array
+          items:
+            type: string
+        responsableDeIva:
+          type: boolean
+          description: "Responsable de IVA. Si no viene: no."
+        correo:
+          type: object
+          nullable: true
+          example: compras@eltornillo.co
+          description: Para mandarle la factura.
+        direccion:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/DireccionDeCliente"
+      required:
+        - id
+        - tipoDocumento
+        - numero
+        - nombre
+        - tipoDePersona

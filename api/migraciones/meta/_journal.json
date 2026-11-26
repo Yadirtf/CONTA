@@ -50,6 +50,13 @@
       "when": 1795666958974,
       "tag": "0006_segundo_factor",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795699812916,
+      "tag": "0007_clientes",
+      "breakpoints": true
     }
   ]
 }

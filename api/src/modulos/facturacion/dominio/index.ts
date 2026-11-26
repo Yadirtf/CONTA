@@ -2,7 +2,8 @@
 export { Factura, type FormaDePago, type SubtotalIva } from './entidades/factura.js';
 export { LineaDeFactura } from './entidades/linea-de-factura.js';
 export { ResolucionDeNumeracion } from './entidades/resolucion-de-numeracion.js';
-export { Identificacion, TIPOS_DE_IDENTIFICACION, type TipoDeIdentificacion } from './objetos-valor/identificacion.js';
+// La identificación vive en el dominio compartido desde HU-05.01 (la usan también los clientes del catálogo).
+export { Identificacion, TIPOS_DE_IDENTIFICACION, type TipoDeIdentificacion } from '../../../compartido/dominio/index.js';
 export { MomentoDeEmision } from './objetos-valor/momento-de-emision.js';
 export { NumeroDeFactura } from './objetos-valor/numero-de-factura.js';
 export { participante, type Direccion, type Participante } from './objetos-valor/participante.js';

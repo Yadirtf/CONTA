@@ -5,6 +5,7 @@ import 'package:conta_app/funcionalidades/salud/dominio/estado_api.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'funcionalidades/acceso/dobles.dart';
+import 'funcionalidades/clientes/dobles.dart';
 import 'funcionalidades/empresas/dobles.dart';
 import 'funcionalidades/miembros/dobles.dart';
 import 'funcionalidades/verificacion/dobles.dart';
@@ -22,6 +23,7 @@ void main() {
         acceso: acceso,
         empresas: RepositorioDeEmpresasFalso([panaderia]),
         miembros: RepositorioDeMiembrosFalso(),
+        clientes: RepositorioDeClientesFalso(),
         verificacion: RepositorioDeVerificacionFalso(),
         repositorioSalud: _RepositorioFijo(),
       ),
@@ -43,6 +45,7 @@ void main() {
         acceso: acceso,
         empresas: RepositorioDeEmpresasFalso([panaderia]),
         miembros: RepositorioDeMiembrosFalso(),
+        clientes: RepositorioDeClientesFalso(),
         verificacion: RepositorioDeVerificacionFalso(),
         repositorioSalud: _RepositorioFijo(),
       ),

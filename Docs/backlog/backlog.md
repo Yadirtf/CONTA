@@ -170,7 +170,7 @@ Como dueño, quiero invitar a mi cajero con permisos limitados, para que venda s
 - Decisión en [ADR-0012](../decisiones/0012-roles-y-modos.md): roles dueño, contador y cajero con una matriz de permisos en el dominio. Cada endpoint declara `@Requiere(permiso)`, la guarda responde 403 «No tienes permiso» y niega por defecto, y los casos de uso vuelven a exigir el permiso. El modo va en la membresía y no da permisos. Invitar es por celular: la membresía queda invitada hasta que la persona la acepta. El retiro no borra la fila y nunca deja la empresa sin dueño. Los endpoints de informes (EP-16) y anulación (EP-06) llevarán `@Requiere(Permiso.VerInformes)` y `@Requiere(Permiso.AnularDocumentos)`.
 - Módulos: `api/src/compartido/dominio/permisos/`, `api/src/modulos/empresas/`, `app/lib/funcionalidades/empresas/` y `app/lib/funcionalidades/miembros/`.
 
-**HU-04.04 Verificación en dos pasos para contador y consola** (M, S) — En revisión
+**HU-04.04 Verificación en dos pasos para contador y consola** (M, S) — Hecha
 - Dado un usuario con rol contador o administrador, cuando inicia sesión, entonces se exige el segundo factor.
 - Decisión en [ADR-0013](../decisiones/0013-verificacion-en-dos-pasos.md): app autenticadora (TOTP) con 10 códigos de recuperación. Se exige por membresía, en cada petición de empresa, a quien tiene rol contador o está en modo contador, y vale una jornada (12 horas) por sesión. Cambiar de app exige haber verificado hace poco: el WhatsApp solo nunca basta. El secreto va cifrado con una clave del entorno (`SECRETO_SEGUNDO_FACTOR`) y cada paso queda en un registro de solo inserción.
 - La consola todavía no tiene inicio de sesión ni administradores en la API: la historia que los cree usará este mismo segundo factor, obligatorio y con una ventana más corta. La recuperación asistida (sin app ni códigos) queda para EP-18.
@@ -178,11 +178,13 @@ Como dueño, quiero invitar a mi cajero con permisos limitados, para que venda s
 
 #### EP-05. Catálogo: clientes y productos — Prioridad M
 
-**HU-05.01 Buscar cliente por cédula o NIT** (M, M)
+**HU-05.01 Buscar cliente por cédula o NIT** (M, M) — En revisión
 Como cajero, quiero buscar al comprador por su documento, para facturar rápido.
 - Dado un NIT, cuando lo escribo, entonces se calcula y valida el dígito de verificación.
 - Dado un comprador nuevo, puedo crearlo con los campos mínimos que exige la DIAN.
 - Existe la opción «consumidor final».
+- Decisión (nota en el PR, nivel 2): tabla `conta.clientes` por empresa con RLS, única por documento; búsqueda por el comienzo del documento con 3 caracteres como mínimo y 10 resultados como máximo, en el cuerpo de un `POST` para que el documento no quede en URLs; el dígito de verificación lo calcula la API (también al buscar) y rechaza uno escrito que no coincida; crear es idempotente con un id que elige la app y un documento repetido devuelve el comprador guardado; el consumidor final (222222222222) es una constante del dominio, no una fila, y su número queda reservado; tope de 300 compradores nuevos por empresa al día. Editar y borrar compradores (Ley 1581) quedan para una historia propia.
+- Módulos: `api/src/modulos/catalogo/`, `api/src/compartido/dominio/identificacion/` y `app/lib/funcionalidades/clientes/`.
 
 **HU-05.02 Productos con IVA ya marcado** (M, M)
 Como dueño, quiero crear productos con su precio e IVA, para no calcular impuestos al vender.

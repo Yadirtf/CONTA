@@ -16,6 +16,7 @@ class PantallaDeEmpresa extends StatefulWidget {
     required this.contenido,
     this.alSalir,
     this.alVerPersonas,
+    this.alVerCompradores,
   });
 
   final Empresa empresa;
@@ -28,6 +29,9 @@ class PantallaDeEmpresa extends StatefulWidget {
 
   /// Abrir las personas del negocio. Solo llega si la membresía tiene el permiso de gestionarlas.
   final VoidCallback? alVerPersonas;
+
+  /// Buscar o crear compradores (HU-05.01). Solo llega si la membresía puede vender.
+  final VoidCallback? alVerCompradores;
 
   @override
   State<PantallaDeEmpresa> createState() => _PantallaDeEmpresaState();
@@ -45,6 +49,8 @@ class _PantallaDeEmpresaState extends State<PantallaDeEmpresa> {
         appBar: AppBar(
           title: Text(respuesta is Exito<Empresa> ? respuesta.valor.razonSocial : widget.empresa.razonSocial),
           actions: [
+            if (widget.alVerCompradores != null)
+              IconButton(onPressed: widget.alVerCompradores, tooltip: 'Compradores', icon: const Icon(Icons.badge_outlined)),
             if (widget.alVerPersonas != null)
               IconButton(onPressed: widget.alVerPersonas, tooltip: 'Personas del negocio', icon: const Icon(Icons.group_outlined)),
             IconButton(onPressed: widget.alCambiar, tooltip: 'Cambiar de negocio', icon: const Icon(Icons.swap_horiz)),
