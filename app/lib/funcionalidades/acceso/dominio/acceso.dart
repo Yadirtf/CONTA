@@ -1,26 +1,8 @@
 // Dominio de la funcionalidad: Dart puro, sin Flutter ni http.
 
-/// Respuesta de la API a un paso del acceso: lo pedido o el rechazo con palabras para el dueño.
-sealed class Respuesta<T> {
-  const Respuesta();
-}
+import '../../../nucleo/respuesta.dart';
 
-final class Exito<T> extends Respuesta<T> {
-  const Exito(this.valor);
-  final T valor;
-}
-
-final class Rechazo<T> extends Respuesta<T> {
-  const Rechazo(this.codigo, this.mensaje, {this.reintentarDesde, this.intentosRestantes});
-
-  /// Código estable de la API (acceso.bloqueado, acceso.codigo-incorrecto…) o «sin-conexion».
-  final String codigo;
-  final String mensaje;
-  final DateTime? reintentarDesde;
-  final int? intentosRestantes;
-
-  static const sinConexion = 'sin-conexion';
-}
+export '../../../nucleo/respuesta.dart';
 
 final class CodigoEnviado {
   const CodigoEnviado({required this.venceEn, required this.otroCodigoDesde});

@@ -13,3 +13,10 @@ export const empresas = conta.table('empresas', {
   razonSocial: text('razon_social').notNull(),
   creadaEn: timestamp('creada_en', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Quién pertenece a qué empresa (HU-04.02). usuario_id apunta a conta_identidad.usuarios. */
+export const membresias = conta.table('membresias', {
+  empresaId: uuid('empresa_id').notNull(),
+  usuarioId: uuid('usuario_id').notNull(),
+  creadaEn: timestamp('creada_en', { withTimezone: true }).notNull().defaultNow(),
+});

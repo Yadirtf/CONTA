@@ -3,7 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../nucleo/componentes/franja_de_aviso.dart';
 import '../../../nucleo/componentes/marco_de_formulario.dart';
 import '../../../nucleo/tema/tema_conta.dart';
-import 'componentes/boton_principal.dart';
+import '../../../nucleo/componentes/boton_principal.dart';
 import 'controlador_de_acceso.dart';
 
 /// Paso 1: el celular. Un campo y un botón; el teclado numérico se abre solo.

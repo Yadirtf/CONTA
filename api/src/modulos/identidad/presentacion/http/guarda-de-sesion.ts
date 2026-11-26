@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import type { SesionVigente } from '../../aplicacion/puertos/repositorios-de-identidad.js';
 import { SesionDelToken } from '../../aplicacion/consultas/sesion-del-token.js';
+import { tokenDeLaPeticion } from './token-de-la-peticion.js';
 
 const CLAVE = Symbol('sesion');
 type Peticion = { headers: Record<string, string | string[] | undefined>; [CLAVE]?: SesionVigente };
@@ -18,8 +19,7 @@ export class GuardaDeSesion implements CanActivate {
 
   async canActivate(contexto: ExecutionContext): Promise<boolean> {
     const peticion = contexto.switchToHttp().getRequest<Peticion>();
-    const cabecera = peticion.headers['authorization'];
-    const token = typeof cabecera === 'string' && cabecera.startsWith('Bearer ') ? cabecera.slice('Bearer '.length) : '';
+    const token = tokenDeLaPeticion(peticion.headers);
     const sesion = token ? await this.sesionDelToken.ejecutar(token) : null;
     if (!sesion) throw new UnauthorizedException({ codigo: 'acceso.sin-sesion', mensaje: 'Inicia sesión otra vez' });
     peticion[CLAVE] = sesion;

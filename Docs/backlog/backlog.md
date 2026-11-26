@@ -157,9 +157,11 @@ Como dueño, quiero entrar con mi celular y un código, para no recordar contras
 - Decisión en [ADR-0010](../decisiones/0010-acceso-con-celular-y-codigo-por-whatsapp.md): WhatsApp primero detrás de un puerto, con SMS de respaldo para después y celulares de prueba en el entorno de pruebas. Probado el 2026-11-25 en el entorno de pruebas: el código real llegó por WhatsApp con la plantilla aprobada y un token permanente ([guía de WhatsApp](../despliegue/whatsapp-codigos-de-acceso.md)).
 - Módulos: `api/src/modulos/identidad/` y `app/lib/funcionalidades/acceso/`.
 
-**HU-04.02 Pertenecer a varias empresas** (M, M)
+**HU-04.02 Pertenecer a varias empresas** (M, M) — Hecha
 Como contador, quiero cambiar entre las empresas que llevo, para no tener varias cuentas.
 - Dado un usuario con membresía en 3 empresas, cuando cambia de empresa, entonces todos los datos mostrados son de la empresa elegida.
+- Decisión en [ADR-0011](../decisiones/0011-pertenecer-a-varias-empresas.md): tabla `conta.membresias` con RLS y encabezado `X-Empresa` en cada petición, con la membresía comprobada en cada una. Una transacción del usuario, de solo lectura, lista «mis empresas». La app descarta todo lo de la empresa anterior al cambiar. Además: `POST /empresas` crea una empresa con quien la crea como miembro.
+- Módulos: `api/src/modulos/empresas/` y `app/lib/funcionalidades/empresas/`.
 
 **HU-04.03 Roles y modos** (M, M)
 Como dueño, quiero invitar a mi cajero con permisos limitados, para que venda sin ver los informes.

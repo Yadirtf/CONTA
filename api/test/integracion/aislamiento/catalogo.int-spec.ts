@@ -90,6 +90,10 @@ describe('catálogo de aislamiento multiempresa (integración)', () => {
            FROM pg_policies WHERE schemaname = ANY($1)`,
         [ESQUEMAS_DE_NEGOCIO],
       );
+      // Las políticas *_del_usuario_actual (ADR-0011) dejan leer, en una transacción del usuario, sus membresías
+      // y sus empresas. No filtran por empresa: se revisan con su propia regla, más estricta.
+      const SIN_EMPRESA = '(conta_sistema.empresa_actual() IS NULL)';
+      const esDelUsuario = (p: { nombre: string }) => p.nombre.endsWith('_del_usuario_actual');
       const fallas: string[] = [];
       for (const tabla of tablas) {
         const columna = FABRICAS[tabla.nombre]?.columnaEmpresa ?? 'empresa_id';
@@ -97,7 +101,14 @@ describe('catálogo de aislamiento multiempresa (integración)', () => {
         if (propias.length === 0) fallas.push(`${tabla.nombre}: sin políticas`);
         const filtra = (expresion: string | null) =>
           expresion !== null && expresion.includes('empresa_actual()') && new RegExp(`\\b${columna}\\b`).test(expresion);
-        for (const p of propias) {
+        for (const p of propias.filter(esDelUsuario)) {
+          // ADR-0011: solo lectura y solo sin empresa fijada; si no, se sumaría (OR) a la política de empresa.
+          if (p.comando !== 'SELECT') fallas.push(`${tabla.nombre}.${p.nombre}: una política del usuario solo puede ser FOR SELECT`);
+          if (!p.usando?.includes(SIN_EMPRESA) || !p.usando.includes('usuario_actual()')) {
+            fallas.push(`${tabla.nombre}.${p.nombre}: USING debe exigir ${SIN_EMPRESA} y filtrar por usuario_actual()`);
+          }
+        }
+        for (const p of propias.filter((p) => !esDelUsuario(p))) {
           if (p.comando !== 'INSERT' && !filtra(p.usando)) fallas.push(`${tabla.nombre}.${p.nombre}: USING no filtra por empresa`);
           if (['INSERT', 'UPDATE'].includes(p.comando) && !filtra(p.verificando)) {
             fallas.push(`${tabla.nombre}.${p.nombre}: WITH CHECK no filtra por empresa`);
@@ -123,6 +134,8 @@ describe('catálogo de aislamiento multiempresa (integración)', () => {
       const fallas = llaves
         .filter((l) => {
           const destino = conEsquema(l.destino);
+          // Una tabla fuera de los esquemas de negocio (conta_identidad.usuarios) no tiene empresa: no hay a cuál cruzar.
+          if (!ESQUEMAS_DE_NEGOCIO.includes(destino.split('.')[0]!)) return false;
           if (destino === 'conta.empresas') return !(l.columnas.length === 1 && l.columnas[0] === 'empresa_id');
           const i = l.columnas.indexOf('empresa_id');
           return i < 0 || l.columnasDestino[i] !== (FABRICAS[destino]?.columnaEmpresa ?? 'empresa_id');
