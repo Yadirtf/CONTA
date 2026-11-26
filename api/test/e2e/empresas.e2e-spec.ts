@@ -77,7 +77,8 @@ describe.skipIf(!hayBase)('pertenecer a varias empresas (e2e)', () => {
         await leer(deContador, elegida.id, otra.id).expect(404);
       }
     }
-  });
+    // 9 peticiones con 3 transacciones cada una; contra Neon desde Actions pasan de los 5 s por defecto.
+  }, 30_000);
 
   it('elegir una empresa ajena responde 404, igual que una inexistente o mal escrita', async () => {
     const deAjena = await leer(deContador, ajena.id, ajena.id).expect(404);
