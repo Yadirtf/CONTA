@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'funcionalidades/acceso/dobles.dart';
 import 'funcionalidades/empresas/dobles.dart';
+import 'funcionalidades/miembros/dobles.dart';
 
 class _RepositorioFijo implements RepositorioSalud {
   @override
@@ -16,7 +17,12 @@ void main() {
   testWidgets('sin sesión la app pide el celular', (tester) async {
     final acceso = ControladorDeAcceso(RepositorioDeAccesoFalso(), AlmacenEnMemoria());
     await tester.pumpWidget(
-      ContaApp(acceso: acceso, empresas: RepositorioDeEmpresasFalso([panaderia]), repositorioSalud: _RepositorioFijo()),
+      ContaApp(
+        acceso: acceso,
+        empresas: RepositorioDeEmpresasFalso([panaderia]),
+        miembros: RepositorioDeMiembrosFalso(),
+        repositorioSalud: _RepositorioFijo(),
+      ),
     );
     await tester.pumpAndSettle();
     expect(find.text('Entra con tu celular'), findsOneWidget);
@@ -31,7 +37,12 @@ void main() {
       );
     final acceso = ControladorDeAcceso(RepositorioDeAccesoFalso(), almacen);
     await tester.pumpWidget(
-      ContaApp(acceso: acceso, empresas: RepositorioDeEmpresasFalso([panaderia]), repositorioSalud: _RepositorioFijo()),
+      ContaApp(
+        acceso: acceso,
+        empresas: RepositorioDeEmpresasFalso([panaderia]),
+        miembros: RepositorioDeMiembrosFalso(),
+        repositorioSalud: _RepositorioFijo(),
+      ),
     );
     await tester.pumpAndSettle();
     expect(find.text('Panadería La Espiga'), findsOneWidget);

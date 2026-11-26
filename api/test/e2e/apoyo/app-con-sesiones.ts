@@ -1,4 +1,4 @@
-import type { INestApplication } from '@nestjs/common';
+import type { INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../../src/app.module.js';
@@ -13,12 +13,12 @@ export const CODIGO_DE_PRUEBA = '135790';
 /** Celular al azar en cada corrida, para no chocar con corridas anteriores en la misma base. */
 export const celularAlAzar = (): string => `3${String(Math.floor(Math.random() * 1e9)).padStart(9, '0')}`;
 
-/** La API completa, con los celulares dados como celulares de prueba. */
-export async function crearAppConCelulares(celulares: readonly string[]): Promise<INestApplication> {
+/** La API completa, con los celulares dados como celulares de prueba y, si hacen falta, módulos de prueba. */
+export async function crearAppConCelulares(celulares: readonly string[], modulosDePrueba: Type[] = []): Promise<INestApplication> {
   process.env['CONTA_ENTORNO'] = 'pruebas';
   process.env['CELULARES_DE_PRUEBA'] = celulares.map((c) => `${c}:${CODIGO_DE_PRUEBA}`).join(',');
   try {
-    const app = (await Test.createTestingModule({ imports: [AppModule] }).compile()).createNestApplication();
+    const app = (await Test.createTestingModule({ imports: [AppModule, ...modulosDePrueba] }).compile()).createNestApplication();
     configurarApp(app);
     await app.init();
     return app;

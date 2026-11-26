@@ -43,6 +43,8 @@ export class IdentidadEnMemoria implements UnidadDeTrabajoDeIdentidad {
       },
       usuarios: {
         buscarPorCelular: (celular) => Promise.resolve(c.usuarios.get(celular.e164) ?? null),
+        buscarPorIds: (ids) =>
+          Promise.resolve([...c.usuarios.values()].filter((u) => ids.some((id) => id.valor === u.id.valor))),
         crearOBuscar: (usuario) => {
           if (!c.usuarios.has(usuario.celular.e164)) c.usuarios.set(usuario.celular.e164, usuario);
           return Promise.resolve(c.usuarios.get(usuario.celular.e164)!);

@@ -14,9 +14,19 @@ export const empresas = conta.table('empresas', {
   creadaEn: timestamp('creada_en', { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** Quién pertenece a qué empresa (HU-04.02). usuario_id apunta a conta_identidad.usuarios. */
+/**
+ * Quién pertenece a qué empresa, con qué rol y en qué modo (HU-04.02, HU-04.03). usuario_id, invitada_por y
+ * retirada_por apuntan a conta_identidad.usuarios. Una sola membresía vigente (sin retirar) por persona y empresa.
+ */
 export const membresias = conta.table('membresias', {
+  id: uuid('id').primaryKey(),
   empresaId: uuid('empresa_id').notNull(),
   usuarioId: uuid('usuario_id').notNull(),
+  rol: text('rol').notNull(),
+  modo: text('modo').notNull(),
   creadaEn: timestamp('creada_en', { withTimezone: true }).notNull().defaultNow(),
+  invitadaPor: uuid('invitada_por'),
+  aceptadaEn: timestamp('aceptada_en', { withTimezone: true }),
+  retiradaEn: timestamp('retirada_en', { withTimezone: true }),
+  retiradaPor: uuid('retirada_por'),
 });

@@ -25,9 +25,11 @@ function preparar() {
 describe('CrearEmpresa', () => {
   it('crea la empresa y hace miembro a quien la crea, en la transacción de la empresa nueva', async () => {
     const { base, crear } = preparar();
-    const empresa = await crear.ejecutar(persona, '  Panadería La Espiga ');
+    const { empresa, rol, modo, estado } = await crear.ejecutar(persona, '  Panadería La Espiga ');
     expect(empresa.razonSocial).toBe('Panadería La Espiga');
-    expect(base.membresias).toEqual([{ empresaId: empresa.id, usuarioId: persona, creadaEn: AHORA }]);
+    expect({ rol, modo, estado }).toEqual({ rol: 'dueno', modo: 'simple', estado: 'activa' });
+    const [fundadora] = base.membresias;
+    expect(fundadora).toMatchObject({ empresaId: empresa.id, usuarioId: persona, rol: 'dueno', creadaEn: AHORA, aceptadaEn: AHORA });
     expect(base.transacciones).toEqual([`usuario:${persona.valor}`, `empresa:${empresa.id.valor}`]);
   });
 
@@ -52,17 +54,17 @@ describe('ListarMisEmpresas', () => {
     await crear.ejecutar(persona, 'Tienda B');
     await crear.ejecutar(otraPersona, 'Ajena');
     await crear.ejecutar(persona, 'Almacén A');
-    expect((await listar.ejecutar(persona)).map((e) => e.razonSocial)).toEqual(['Almacén A', 'Tienda B']);
+    expect((await listar.ejecutar(persona)).map((e) => e.empresa.razonSocial)).toEqual(['Almacén A', 'Tienda B']);
     expect(await listar.ejecutar(IdUsuario.de('33333333-3333-4333-8333-333333333333'))).toEqual([]);
   });
 });
 
 describe('ComprobarMembresia', () => {
-  it('da el contexto de la empresa solo a quien pertenece a ella', async () => {
+  it('da el contexto de la empresa, con el rol, solo a quien pertenece a ella', async () => {
     const { crear, comprobar } = preparar();
-    const suya = await crear.ejecutar(persona, 'Suya');
-    const ajena = await crear.ejecutar(otraPersona, 'Ajena');
-    expect(await comprobar.ejecutar(persona, suya.id)).toEqual({ empresaId: suya.id });
+    const { empresa: suya } = await crear.ejecutar(persona, 'Suya');
+    const { empresa: ajena } = await crear.ejecutar(otraPersona, 'Ajena');
+    expect(await comprobar.ejecutar(persona, suya.id)).toEqual({ empresaId: suya.id, usuarioId: persona, rol: 'dueno' });
     expect(await comprobar.ejecutar(persona, ajena.id)).toBeNull();
     expect(await comprobar.ejecutar(persona, IdEmpresa.de('99999999-9999-4999-8999-999999999999'))).toBeNull();
   });

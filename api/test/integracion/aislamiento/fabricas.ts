@@ -69,13 +69,17 @@ export const FABRICAS: Readonly<Record<string, FabricaDeFilas>> = {
   },
   'conta.membresias': {
     columnaEmpresa: 'empresa_id',
-    columnaId: 'usuario_id',
+    columnaId: 'id',
     empresaInmutable: true,
     async insertar(cliente, empresaId) {
       await prepararEmpresa(cliente, empresaId);
       const usuarioId = await crearUsuario(cliente);
-      await cliente.query('INSERT INTO conta.membresias (empresa_id, usuario_id) VALUES ($1, $2)', [empresaId, usuarioId]);
-      return usuarioId;
+      const id = nuevoId();
+      await cliente.query(
+        `INSERT INTO conta.membresias (id, empresa_id, usuario_id, rol, modo, aceptada_en) VALUES ($1, $2, $3, 'dueno', 'simple', now())`,
+        [id, empresaId, usuarioId],
+      );
+      return id;
     },
   },
   'conta.intentos_envio_dian': {

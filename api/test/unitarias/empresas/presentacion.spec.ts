@@ -1,5 +1,5 @@
-import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import type { ContextoEmpresa } from '../../../src/compartido/aplicacion/index.js';
+import { BadRequestException, ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import type { ContextoDeMiembro } from '../../../src/compartido/aplicacion/index.js';
 import { IdEmpresa, IdUsuario } from '../../../src/compartido/dominio/index.js';
 import { excepcionDe } from '../../../src/compartido/presentacion/empresa/rechazos-de-empresa.js';
 import type { ComprobarMembresia } from '../../../src/modulos/empresas/aplicacion/consultas/comprobar-membresia.js';
@@ -18,9 +18,9 @@ function resolutor() {
   const preguntas: string[] = [];
   const sesionDelToken = { ejecutar: (t: string) => Promise.resolve(t === TOKEN ? sesion : null) } as SesionDelToken;
   const comprobar = {
-    ejecutar: (u: IdUsuario, e: IdEmpresa): Promise<ContextoEmpresa | null> => {
+    ejecutar: (u: IdUsuario, e: IdEmpresa): Promise<ContextoDeMiembro | null> => {
       preguntas.push(`${u.valor}@${e.valor}`);
-      return Promise.resolve(e.valor === SUYA ? { empresaId: e } : null);
+      return Promise.resolve(e.valor === SUYA ? { empresaId: e, usuarioId: u, rol: 'cajero' } : null);
     },
   } as ComprobarMembresia;
   return { preguntas, resolutor: new ResolutorPorMembresia(sesionDelToken, comprobar) };
@@ -29,10 +29,10 @@ function resolutor() {
 const peticion = (encabezados: Record<string, string | string[] | undefined>) => ({ headers: encabezados });
 
 describe('ResolutorPorMembresia', () => {
-  it('con sesión y membresía, la petición corre en la empresa elegida', async () => {
+  it('con sesión y membresía, la petición corre en la empresa elegida, con el rol del miembro', async () => {
     const { resolutor: r, preguntas } = resolutor();
     const resolucion = await r.resolver(peticion({ authorization: `Bearer ${TOKEN}`, 'x-empresa': SUYA.toUpperCase() }));
-    expect(resolucion).toEqual({ contexto: { empresaId: IdEmpresa.de(SUYA) } });
+    expect(resolucion).toEqual({ contexto: { empresaId: IdEmpresa.de(SUYA), usuarioId: persona, rol: 'cajero' } });
     expect(preguntas).toEqual([`${persona.valor}@${SUYA}`]);
   });
 
@@ -73,5 +73,8 @@ describe('excepcionDe', () => {
     const ajena = excepcionDe('empresa-ajena');
     expect(ajena).toBeInstanceOf(NotFoundException);
     expect(ajena.getResponse()).toEqual({ codigo: 'empresa.no-encontrada', mensaje: 'No encontramos esa empresa' });
+    const sinPermiso = excepcionDe('sin-permiso');
+    expect(sinPermiso).toBeInstanceOf(ForbiddenException);
+    expect(sinPermiso.getResponse()).toEqual({ codigo: 'permiso.denegado', mensaje: 'No tienes permiso' });
   });
 });

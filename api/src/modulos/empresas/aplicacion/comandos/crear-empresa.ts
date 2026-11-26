@@ -2,12 +2,12 @@ import type { Reloj, UnidadDeTrabajo, UnidadDeTrabajoDelUsuario } from '../../..
 import { IdEmpresa, type IdUsuario } from '../../../../compartido/dominio/index.js';
 import { Empresa } from '../../dominio/empresa.js';
 import { comprobarQuePuedeCrearOtra } from '../../dominio/limite-de-empresas.js';
-import { nuevaMembresia } from '../../dominio/membresia.js';
-import type { RepositoriosDelUsuario } from '../puertos/repositorio-de-mis-empresas.js';
+import { Membresia } from '../../dominio/membresia.js';
+import type { MiEmpresa, RepositoriosDelUsuario } from '../puertos/repositorio-de-mis-empresas.js';
 import type { RepositoriosDeEmpresas } from '../puertos/repositorio-empresas.js';
 
 /**
- * Crea una empresa y hace miembro a quien la crea, en una sola transacción de la empresa nueva (HU-04.02).
+ * Crea una empresa y hace dueño a quien la crea, en una sola transacción de la empresa nueva (HU-04.02, HU-04.03).
  * El id lo genera el servidor: uno elegido por el cliente podría apuntar a una empresa ajena.
  */
 export class CrearEmpresa {
@@ -18,14 +18,15 @@ export class CrearEmpresa {
     private readonly nuevoId: () => string = () => crypto.randomUUID(),
   ) {}
 
-  async ejecutar(usuarioId: IdUsuario, razonSocial: string): Promise<Empresa> {
+  async ejecutar(usuarioId: IdUsuario, razonSocial: string): Promise<MiEmpresa> {
     const empresa = Empresa.crear(IdEmpresa.de(this.nuevoId()), razonSocial);
     const queLleva = await this.delUsuario.ejecutar({ usuarioId }, ({ misEmpresas }) => misEmpresas.contar());
     comprobarQuePuedeCrearOtra(queLleva);
+    const fundadora = Membresia.fundadora(this.nuevoId(), empresa.id, usuarioId, this.reloj.ahora());
     await this.empresas.ejecutar({ empresaId: empresa.id }, async ({ empresas, membresias }) => {
       await empresas.agregar(empresa);
-      await membresias.agregar(nuevaMembresia(empresa.id, usuarioId, this.reloj.ahora()));
+      await membresias.agregar(fundadora);
     });
-    return empresa;
+    return { empresa, rol: fundadora.rol, modo: fundadora.modo, estado: 'activa' };
   }
 }

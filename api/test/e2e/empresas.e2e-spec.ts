@@ -9,6 +9,10 @@ import { celularAlAzar, crearAppConCelulares, entrar } from './apoyo/app-con-ses
 interface EmpresaRespondida {
   id: string;
   razonSocial: string;
+  rol: string;
+  modo: string;
+  estado: string;
+  permisos: string[];
 }
 
 describe('empresas sin sesión (e2e)', () => {
@@ -72,7 +76,7 @@ describe.skipIf(!hayBase)('pertenecer a varias empresas (e2e)', () => {
   it('al cambiar de empresa, lo que ve es de la empresa elegida', async () => {
     for (const elegida of suyas) {
       const { body } = await leer(deContador, elegida.id, elegida.id).expect(200);
-      expect(body).toEqual(elegida);
+      expect(body).toEqual({ id: elegida.id, razonSocial: elegida.razonSocial });
       for (const otra of suyas.filter((e) => e.id !== elegida.id)) {
         await leer(deContador, elegida.id, otra.id).expect(404);
       }

@@ -163,10 +163,12 @@ Como contador, quiero cambiar entre las empresas que llevo, para no tener varias
 - Decisión en [ADR-0011](../decisiones/0011-pertenecer-a-varias-empresas.md): tabla `conta.membresias` con RLS y encabezado `X-Empresa` en cada petición, con la membresía comprobada en cada una. Una transacción del usuario, de solo lectura, lista «mis empresas». La app descarta todo lo de la empresa anterior al cambiar. Además: `POST /empresas` crea una empresa con quien la crea como miembro.
 - Módulos: `api/src/modulos/empresas/` y `app/lib/funcionalidades/empresas/`.
 
-**HU-04.03 Roles y modos** (M, M)
+**HU-04.03 Roles y modos** (M, M) — Hecha
 Como dueño, quiero invitar a mi cajero con permisos limitados, para que venda sin ver los informes.
 - Dado un cajero, cuando intenta abrir informes o anular documentos, entonces recibe «no tienes permiso».
 - El modo (simple o contador) viene de la API con la membresía.
+- Decisión en [ADR-0012](../decisiones/0012-roles-y-modos.md): roles dueño, contador y cajero con una matriz de permisos en el dominio. Cada endpoint declara `@Requiere(permiso)`, la guarda responde 403 «No tienes permiso» y niega por defecto, y los casos de uso vuelven a exigir el permiso. El modo va en la membresía y no da permisos. Invitar es por celular: la membresía queda invitada hasta que la persona la acepta. El retiro no borra la fila y nunca deja la empresa sin dueño. Los endpoints de informes (EP-16) y anulación (EP-06) llevarán `@Requiere(Permiso.VerInformes)` y `@Requiere(Permiso.AnularDocumentos)`.
+- Módulos: `api/src/compartido/dominio/permisos/`, `api/src/modulos/empresas/`, `app/lib/funcionalidades/empresas/` y `app/lib/funcionalidades/miembros/`.
 
 **HU-04.04 Verificación en dos pasos para contador y consola** (M, S)
 - Dado un usuario con rol contador o administrador, cuando inicia sesión, entonces se exige el segundo factor.
