@@ -1,6 +1,6 @@
 # ADR-0012. Roles y modos: matriz de permisos en el dominio, comprobada en la guarda y otra vez en el caso de uso
 
-- Estado: Propuesto
+- Estado: Aceptado (Inge, 2026-11-26)
 - Fecha: 2026-11-26
 - Historia: HU-04.03
 - Decide: Inge
