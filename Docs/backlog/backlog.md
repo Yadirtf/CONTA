@@ -178,7 +178,7 @@ Como dueño, quiero invitar a mi cajero con permisos limitados, para que venda s
 
 #### EP-05. Catálogo: clientes y productos — Prioridad M
 
-**HU-05.01 Buscar cliente por cédula o NIT** (M, M) — En revisión
+**HU-05.01 Buscar cliente por cédula o NIT** (M, M) — Hecha
 Como cajero, quiero buscar al comprador por su documento, para facturar rápido.
 - Dado un NIT, cuando lo escribo, entonces se calcula y valida el dígito de verificación.
 - Dado un comprador nuevo, puedo crearlo con los campos mínimos que exige la DIAN.
@@ -186,10 +186,12 @@ Como cajero, quiero buscar al comprador por su documento, para facturar rápido.
 - Decisión (nota en el PR, nivel 2): tabla `conta.clientes` por empresa con RLS, única por documento; búsqueda por el comienzo del documento con 3 caracteres como mínimo y 10 resultados como máximo, en el cuerpo de un `POST` para que el documento no quede en URLs; el dígito de verificación lo calcula la API (también al buscar) y rechaza uno escrito que no coincida; crear es idempotente con un id que elige la app y un documento repetido devuelve el comprador guardado; el consumidor final (222222222222) es una constante del dominio, no una fila, y su número queda reservado; tope de 300 compradores nuevos por empresa al día. Editar y borrar compradores (Ley 1581) quedan para una historia propia.
 - Módulos: `api/src/modulos/catalogo/`, `api/src/compartido/dominio/identificacion/` y `app/lib/funcionalidades/clientes/`.
 
-**HU-05.02 Productos con IVA ya marcado** (M, M)
+**HU-05.02 Productos con IVA ya marcado** (M, M) — En revisión
 Como dueño, quiero crear productos con su precio e IVA, para no calcular impuestos al vender.
 - Dado un producto con IVA 19% incluido, cuando lo vendo, entonces la base y el impuesto se separan exactamente.
 - Puedo marcar productos excluidos o exentos.
+- Decisión (nota en el PR, nivel 2, con Verbalized Sampling y evaluador aparte): tabla `conta.productos` por empresa con RLS; se guarda un solo precio, el final con IVA incluido (Ley 1480), y el tratamiento como tipo (gravado, exento, excluido) más tarifa (19 o 5; exento 0 %); un precio escrito sin IVA se convierte una vez al crear. Al vender se separa el total de la línea (precio × cantidad): la base se redondea una vez, mitad al par, y el IVA es lo que falta, así que base + IVA = total exacto. Crear pide el permiso nuevo `gestionar-productos` (dueño y contador); listar, `vender` (también el cajero). Crear es idempotente por id; código único por empresa; lista cerrada de unidades UN/ECE; tope de 500 productos nuevos por empresa al día. Cambiar precio o retirar productos quedan para otra historia. Para HU-06.01: la línea de la factura se arma desde el total con IVA sin recalcular, y la factura distingue exento de excluido.
+- Módulos: `api/src/compartido/dominio/impuestos/`, `api/src/modulos/catalogo/` (dominio `productos/`) y `app/lib/funcionalidades/productos/`.
 
 #### EP-06. Emisión de documentos electrónicos — Prioridad M
 

@@ -1,7 +1,7 @@
 import type { ContextoDeMiembro, Reloj, UnidadDeTrabajo } from '../../../../compartido/aplicacion/index.js';
 import { ErrorDominio, exigirPermiso, Permiso } from '../../../../compartido/dominio/index.js';
 import { Cliente, comprobarQuePuedeCrear, type DatosDeClienteNuevo, UN_DIA_EN_MS } from '../../dominio/clientes/index.js';
-import type { RepositoriosDeCatalogo } from '../puertos/repositorio-clientes.js';
+import type { RepositoriosDeCatalogo } from '../puertos/repositorios-de-catalogo.js';
 
 export interface ClienteCreado {
   readonly cliente: Cliente;

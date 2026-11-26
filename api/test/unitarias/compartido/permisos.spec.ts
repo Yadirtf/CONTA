@@ -12,7 +12,7 @@ import {
 // Matriz de permisos de HU-04.03 (ADR-0012), en las dos direcciones: lo permitido y lo negado.
 const ESPERADO: Readonly<Record<Rol, readonly Permiso[]>> = {
   dueno: Object.values(Permiso),
-  contador: [Permiso.VerEmpresa, Permiso.Vender, Permiso.VerInformes, Permiso.AnularDocumentos, Permiso.UsarModoContador],
+  contador: [Permiso.VerEmpresa, Permiso.Vender, Permiso.GestionarProductos, Permiso.VerInformes, Permiso.AnularDocumentos, Permiso.UsarModoContador],
   cajero: [Permiso.VerEmpresa, Permiso.Vender],
 };
 
@@ -24,9 +24,9 @@ describe('permisos por rol', () => {
     },
   );
 
-  it('el cajero vende, pero no abre informes, no anula documentos ni gestiona personas', () => {
+  it('el cajero vende, pero no crea productos, no abre informes, no anula documentos ni gestiona personas', () => {
     expect(tienePermiso('cajero', Permiso.Vender)).toBe(true);
-    for (const negado of [Permiso.VerInformes, Permiso.AnularDocumentos, Permiso.GestionarMiembros, Permiso.UsarModoContador]) {
+    for (const negado of [Permiso.GestionarProductos, Permiso.VerInformes, Permiso.AnularDocumentos, Permiso.GestionarMiembros, Permiso.UsarModoContador]) {
       expect(() => exigirPermiso('cajero', negado)).toThrow(expect.objectContaining({ codigo: 'permiso.denegado', message: 'No tienes permiso' }));
     }
   });

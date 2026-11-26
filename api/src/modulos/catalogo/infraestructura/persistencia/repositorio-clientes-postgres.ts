@@ -4,10 +4,8 @@ import type { Ejecutor } from '../../../../compartido/infraestructura/persistenc
 import type { RepositorioClientes } from '../../aplicacion/puertos/repositorio-clientes.js';
 import type { Cliente } from '../../dominio/clientes/index.js';
 import { clienteDeFila, filaNuevaDe } from './cliente-de-fila.js';
+import { empresaDeLaTransaccion as EMPRESA_DE_LA_TRANSACCION } from './empresa-de-la-transaccion.js';
 import { clientes } from './tablas-catalogo.js';
-
-/** La empresa de la transacción, fijada por la unidad de trabajo. Así el código nunca escribe una empresa a mano. */
-const EMPRESA_DE_LA_TRANSACCION = sql`conta_sistema.empresa_actual()`;
 
 // Corre en la transacción de una empresa: RLS solo deja ver y escribir sus clientes, así que no filtra por
 // empresa a mano (un filtro de más escondería un error de la política en las pruebas).

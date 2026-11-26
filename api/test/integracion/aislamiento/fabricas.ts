@@ -99,6 +99,22 @@ export const FABRICAS: Readonly<Record<string, FabricaDeFilas>> = {
       return id;
     },
   },
+  'conta.productos': {
+    columnaEmpresa: 'empresa_id',
+    columnaId: 'id',
+    empresaInmutable: true,
+    async insertar(cliente, empresaId) {
+      await prepararEmpresa(cliente, empresaId);
+      const creadoPor = await crearUsuario(cliente);
+      const id = nuevoId();
+      await cliente.query(
+        `INSERT INTO conta.productos (empresa_id, id, nombre, nombre_busqueda, unidad, precio, tipo_de_iva, tarifa_iva, creado_por)
+         VALUES ($1, $2, 'Gaseosa 400 ml', 'gaseosa 400 ml', '94', 2500, 'gravado', '19', $3)`,
+        [empresaId, id, creadoPor],
+      );
+      return id;
+    },
+  },
   'conta.intentos_envio_dian': {
     columnaEmpresa: 'empresa_id',
     columnaId: 'id',

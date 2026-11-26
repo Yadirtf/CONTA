@@ -6,6 +6,8 @@ const ESTADOS: Readonly<Record<string, HttpStatus>> = {
   [CODIGO_SIN_PERMISO]: HttpStatus.FORBIDDEN,
   'cliente.id-en-uso': HttpStatus.CONFLICT,
   'cliente.limite-diario': HttpStatus.TOO_MANY_REQUESTS,
+  'producto.codigo-en-uso': HttpStatus.CONFLICT,
+  'producto.limite-diario': HttpStatus.TOO_MANY_REQUESTS,
 };
 
 interface RespuestaHttp {
@@ -13,7 +15,7 @@ interface RespuestaHttp {
   json(cuerpo: unknown): void;
 }
 
-/** Traduce los ErrorDominio del catálogo a HTTP con un código estable. Nunca repite el documento recibido. */
+/** Traduce los ErrorDominio del catálogo (clientes y productos) a HTTP con un código estable. Nunca repite el documento recibido. */
 @Catch(ErrorDominio)
 export class TraductorDeErroresDeCatalogo implements ExceptionFilter<ErrorDominio> {
   catch(error: ErrorDominio, host: ArgumentsHost): void {

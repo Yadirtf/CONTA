@@ -2,8 +2,10 @@
 // unicidad por documento y por id es la de la tabla. La concurrencia real se prueba en las e2e.
 import type { ContextoEmpresa, UnidadDeTrabajo } from '../../../src/compartido/aplicacion/index.js';
 import type { Identificacion } from '../../../src/compartido/dominio/index.js';
-import type { RepositorioClientes, RepositoriosDeCatalogo } from '../../../src/modulos/catalogo/aplicacion/puertos/repositorio-clientes.js';
+import type { RepositorioClientes } from '../../../src/modulos/catalogo/aplicacion/puertos/repositorio-clientes.js';
+import type { RepositoriosDeCatalogo } from '../../../src/modulos/catalogo/aplicacion/puertos/repositorios-de-catalogo.js';
 import type { Cliente } from '../../../src/modulos/catalogo/dominio/clientes/index.js';
+import { ProductosEnMemoria } from './productos-en-memoria.js';
 
 interface Guardado {
   readonly empresaId: string;
@@ -16,9 +18,11 @@ export class CatalogoEnMemoria implements UnidadDeTrabajo<RepositoriosDeCatalogo
   antesDeInsertar: (() => void) | null = null;
   /** Veces que se pidió el candado de altas. */
   bloqueos = 0;
+  readonly productos = new ProductosEnMemoria();
 
   ejecutar<T>(contexto: ContextoEmpresa, trabajo: (r: RepositoriosDeCatalogo) => Promise<T>): Promise<T> {
-    return trabajo({ clientes: this.repositorio(contexto.empresaId.valor) });
+    const empresaId = contexto.empresaId.valor;
+    return trabajo({ clientes: this.repositorio(empresaId), productos: this.productos.de(empresaId) });
   }
 
   guardar(empresaId: string, cliente: Cliente): void {
