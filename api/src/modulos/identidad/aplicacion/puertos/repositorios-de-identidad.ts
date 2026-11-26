@@ -1,4 +1,4 @@
-import type { AccesoPorCelular, Celular, Sesion, Usuario } from '../../dominio/index.js';
+import type { AccesoPorCelular, Celular, IdUsuario, Sesion, Usuario } from '../../dominio/index.js';
 
 /** Accesos por celular. `tomar` bloquea la fila hasta el fin de la transacción: dos intentos no se cruzan. */
 export interface RepositorioDeAccesos {
@@ -8,6 +8,8 @@ export interface RepositorioDeAccesos {
 
 export interface RepositorioDeUsuarios {
   buscarPorCelular(celular: Celular): Promise<Usuario | null>;
+  /** Las personas que existan de esos ids, en cualquier orden. */
+  buscarPorIds(ids: readonly IdUsuario[]): Promise<Usuario[]>;
   /** Crea el usuario o, si otro proceso lo creó a la vez, devuelve el existente. */
   crearOBuscar(usuario: Usuario): Promise<Usuario>;
 }

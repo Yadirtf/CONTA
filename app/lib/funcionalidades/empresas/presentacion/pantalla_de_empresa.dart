@@ -5,7 +5,8 @@ import '../../../nucleo/tema/tema_conta.dart';
 import '../dominio/empresas.dart';
 
 /// Inicio dentro de un negocio. El nombre de arriba lo confirma la API pidiéndolo dentro de esa empresa:
-/// si la persona ya no pertenece, se ve el aviso y no los datos.
+/// si la persona ya no pertenece, se ve el aviso y no los datos. Debajo, su rol y su modo, que llegan de la API
+/// (HU-04.03).
 class PantallaDeEmpresa extends StatefulWidget {
   const PantallaDeEmpresa({
     super.key,
@@ -14,6 +15,7 @@ class PantallaDeEmpresa extends StatefulWidget {
     required this.alCambiar,
     required this.contenido,
     this.alSalir,
+    this.alVerPersonas,
   });
 
   final Empresa empresa;
@@ -23,6 +25,9 @@ class PantallaDeEmpresa extends StatefulWidget {
 
   /// Cerrar sesión. Llega desde la composición (app.dart): empresas no conoce el acceso.
   final VoidCallback? alSalir;
+
+  /// Abrir las personas del negocio. Solo llega si la membresía tiene el permiso de gestionarlas.
+  final VoidCallback? alVerPersonas;
 
   @override
   State<PantallaDeEmpresa> createState() => _PantallaDeEmpresaState();
@@ -40,6 +45,8 @@ class _PantallaDeEmpresaState extends State<PantallaDeEmpresa> {
         appBar: AppBar(
           title: Text(respuesta is Exito<Empresa> ? respuesta.valor.razonSocial : widget.empresa.razonSocial),
           actions: [
+            if (widget.alVerPersonas != null)
+              IconButton(onPressed: widget.alVerPersonas, tooltip: 'Personas del negocio', icon: const Icon(Icons.group_outlined)),
             IconButton(onPressed: widget.alCambiar, tooltip: 'Cambiar de negocio', icon: const Icon(Icons.swap_horiz)),
             if (widget.alSalir != null)
               IconButton(onPressed: widget.alSalir, tooltip: 'Salir', icon: const Icon(Icons.logout)),
@@ -49,7 +56,15 @@ class _PantallaDeEmpresaState extends State<PantallaDeEmpresa> {
           padding: const EdgeInsets.all(EspacioConta.s4),
           child: switch (respuesta) {
             null => const Center(child: CircularProgressIndicator()),
-            Exito() => widget.contenido,
+            Exito() => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (widget.empresa.membresia case final membresia?)
+                  Text(membresia.descripcion, style: TextStyle(color: context.paleta.textoSuave)),
+                const SizedBox(height: EspacioConta.s4),
+                Expanded(child: widget.contenido),
+              ],
+            ),
             Rechazo(:final mensaje) => FranjaDeAviso(mensaje),
           },
         ),

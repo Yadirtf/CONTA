@@ -4,7 +4,8 @@ import '../dominio/empresas.dart';
 
 enum PasoDeEmpresas { cargando, sinConexion, crear, elegir, adentro }
 
-/// Estado de «en qué empresa trabajo» (HU-04.02): listar, elegir, crear y cambiar. Las pantallas solo lo muestran.
+/// Estado de «en qué empresa trabajo» (HU-04.02): listar, elegir, crear, cambiar y responder invitaciones
+/// (HU-04.03). Las pantallas solo lo muestran.
 /// Vive mientras dura la sesión: al salir se descarta con todo lo que sabía.
 class ControladorDeEmpresas extends ChangeNotifier {
   ControladorDeEmpresas(this._repositorio, {this.alPerderSesion});
@@ -22,7 +23,8 @@ class ControladorDeEmpresas extends ChangeNotifier {
   /// La empresa en la que se trabaja. Todo lo de adentro se pide en su nombre.
   Empresa? elegida;
 
-  /// Al entrar: sin empresas, a crear la primera; con una, directo a ella; con varias, a elegir.
+  /// Al entrar: sin empresas, a crear la primera; con una (ya aceptada), directo a ella; con varias o con una
+  /// invitación pendiente, a elegir.
   Future<void> cargar() async {
     _ir(PasoDeEmpresas.cargando);
     switch (await _repositorio.misEmpresas()) {
@@ -30,7 +32,7 @@ class ControladorDeEmpresas extends ChangeNotifier {
         empresas = valor;
         aviso = null;
         if (valor.isEmpty) return _ir(PasoDeEmpresas.crear);
-        if (valor.length == 1) return elegir(valor.single);
+        if (valor.length == 1 && !valor.single.invitada) return elegir(valor.single);
         _ir(PasoDeEmpresas.elegir);
       case final Rechazo<List<Empresa>> rechazo:
         if (_sesionPerdida(rechazo)) return;
@@ -39,7 +41,9 @@ class ControladorDeEmpresas extends ChangeNotifier {
     }
   }
 
+  /// Una invitación pendiente no se puede elegir: primero se acepta.
   void elegir(Empresa empresa) {
+    if (empresa.invitada) return;
     elegida = empresa;
     aviso = null;
     _ir(PasoDeEmpresas.adentro);
@@ -71,6 +75,23 @@ class ControladorDeEmpresas extends ChangeNotifier {
           empresas = [...empresas, valor]..sort((a, b) => a.razonSocial.compareTo(b.razonSocial));
           elegir(valor);
         case final Rechazo<Empresa> rechazo:
+          if (!_sesionPerdida(rechazo)) aviso = rechazo.mensaje;
+      }
+    } finally {
+      ocupado = false;
+      notifyListeners();
+    }
+  }
+
+  /// Acepta o rechaza la invitación y vuelve a cargar la lista, que ya trae el negocio como suyo o sin él.
+  Future<void> responder(Empresa empresa, {required bool aceptar}) async {
+    ocupado = true;
+    notifyListeners();
+    try {
+      switch (await _repositorio.responderInvitacion(empresa.id, aceptar: aceptar)) {
+        case Exito():
+          await cargar();
+        case final Rechazo<void> rechazo:
           if (!_sesionPerdida(rechazo)) aviso = rechazo.mensaje;
       }
     } finally {

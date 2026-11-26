@@ -19,7 +19,7 @@ async function escenario(cliente: pg.Client) {
   const [suya1, suya2, ajena] = [nuevoId(), nuevoId(), nuevoId()];
   for (const [empresa, miembro] of [[suya1, persona], [suya2, persona], [ajena, otra]] as const) {
     await crearEmpresa(cliente, empresa);
-    await cliente.query('INSERT INTO conta.membresias (empresa_id, usuario_id) VALUES ($1, $2)', [empresa, miembro]);
+    await cliente.query(`INSERT INTO conta.membresias (id, empresa_id, usuario_id, rol, modo, aceptada_en) VALUES (gen_random_uuid(), $1, $2, 'dueno', 'simple', now())`, [empresa, miembro]);
   }
   await insertarEnvioDian(cliente, suya1);
   await comoEmpresa(cliente, null);
@@ -51,7 +51,7 @@ describe.skipIf(!hayBase)('transacción del usuario (integración)', () => {
       const { persona, suyas, ajena } = await escenario(cliente);
       await comoUsuario(cliente, persona);
       const crear = await errorDe(cliente, 'INSERT INTO conta.empresas (id, razon_social) VALUES ($1, $2)', [nuevoId(), 'X']);
-      const unirse = await errorDe(cliente, 'INSERT INTO conta.membresias (empresa_id, usuario_id) VALUES ($1, $2)', [ajena, persona]);
+      const unirse = await errorDe(cliente, `INSERT INTO conta.membresias (id, empresa_id, usuario_id, rol, modo, aceptada_en) VALUES (gen_random_uuid(), $1, $2, 'dueno', 'simple', now())`, [ajena, persona]);
       const renombrar = await cliente.query('UPDATE conta.empresas SET razon_social = $2 WHERE id = $1', [suyas[0], 'Otra']);
       expect(crear?.message).toMatch(/row-level security/);
       expect(unirse?.message).toMatch(/row-level security/);
@@ -91,7 +91,7 @@ describe.skipIf(!hayBase)('transacción del usuario (integración)', () => {
       await preparar.query('BEGIN');
       await preparar.query(`INSERT INTO conta_identidad.usuarios (id, celular) VALUES ($1, $2)`, [persona, `+573${String(Date.now()).slice(-9)}`]);
       await crearEmpresa(preparar, empresa);
-      await preparar.query('INSERT INTO conta.membresias (empresa_id, usuario_id) VALUES ($1, $2)', [empresa, persona]);
+      await preparar.query(`INSERT INTO conta.membresias (id, empresa_id, usuario_id, rol, modo, aceptada_en) VALUES (gen_random_uuid(), $1, $2, 'dueno', 'simple', now())`, [empresa, persona]);
       await preparar.query('COMMIT');
     } finally {
       await preparar.end();
@@ -101,7 +101,7 @@ describe.skipIf(!hayBase)('transacción del usuario (integración)', () => {
     try {
       const deLaPersona = await uow.ejecutar({ usuarioId: IdUsuario.de(persona) }, ({ misEmpresas }) => misEmpresas.listar());
       const deOtra = await uow.ejecutar({ usuarioId: IdUsuario.de(nuevoId()) }, ({ misEmpresas }) => misEmpresas.listar());
-      expect(deLaPersona.map((e) => e.id.valor)).toEqual([empresa]);
+      expect(deLaPersona.map((e) => e.empresa.id.valor)).toEqual([empresa]);
       expect(deOtra).toEqual([]);
     } finally {
       await baseDeDatos.cerrar();

@@ -10,8 +10,8 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { ContextoEmpresa } from '../../../../compartido/aplicacion/index.js';
-import { IdEmpresa } from '../../../../compartido/dominio/index.js';
-import { EmpresaDeLaPeticion, GuardaDeEmpresa } from '../../../../compartido/presentacion/empresa/index.js';
+import { IdEmpresa, Permiso } from '../../../../compartido/dominio/index.js';
+import { EmpresaDeLaPeticion, GuardaDeEmpresa, Requiere } from '../../../../compartido/presentacion/empresa/index.js';
 import { ObtenerEmpresa } from '../../aplicacion/consultas/obtener-empresa.js';
 import { RespuestaEmpresa, respuestaDe } from './respuesta-empresa.js';
 
@@ -25,11 +25,12 @@ export class EmpresasController {
   constructor(private readonly obtenerEmpresa: ObtenerEmpresa) {}
 
   @Get(':id')
+  @Requiere(Permiso.VerEmpresa)
   @Header('Cache-Control', 'no-store')
   @ApiOperation({ summary: 'Datos de la empresa. Solo responde por la empresa elegida en X-Empresa.' })
   @ApiOkResponse({ type: RespuestaEmpresa })
   @ApiBadRequestResponse({ description: 'Falta X-Empresa (empresa.sin-elegir).' })
-  @ApiNotFoundResponse({ description: 'No existe, es de otra empresa o la persona no es miembro: la API no distingue.' })
+  @ApiNotFoundResponse({ description: 'No existe, es de otra empresa o la persona no es miembro activo: la API no distingue.' })
   @ApiUnauthorizedResponse({ description: 'Sin sesión, vencida o cerrada.' })
   async obtener(
     @EmpresaDeLaPeticion() contexto: ContextoEmpresa,

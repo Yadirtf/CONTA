@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { Ejecutor } from '../../../../compartido/infraestructura/persistencia/base-de-datos.js';
 import type { RepositorioDeUsuarios } from '../../aplicacion/puertos/repositorios-de-identidad.js';
 import { Celular, IdUsuario, type Usuario } from '../../dominio/index.js';
@@ -14,6 +14,14 @@ export class RepositorioDeUsuariosPostgres implements RepositorioDeUsuarios {
   async buscarPorCelular(celular: Celular): Promise<Usuario | null> {
     const [fila] = await this.ejecutor.select().from(usuarios).where(eq(usuarios.celular, celular.e164));
     return fila ? usuarioDeFila(fila) : null;
+  }
+
+  async buscarPorIds(ids: readonly IdUsuario[]): Promise<Usuario[]> {
+    const filas = await this.ejecutor
+      .select()
+      .from(usuarios)
+      .where(inArray(usuarios.id, ids.map((id) => id.valor)));
+    return filas.map(usuarioDeFila);
   }
 
   async crearOBuscar(usuario: Usuario): Promise<Usuario> {

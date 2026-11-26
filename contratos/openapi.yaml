@@ -137,12 +137,13 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/RespuestaEmpresa"
+                  $ref: "#/components/schemas/RespuestaMiEmpresa"
         "401":
           description: Sin sesión, vencida o cerrada.
       security:
         - bearer: []
-      summary: Empresas a las que pertenece la persona de la sesión, por razón social.
+      summary: Empresas de la persona de la sesión, por razón social, con rol, modo,
+        permisos e invitaciones pendientes.
       tags:
         - empresas
     post:
@@ -160,7 +161,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/RespuestaEmpresa"
+                $ref: "#/components/schemas/RespuestaMiEmpresa"
         "400":
           description: Razón social vacía o de más de 450 caracteres.
         "401":
@@ -169,7 +170,7 @@ paths:
           description: La persona ya lleva el máximo de empresas (empresa.limite).
       security:
         - bearer: []
-      summary: Crea una empresa; quien la crea queda como miembro.
+      summary: Crea una empresa; quien la crea queda como dueño.
       tags:
         - empresas
   /empresas/{id}:
@@ -199,13 +200,187 @@ paths:
         "401":
           description: Sin sesión, vencida o cerrada.
         "404":
-          description: "No existe, es de otra empresa o la persona no es miembro: la API
-            no distingue."
+          description: "No existe, es de otra empresa o la persona no es miembro activo:
+            la API no distingue."
       security:
         - bearer: []
       summary: Datos de la empresa. Solo responde por la empresa elegida en X-Empresa.
       tags:
         - empresas
+  /empresas/{empresaId}/invitacion/aceptar:
+    post:
+      operationId: InvitacionesController_aceptar
+      parameters:
+        - name: empresaId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "204":
+          description: ""
+        "401":
+          description: Sin sesión, vencida o cerrada.
+        "404":
+          description: No hay invitación pendiente para esta persona en esa empresa
+            (invitacion.no-encontrada).
+      security:
+        - bearer: []
+      summary: "Acepta la invitación: desde ya puede trabajar en la empresa con el rol
+        que le dieron."
+      tags:
+        - empresas
+  /empresas/{empresaId}/invitacion/rechazar:
+    post:
+      operationId: InvitacionesController_rechazar
+      parameters:
+        - name: empresaId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "204":
+          description: ""
+        "401":
+          description: Sin sesión, vencida o cerrada.
+        "404":
+          description: No hay invitación pendiente para esta persona en esa empresa
+            (invitacion.no-encontrada).
+      security:
+        - bearer: []
+      summary: "Rechaza la invitación: la empresa deja de aparecer en su lista."
+      tags:
+        - empresas
+  /miembros:
+    get:
+      operationId: MiembrosController_listar
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RespuestaMiembro"
+        "403":
+          description: "El rol no tiene el permiso (permiso.denegado: «No tienes permiso»)."
+      security:
+        - bearer: []
+      summary: Personas invitadas y activas de la empresa.
+      tags:
+        - miembros
+    post:
+      operationId: MiembrosController_invitar
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NuevoMiembro"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaMiembro"
+        "403":
+          description: "El rol no tiene el permiso (permiso.denegado: «No tienes permiso»)."
+        "409":
+          description: Ya está o ya tiene invitación (miembro.ya-esta), o la empresa llegó
+            al tope (miembro.limite).
+        "429":
+          description: Tope de invitaciones del día (miembro.limite-diario).
+      security:
+        - bearer: []
+      summary: Invita a una persona por su celular; entra cuando acepta la invitación.
+      tags:
+        - miembros
+  /miembros/{usuarioId}:
+    patch:
+      operationId: MiembrosController_cambiar
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+        - name: usuarioId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CambioDeMiembro"
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaCambioDeMiembro"
+        "403":
+          description: "El rol no tiene el permiso (permiso.denegado: «No tienes permiso»)."
+        "404":
+          description: La persona no está en la empresa (miembro.no-encontrado).
+        "409":
+          description: Es su propio rol (miembro.sobre-si-mismo) o dejaría la empresa sin
+            dueño (miembro.ultimo-dueno).
+      security:
+        - bearer: []
+      summary: Cambia el rol o el modo de una persona. Nadie cambia su propio rol.
+      tags:
+        - miembros
+    delete:
+      operationId: MiembrosController_retirar
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+        - name: usuarioId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "204":
+          description: "Retirada: deja de ver la empresa desde la siguiente petición."
+        "403":
+          description: "El rol no tiene el permiso (permiso.denegado: «No tienes permiso»)."
+        "404":
+          description: La persona no está en la empresa (miembro.no-encontrado).
+        "409":
+          description: Es el último dueño (miembro.ultimo-dueno).
+      security:
+        - bearer: []
+      summary: Retira a una persona (o a uno mismo) sin borrar su historia. Nunca al
+        último dueño.
+      tags:
+        - miembros
 info:
   title: CONTA API
   description: "API única de CONTA: facturación electrónica DIAN, contabilidad y
@@ -324,6 +499,61 @@ components:
         - venceEn
         - usuario
         - nuevo
+    RespuestaMiEmpresa:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        razonSocial:
+          type: string
+          example: Tienda Doña Rosa S.A.S.
+        rol:
+          type: string
+          enum: &a1
+            - dueno
+            - contador
+            - cajero
+        modo:
+          type: string
+          enum: &a2
+            - simple
+            - contador
+          description: Cara con que la app muestra la empresa. No da permisos.
+        estado:
+          type: string
+          enum:
+            - invitada
+            - activa
+          description: "invitada: hay que aceptarla antes de entrar."
+        permisos:
+          type: array
+          description: Lo que el rol deja hacer; sirve para mostrar u ocultar acciones.
+          items:
+            type: string
+            enum:
+              - ver-empresa
+              - vender
+              - ver-informes
+              - anular-documentos
+              - gestionar-miembros
+              - usar-modo-contador
+      required:
+        - id
+        - razonSocial
+        - rol
+        - modo
+        - estado
+        - permisos
+    NuevaEmpresa:
+      type: object
+      properties:
+        razonSocial:
+          type: string
+          example: Tienda Doña Rosa S.A.S.
+          maxLength: 450
+      required:
+        - razonSocial
     RespuestaEmpresa:
       type: object
       properties:
@@ -336,12 +566,73 @@ components:
       required:
         - id
         - razonSocial
-    NuevaEmpresa:
+    RespuestaMiembro:
       type: object
       properties:
-        razonSocial:
+        usuarioId:
           type: string
-          example: Tienda Doña Rosa S.A.S.
-          maxLength: 450
+          format: uuid
+          description: Id de la persona; es el que llevan las rutas /miembros/:usuarioId.
+        celular:
+          type: string
+          example: +57 300 *** 4567
+        rol:
+          type: string
+          enum: *a1
+        modo:
+          type: string
+          enum: *a2
+        estado:
+          type: string
+          enum:
+            - invitada
+            - activa
       required:
-        - razonSocial
+        - usuarioId
+        - celular
+        - rol
+        - modo
+        - estado
+    NuevoMiembro:
+      type: object
+      properties:
+        celular:
+          type: string
+          example: 300 123 4567
+          description: Celular de Colombia de quien se invita.
+        rol:
+          type: string
+          enum: *a1
+          example: cajero
+        modo:
+          type: string
+          enum: *a2
+          description: "Si no viene: contador para el rol contador, simple para los demás."
+      required:
+        - celular
+        - rol
+    CambioDeMiembro:
+      type: object
+      properties:
+        rol:
+          type: string
+          enum: *a1
+        modo:
+          type: string
+          enum: *a2
+    RespuestaCambioDeMiembro:
+      type: object
+      properties:
+        usuarioId:
+          type: string
+          format: uuid
+        rol:
+          type: string
+          enum: *a1
+        modo:
+          type: string
+          enum: *a2
+      required:
+        - usuarioId
+        - rol
+        - modo

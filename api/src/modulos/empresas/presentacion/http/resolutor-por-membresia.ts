@@ -10,9 +10,9 @@ import { ComprobarMembresia } from '../../aplicacion/consultas/comprobar-membres
 import { empresaElegida } from './empresa-elegida.js';
 
 /**
- * Resolutor real de la empresa de la petición (HU-04.02, ADR-0011): la sesión dice quién es, X-Empresa dice
- * en qué empresa trabaja y la membresía, consultada en cada petición, dice si puede. Sin estado en el servidor:
- * cada pestaña o pantalla declara su empresa y ninguna pisa a otra.
+ * Resolutor real de la empresa de la petición (HU-04.02 y HU-04.03, ADR-0011 y ADR-0012): la sesión dice quién
+ * es, X-Empresa dice en qué empresa trabaja y la membresía activa, consultada en cada petición, dice si puede y
+ * con qué rol. Sin estado en el servidor: cada pestaña o pantalla declara su empresa y ninguna pisa a otra.
  */
 @Injectable()
 export class ResolutorPorMembresia implements ResolutorDeEmpresa {

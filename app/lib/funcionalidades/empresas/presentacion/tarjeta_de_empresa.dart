@@ -17,6 +17,10 @@ class TarjetaDeEmpresa extends StatelessWidget {
       minTileHeight: AlturaConta.producto,
       leading: Icon(Icons.storefront_outlined, color: context.paleta.textoSuave),
       title: Text(empresa.razonSocial, style: const TextStyle(fontSize: TextoConta.cuerpo)),
+      subtitle: switch (empresa.membresia) {
+        null => null,
+        final membresia => Text(membresia.rol.nombre, style: TextStyle(color: context.paleta.textoSuave)),
+      },
       trailing: const Icon(Icons.chevron_right),
       onTap: alTocar,
     ),

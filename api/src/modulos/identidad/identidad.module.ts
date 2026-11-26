@@ -3,8 +3,10 @@ import { RELOJ, type Reloj } from '../../compartido/aplicacion/index.js';
 import { BaseDeDatos } from '../../compartido/infraestructura/persistencia/base-de-datos.js';
 import { RelojDelSistema } from '../../compartido/infraestructura/reloj-del-sistema.js';
 import { CerrarSesion } from './aplicacion/comandos/cerrar-sesion.js';
+import { RegistrarPersona } from './aplicacion/comandos/registrar-persona.js';
 import { SolicitarCodigo } from './aplicacion/comandos/solicitar-codigo.js';
 import { VerificarCodigo } from './aplicacion/comandos/verificar-codigo.js';
+import { CelularesDePersonas } from './aplicacion/consultas/celulares-de-personas.js';
 import { SesionDelToken } from './aplicacion/consultas/sesion-del-token.js';
 import { ENVIADOR_DE_CODIGOS, type EnviadorDeCodigos } from './aplicacion/puertos/enviador-de-codigos.js';
 import { UNIDAD_DE_TRABAJO_DE_IDENTIDAD, type UnidadDeTrabajoDeIdentidad } from './aplicacion/puertos/repositorios-de-identidad.js';
@@ -77,10 +79,21 @@ function enviadorDe(config: ConfiguracionDeAcceso): EnviadorDeCodigos {
       useFactory: (uow: UnidadDeTrabajoDeIdentidad, h: HuellasDeAcceso, r: Reloj) => new SesionDelToken(uow, h, r),
       inject: [UNIDAD_DE_TRABAJO_DE_IDENTIDAD, HUELLAS_DE_ACCESO, RELOJ],
     },
+    {
+      provide: RegistrarPersona,
+      useFactory: (uow: UnidadDeTrabajoDeIdentidad, h: HuellasDeAcceso, r: Reloj) => new RegistrarPersona(uow, h, r),
+      inject: [UNIDAD_DE_TRABAJO_DE_IDENTIDAD, HUELLAS_DE_ACCESO, RELOJ],
+    },
+    {
+      provide: CelularesDePersonas,
+      useFactory: (uow: UnidadDeTrabajoDeIdentidad) => new CelularesDePersonas(uow),
+      inject: [UNIDAD_DE_TRABAJO_DE_IDENTIDAD],
+    },
     GuardaDeSesion,
     GuardaDeLimitePorOrigen,
   ],
-  // El módulo de empresas arma con SesionDelToken el resolutor de empresa (HU-04.02).
-  exports: [GuardaDeSesion, SesionDelToken, ENVIADOR_DE_CODIGOS],
+  // El módulo de empresas arma con SesionDelToken el resolutor de empresa (HU-04.02) y con RegistrarPersona y
+  // CelularesDePersonas su directorio de personas para invitar y listar miembros (HU-04.03).
+  exports: [GuardaDeSesion, SesionDelToken, RegistrarPersona, CelularesDePersonas, ENVIADOR_DE_CODIGOS],
 })
 export class IdentidadModule {}
