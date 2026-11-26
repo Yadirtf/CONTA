@@ -14,7 +14,7 @@ Cada decisión de nivel 3 (ver la [guía del coordinador](../forma-de-trabajo/gu
 | [0008](0008-envio-dian-con-cola-en-tabla-y-despertador.md) | Envío a la DIAN: agregado EnvioDian, cola en una tabla, despertador en proceso y recuperación por el Worker | Propuesto |
 | [0009](0009-sistema-visual-y-tokens-compartidos.md) | Sistema visual «Calma fresca» y tokens de diseño compartidos en `contratos/diseno/` | Aceptado |
 | [0010](0010-acceso-con-celular-y-codigo-por-whatsapp.md) | Acceso con celular y código: WhatsApp primero detrás de un puerto, SMS de respaldo y celulares de prueba | Propuesto |
-| [0011](0011-pertenecer-a-varias-empresas.md) | Pertenecer a varias empresas: membresías con RLS, encabezado X-Empresa y transacción del usuario | Propuesto |
+| [0011](0011-pertenecer-a-varias-empresas.md) | Pertenecer a varias empresas: membresías con RLS, encabezado X-Empresa y transacción del usuario | Aceptado |
 | [0012](0012-roles-y-modos.md) | Roles y modos: matriz de permisos en el dominio, comprobada en la guarda y otra vez en el caso de uso | Propuesto |
 
 ## Notas

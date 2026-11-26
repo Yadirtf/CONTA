@@ -1,6 +1,6 @@
 # ADR-0011. Pertenecer a varias empresas: membresías con RLS, encabezado X-Empresa y transacción del usuario
 
-- Estado: Propuesto
+- Estado: Aceptado (Inge, 2026-11-26)
 - Fecha: 2026-11-26
 - Historia: HU-04.02
 - Decide: Inge
