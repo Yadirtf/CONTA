@@ -66,7 +66,7 @@ describe('InvitarMiembro', () => {
     });
     expect(await comprobar.ejecutar(cajero, empresa.id)).toBeNull();
     await responder.ejecutar(cajero, empresa.id, 'aceptar');
-    expect(await comprobar.ejecutar(cajero, empresa.id)).toEqual({ empresaId: empresa.id, usuarioId: cajero, rol: 'cajero' });
+    expect(await comprobar.ejecutar(cajero, empresa.id)).toEqual({ empresaId: empresa.id, usuarioId: cajero, rol: 'cajero', modo: 'simple' });
   });
 
   it('un cajero no invita, y su intento no registra a nadie', async () => {

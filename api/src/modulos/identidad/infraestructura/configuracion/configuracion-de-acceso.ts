@@ -17,6 +17,8 @@ export interface ConfiguracionDeAcceso {
   readonly celularesDePrueba: ReadonlyMap<string, string>;
   /** Tope de mensajes por hora para todo CONTA: corta el bombeo de mensajes aunque esquive los otros límites. */
   readonly enviosPorHora: number;
+  /** Clave del segundo factor (HU-04.04): cifra los secretos TOTP y firma los códigos de recuperación. Sin ella falla cerrado. */
+  readonly secretoDeSegundoFactor: string | null;
 }
 
 const LARGO_MINIMO_DEL_SECRETO = 32;
@@ -26,16 +28,21 @@ const LARGO_MINIMO_DEL_SECRETO = 32;
  * algo es inseguro: un secreto corto o celulares de prueba fuera del entorno de pruebas, que serían una puerta trasera.
  */
 export function configuracionDeAcceso(env: Entorno = process.env): ConfiguracionDeAcceso {
-  const secreto = env['SECRETO_CODIGOS_ACCESO']?.trim() || null;
-  if (secreto && secreto.length < LARGO_MINIMO_DEL_SECRETO) {
-    throw new Error(`SECRETO_CODIGOS_ACCESO debe tener al menos ${LARGO_MINIMO_DEL_SECRETO} caracteres`);
-  }
   return {
-    secretoDeCodigos: secreto,
+    secretoDeCodigos: secretoDe(env, 'SECRETO_CODIGOS_ACCESO'),
+    secretoDeSegundoFactor: secretoDe(env, 'SECRETO_SEGUNDO_FACTOR'),
     whatsapp: whatsappDe(env),
     celularesDePrueba: celularesDePruebaDe(env),
     enviosPorHora: Number.parseInt(env['ACCESO_ENVIOS_POR_HORA'] ?? '', 10) || 200,
   };
+}
+
+function secretoDe(env: Entorno, variable: string): string | null {
+  const secreto = env[variable]?.trim() || null;
+  if (secreto && secreto.length < LARGO_MINIMO_DEL_SECRETO) {
+    throw new Error(`${variable} debe tener al menos ${LARGO_MINIMO_DEL_SECRETO} caracteres`);
+  }
+  return secreto;
 }
 
 function whatsappDe(env: Entorno): ConfiguracionDeWhatsApp | null {

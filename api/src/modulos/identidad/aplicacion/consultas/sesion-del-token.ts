@@ -1,4 +1,5 @@
 import type { Reloj } from '../../../../compartido/aplicacion/index.js';
+import { tieneSegundoFactorVigente } from '../../dominio/index.js';
 import type { SesionVigente, UnidadDeTrabajoDeIdentidad } from '../puertos/repositorios-de-identidad.js';
 import type { HuellasDeAcceso } from '../puertos/secretos-de-acceso.js';
 
@@ -6,7 +7,10 @@ import type { HuellasDeAcceso } from '../puertos/secretos-de-acceso.js';
 const LARGO_DEL_TOKEN = 43;
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
 
-/** Dice de quién es un token de sesión, o null si no existe, venció o fue revocado. */
+/**
+ * Dice de quién es un token de sesión, o null si no existe, venció o fue revocado. También dice si la sesión
+ * tiene vigente el segundo factor (HU-04.04), con la misma hora con que la buscó.
+ */
 export class SesionDelToken {
   constructor(
     private readonly uow: UnidadDeTrabajoDeIdentidad,
@@ -17,6 +21,8 @@ export class SesionDelToken {
   async ejecutar(token: string): Promise<SesionVigente | null> {
     if (token.length !== LARGO_DEL_TOKEN || !BASE64URL.test(token)) return null;
     const huella = this.huellas.huellaDeToken(token);
-    return this.uow.ejecutar(({ sesiones }) => sesiones.buscarVigente(huella, this.reloj.ahora()));
+    const ahora = this.reloj.ahora();
+    const encontrada = await this.uow.ejecutar(({ sesiones }) => sesiones.buscarVigente(huella, ahora));
+    return encontrada && { ...encontrada, segundoFactorVigente: tieneSegundoFactorVigente(encontrada.sesion, ahora) };
   }
 }

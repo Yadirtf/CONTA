@@ -4,6 +4,8 @@ import type {
   UnidadDeTrabajoDeIdentidad,
 } from '../../aplicacion/puertos/repositorios-de-identidad.js';
 import { RepositorioDeAccesosPostgres } from './repositorio-de-accesos-postgres.js';
+import { RegistroDeSegundoFactorPostgres } from './registro-de-segundo-factor-postgres.js';
+import { RepositorioDeSegundosFactoresPostgres } from './repositorio-de-segundos-factores-postgres.js';
 import { RepositorioDeSesionesPostgres } from './repositorio-de-sesiones-postgres.js';
 import { RepositorioDeUsuariosPostgres } from './repositorio-de-usuarios-postgres.js';
 
@@ -20,6 +22,8 @@ export class UnidadDeTrabajoDeIdentidadPostgres implements UnidadDeTrabajoDeIden
         accesos: new RepositorioDeAccesosPostgres(tx),
         usuarios: new RepositorioDeUsuariosPostgres(tx),
         sesiones: new RepositorioDeSesionesPostgres(tx),
+        segundosFactores: new RepositorioDeSegundosFactoresPostgres(tx),
+        registroDeSegundoFactor: new RegistroDeSegundoFactorPostgres(tx),
       }),
     );
   }

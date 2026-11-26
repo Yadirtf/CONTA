@@ -39,6 +39,27 @@ void main() {
     expect(rara.membresia, isNull);
   });
 
+  // HU-04.04: la API dice si el negocio exige la verificación en dos pasos.
+  test('lee si la membresía exige el segundo paso', () async {
+    final respuesta = await _repositorio(
+      (_) async => http.Response(
+        jsonEncode([
+          {
+            'id': 'e1',
+            'razonSocial': 'Cliente del contador',
+            'rol': 'contador',
+            'modo': 'contador',
+            'estado': 'activa',
+            'permisos': ['ver-empresa'],
+            'exigeSegundoFactor': true,
+          },
+        ]),
+        200,
+      ),
+    ).misEmpresas();
+    expect((respuesta as Exito<List<Empresa>>).valor.single.membresia?.exigeSegundoPaso, isTrue);
+  });
+
   test('aceptar y rechazar una invitación van a su ruta, sin X-Empresa', () async {
     final pedidos = <http.Request>[];
     final repositorio = _repositorio((p) async {

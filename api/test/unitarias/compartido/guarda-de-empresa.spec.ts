@@ -21,7 +21,7 @@ class DeClase {
 }
 
 const contexto = (rol: Rol): ResolucionDeEmpresa => ({
-  contexto: { empresaId: IdEmpresa.de('11111111-1111-4111-8111-111111111111'), usuarioId: IdUsuario.de('22222222-2222-4222-8222-222222222222'), rol },
+  contexto: { empresaId: IdEmpresa.de('11111111-1111-4111-8111-111111111111'), usuarioId: IdUsuario.de('22222222-2222-4222-8222-222222222222'), rol, modo: 'simple' },
 });
 
 function ejecucion(clase: new () => object, metodo: string): ExecutionContext {

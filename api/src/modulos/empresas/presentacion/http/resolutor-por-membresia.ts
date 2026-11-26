@@ -5,6 +5,7 @@ import {
   type ResolucionDeEmpresa,
   type ResolutorDeEmpresa,
 } from '../../../../compartido/presentacion/empresa/index.js';
+import { exigeSegundoFactor } from '../../../../compartido/dominio/index.js';
 import { SesionDelToken, tokenDeLaPeticion } from '../../../identidad/index.js';
 import { ComprobarMembresia } from '../../aplicacion/consultas/comprobar-membresia.js';
 import { empresaElegida } from './empresa-elegida.js';
@@ -12,7 +13,8 @@ import { empresaElegida } from './empresa-elegida.js';
 /**
  * Resolutor real de la empresa de la petición (HU-04.02 y HU-04.03, ADR-0011 y ADR-0012): la sesión dice quién
  * es, X-Empresa dice en qué empresa trabaja y la membresía activa, consultada en cada petición, dice si puede y
- * con qué rol. Sin estado en el servidor: cada pestaña o pantalla declara su empresa y ninguna pisa a otra.
+ * con qué rol. A quien trabaja como contador le exige además el segundo factor vigente en la sesión (HU-04.04,
+ * ADR-0013). Sin estado en el servidor: cada pestaña o pantalla declara su empresa y ninguna pisa a otra.
  */
 @Injectable()
 export class ResolutorPorMembresia implements ResolutorDeEmpresa {
@@ -31,6 +33,9 @@ export class ResolutorPorMembresia implements ResolutorDeEmpresa {
     if (empresaId === null) return { rechazo: 'empresa-ajena' };
 
     const contexto = await this.comprobarMembresia.ejecutar(sesion.usuario.id, empresaId);
-    return contexto ? { contexto } : { rechazo: 'empresa-ajena' };
+    if (!contexto) return { rechazo: 'empresa-ajena' };
+    // HU-04.04: con el rol y el modo recién leídos; un cambio a contador lo exige desde la petición siguiente.
+    if (exigeSegundoFactor(contexto.rol, contexto.modo) && !sesion.segundoFactorVigente) return { rechazo: 'sin-segundo-factor' };
+    return { contexto };
   }
 }

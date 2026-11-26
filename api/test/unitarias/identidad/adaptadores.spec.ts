@@ -24,6 +24,12 @@ describe('configuración del acceso (HU-04.01)', () => {
     expect(() => configuracionDeAcceso({ CELULARES_DE_PRUEBA: '3000000001:12', CONTA_ENTORNO: 'pruebas' })).toThrow(/6 dígitos/);
   });
 
+  it('la clave del segundo factor también exige 32 caracteres; sin ella queda en null (falla cerrado, HU-04.04)', () => {
+    expect(() => configuracionDeAcceso({ SECRETO_SEGUNDO_FACTOR: 'corto' })).toThrow(/SECRETO_SEGUNDO_FACTOR.*32/);
+    expect(configuracionDeAcceso({}).secretoDeSegundoFactor).toBeNull();
+    expect(configuracionDeAcceso({ SECRETO_SEGUNDO_FACTOR: 'x'.repeat(32) }).secretoDeSegundoFactor).toBe('x'.repeat(32));
+  });
+
   it('sin credenciales de WhatsApp no hay canal', () => {
     expect(configuracionDeAcceso({}).whatsapp).toBeNull();
     expect(configuracionDeAcceso({ WHATSAPP_TOKEN: 't', WHATSAPP_ID_NUMERO: '123' }).whatsapp?.plantilla).toBe('codigo_de_acceso');

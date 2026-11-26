@@ -1,4 +1,5 @@
 export { EmpresaDeLaPeticion, GuardaDeEmpresa } from './guarda-de-empresa.js';
+export { CODIGO_SIN_SEGUNDO_FACTOR } from './rechazos-de-empresa.js';
 export { Requiere } from './requiere.js';
 export {
   ENCABEZADO_DE_EMPRESA,

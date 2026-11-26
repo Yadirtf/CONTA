@@ -10,8 +10,16 @@ export interface Sesion {
   readonly usuarioId: IdUsuario;
   readonly creadaEn: Date;
   readonly venceEn: Date;
+  /** Cuándo pasó el segundo factor en esta sesión (HU-04.04), o null si no lo ha pasado. */
+  readonly verificadaEn: Date | null;
 }
 
 export function abrirSesion(id: string, usuarioId: IdUsuario, ahora: Date): Sesion {
-  return { id, usuarioId, creadaEn: ahora, venceEn: new Date(ahora.getTime() + POLITICA_DE_ACCESO.vigenciaDeLaSesionMs) };
+  return {
+    id,
+    usuarioId,
+    creadaEn: ahora,
+    venceEn: new Date(ahora.getTime() + POLITICA_DE_ACCESO.vigenciaDeLaSesionMs),
+    verificadaEn: null,
+  };
 }

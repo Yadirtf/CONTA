@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { MODOS, type Modo, Permiso, permisosDe, type Rol, ROLES } from '../../../../compartido/dominio/index.js';
+import { exigeSegundoFactor, MODOS, type Modo, Permiso, permisosDe, type Rol, ROLES } from '../../../../compartido/dominio/index.js';
 import type { MiEmpresa } from '../../aplicacion/puertos/repositorio-de-mis-empresas.js';
 import type { Empresa } from '../../dominio/empresa.js';
 
@@ -24,6 +24,9 @@ export class RespuestaMiEmpresa extends RespuestaEmpresa {
 
   @ApiProperty({ enum: Object.values(Permiso), isArray: true, description: 'Lo que el rol deja hacer; sirve para mostrar u ocultar acciones.' })
   readonly permisos!: Permiso[];
+
+  @ApiProperty({ description: 'true si para entrar hay que pasar el segundo factor (contador o modo contador, HU-04.04).' })
+  readonly exigeSegundoFactor!: boolean;
 }
 
 export const respuestaDe = (empresa: Empresa): RespuestaEmpresa => ({ id: empresa.id.valor, razonSocial: empresa.razonSocial });
@@ -34,4 +37,5 @@ export const respuestaDeMiEmpresa = ({ empresa, rol, modo, estado }: MiEmpresa):
   modo,
   estado,
   permisos: permisosDe(rol),
+  exigeSegundoFactor: exigeSegundoFactor(rol, modo),
 });

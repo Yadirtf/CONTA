@@ -125,6 +125,159 @@ paths:
       summary: Cierra la sesión de este dispositivo.
       tags:
         - acceso
+  /acceso/segundo-factor:
+    get:
+      operationId: SegundoFactorController_estado
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EstadoDelSegundoFactor"
+        "401":
+          description: Sin sesión, vencida o cerrada.
+      security:
+        - bearer: []
+      summary: Dice si la persona ya configuró su app y si esta sesión está verificada.
+      tags:
+        - acceso
+  /acceso/segundo-factor/inscripcion:
+    post:
+      operationId: SegundoFactorController_inscribir
+      parameters: []
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InscripcionIniciada"
+        "401":
+          description: Sin sesión, vencida o cerrada.
+        "409":
+          description: Ya tiene app y no verificó en los últimos 10 minutos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+        "429":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+        "503":
+          description: Falta la clave de cifrado en el servidor.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+      security:
+        - bearer: []
+      summary: Crea la clave de la app autenticadora. Cambiar una app existente exige
+        haber verificado hace poco.
+      tags:
+        - acceso
+  /acceso/segundo-factor/inscripcion/confirmacion:
+    post:
+      operationId: SegundoFactorController_confirmar
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CodigoDelSegundoFactor"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InscripcionConfirmada"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+        "401":
+          description: Sin sesión, vencida o cerrada.
+        "409":
+          description: No hay una configuración pendiente o ya venció.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+        "422":
+          description: Código incorrecto, con intentos restantes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+        "429":
+          description: Bloqueado 15 minutos tras 5 fallos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+      security:
+        - bearer: []
+      summary: Confirma la app con su primer código, verifica esta sesión y entrega
+        los códigos de recuperación.
+      tags:
+        - acceso
+  /acceso/segundo-factor/verificacion:
+    post:
+      operationId: SegundoFactorController_verificarCodigo
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CodigoDelSegundoFactor"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SegundoFactorVerificado"
+        "400":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+        "401":
+          description: Sin sesión, vencida o cerrada.
+        "409":
+          description: La persona todavía no configuró su app.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+        "422":
+          description: Código incorrecto o ya usado, con intentos restantes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+        "429":
+          description: Bloqueado 15 minutos tras 5 fallos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechazoDeAcceso"
+      security:
+        - bearer: []
+      summary: Verifica esta sesión por una jornada con un código de la app o uno de
+        recuperación.
+      tags:
+        - acceso
   /empresas:
     get:
       operationId: MisEmpresasController_listar
@@ -499,6 +652,86 @@ components:
         - venceEn
         - usuario
         - nuevo
+    EstadoDelSegundoFactor:
+      type: object
+      properties:
+        inscrito:
+          type: boolean
+          description: true si la persona ya configuró su app autenticadora.
+        verificadaHasta:
+          type: string
+          format: date-time
+          nullable: true
+          description: Hasta cuándo vale la verificación de esta sesión.
+        codigosDeRecuperacionRestantes:
+          type: number
+          example: 10
+      required:
+        - inscrito
+        - verificadaHasta
+        - codigosDeRecuperacionRestantes
+    InscripcionIniciada:
+      type: object
+      properties:
+        secreto:
+          type: string
+          example: JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP
+          description: Clave en base32. Se muestra una sola vez.
+        uri:
+          type: string
+          example: otpauth://totp/CONTA:...
+          description: La misma clave como enlace, para el QR.
+        venceEn:
+          type: string
+          format: date-time
+          description: Hasta cuándo se puede confirmar con el primer código.
+      required:
+        - secreto
+        - uri
+        - venceEn
+    CodigoDelSegundoFactor:
+      type: object
+      properties:
+        codigo:
+          type: string
+          example: "482913"
+          description: Los 6 números de la app autenticadora o, si se perdió, un código de
+            recuperación (ABCDE-FGHJK).
+      required:
+        - codigo
+    InscripcionConfirmada:
+      type: object
+      properties:
+        codigosDeRecuperacion:
+          description: Se muestran una sola vez. Cada uno sirve para entrar si se pierde
+            la app.
+          type: array
+          items:
+            type: string
+        verificadaHasta:
+          type: string
+          format: date-time
+      required:
+        - codigosDeRecuperacion
+        - verificadaHasta
+    SegundoFactorVerificado:
+      type: object
+      properties:
+        via:
+          type: string
+          enum:
+            - app
+            - recuperacion
+        verificadaHasta:
+          type: string
+          format: date-time
+        codigosDeRecuperacionRestantes:
+          type: number
+          example: 10
+      required:
+        - via
+        - verificadaHasta
+        - codigosDeRecuperacionRestantes
     RespuestaMiEmpresa:
       type: object
       properties:
@@ -538,6 +771,10 @@ components:
               - anular-documentos
               - gestionar-miembros
               - usar-modo-contador
+        exigeSegundoFactor:
+          type: boolean
+          description: true si para entrar hay que pasar el segundo factor (contador o
+            modo contador, HU-04.04).
       required:
         - id
         - razonSocial
@@ -545,6 +782,7 @@ components:
         - modo
         - estado
         - permisos
+        - exigeSegundoFactor
     NuevaEmpresa:
       type: object
       properties:

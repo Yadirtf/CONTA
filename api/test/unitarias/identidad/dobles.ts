@@ -2,34 +2,52 @@
 import type { EnviadorDeCodigos } from '../../../src/modulos/identidad/aplicacion/puertos/enviador-de-codigos.js';
 import type {
   RepositoriosDeIdentidad,
-  SesionVigente,
+  SesionConUsuario,
   UnidadDeTrabajoDeIdentidad,
 } from '../../../src/modulos/identidad/aplicacion/puertos/repositorios-de-identidad.js';
-import { AccesoPorCelular, type Celular, type Sesion, type Usuario } from '../../../src/modulos/identidad/dominio/index.js';
+import type { EventoDeSegundoFactor } from '../../../src/modulos/identidad/aplicacion/puertos/registro-de-segundo-factor.js';
+import { AccesoPorCelular, type Celular, SegundoFactor, type Sesion, type Usuario } from '../../../src/modulos/identidad/dominio/index.js';
 import { HuellasNode } from '../../../src/modulos/identidad/infraestructura/cripto/huellas-node.js';
+
+interface Copia {
+  accesos: Map<string, AccesoPorCelular>;
+  usuarios: Map<string, Usuario>;
+  sesiones: IdentidadEnMemoria['sesiones'];
+  segundosFactores: Map<string, SegundoFactor>;
+}
 
 export class IdentidadEnMemoria implements UnidadDeTrabajoDeIdentidad {
   readonly accesos = new Map<string, AccesoPorCelular>();
   readonly usuarios = new Map<string, Usuario>();
   readonly sesiones = new Map<string, { sesion: Sesion; huella: string; revocadaEn: Date | null }>();
+  readonly segundosFactores = new Map<string, SegundoFactor>();
+  readonly eventos: EventoDeSegundoFactor[] = [];
 
   /** Como una transacción: lo que hace `trabajo` se aplica solo si no lanza. */
   async ejecutar<T>(trabajo: (r: RepositoriosDeIdentidad) => Promise<T>): Promise<T> {
-    const copia = { accesos: new Map(this.accesos), usuarios: new Map(this.usuarios), sesiones: new Map(this.sesiones) };
-    const resultado = await trabajo(this.repositorios(copia));
+    const copia: Copia = {
+      accesos: new Map(this.accesos),
+      usuarios: new Map(this.usuarios),
+      // Las filas de sesión se copian: un cambio dentro de una transacción que falla no debe quedar.
+      sesiones: new Map([...this.sesiones].map(([k, v]) => [k, { ...v }])),
+      segundosFactores: new Map(this.segundosFactores),
+    };
+    const eventos: EventoDeSegundoFactor[] = [];
+    const resultado = await trabajo(this.repositorios(copia, eventos));
     this.reemplazar(copia);
+    this.eventos.push(...eventos);
     return resultado;
   }
 
-  private reemplazar(copia: { accesos: Map<string, AccesoPorCelular>; usuarios: Map<string, Usuario>; sesiones: IdentidadEnMemoria['sesiones'] }) {
-    for (const [nombre, mapa] of Object.entries(copia)) {
-      const destino = this[nombre as keyof typeof copia] as Map<string, unknown>;
+  private reemplazar(copia: Copia) {
+    for (const [nombre, mapa] of Object.entries(copia) as [keyof Copia, Map<string, unknown>][]) {
+      const destino = this[nombre] as Map<string, unknown>;
       destino.clear();
       mapa.forEach((v, k) => destino.set(k, v));
     }
   }
 
-  private repositorios(c: { accesos: Map<string, AccesoPorCelular>; usuarios: Map<string, Usuario>; sesiones: IdentidadEnMemoria['sesiones'] }): RepositoriosDeIdentidad {
+  private repositorios(c: Copia, eventos: EventoDeSegundoFactor[]): RepositoriosDeIdentidad {
     return {
       accesos: {
         tomar: (celular: Celular) => {
@@ -55,7 +73,7 @@ export class IdentidadEnMemoria implements UnidadDeTrabajoDeIdentidad {
           c.sesiones.set(sesion.id, { sesion, huella, revocadaEn: null });
           return Promise.resolve();
         },
-        buscarVigente: (huella, ahora): Promise<SesionVigente | null> => {
+        buscarVigente: (huella, ahora): Promise<SesionConUsuario | null> => {
           const fila = [...c.sesiones.values()].find((s) => s.huella === huella && !s.revocadaEn && s.sesion.venceEn > ahora);
           const usuario = fila && [...c.usuarios.values()].find((u) => u.id.valor === fila.sesion.usuarioId.valor);
           return Promise.resolve(fila && usuario ? { sesion: fila.sesion, usuario } : null);
@@ -63,6 +81,33 @@ export class IdentidadEnMemoria implements UnidadDeTrabajoDeIdentidad {
         revocar: (id, ahora) => {
           const fila = c.sesiones.get(id);
           if (fila && !fila.revocadaEn) fila.revocadaEn = ahora;
+          return Promise.resolve();
+        },
+        marcarVerificada: (id, ahora) => {
+          const fila = c.sesiones.get(id);
+          if (fila && !fila.revocadaEn) fila.sesion = { ...fila.sesion, verificadaEn: ahora };
+          return Promise.resolve();
+        },
+        revocarLasDemas: (usuarioId, excepto, ahora) => {
+          for (const fila of c.sesiones.values()) {
+            if (fila.sesion.usuarioId.valor === usuarioId.valor && fila.sesion.id !== excepto && !fila.revocadaEn) fila.revocadaEn = ahora;
+          }
+          return Promise.resolve();
+        },
+      },
+      segundosFactores: {
+        tomar: (usuarioId) => {
+          const guardado = c.segundosFactores.get(usuarioId.valor);
+          return Promise.resolve(guardado ? SegundoFactor.desde(guardado.foto) : SegundoFactor.nuevo(usuarioId));
+        },
+        guardar: (factor) => {
+          c.segundosFactores.set(factor.foto.usuarioId.valor, SegundoFactor.desde(factor.foto));
+          return Promise.resolve();
+        },
+      },
+      registroDeSegundoFactor: {
+        anotar: (evento) => {
+          eventos.push(evento);
           return Promise.resolve();
         },
       },

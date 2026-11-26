@@ -4,3 +4,4 @@ export { ErrorDeAcceso, type MotivoDeRechazo } from './error-de-acceso.js';
 export { POLITICA_DE_ACCESO } from './politica-de-acceso.js';
 export { abrirSesion, type Sesion } from './sesion.js';
 export { IdUsuario, type Usuario } from './usuario.js';
+export * from './segundo-factor/index.js';

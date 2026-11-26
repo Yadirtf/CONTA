@@ -64,7 +64,7 @@ describe('ComprobarMembresia', () => {
     const { crear, comprobar } = preparar();
     const { empresa: suya } = await crear.ejecutar(persona, 'Suya');
     const { empresa: ajena } = await crear.ejecutar(otraPersona, 'Ajena');
-    expect(await comprobar.ejecutar(persona, suya.id)).toEqual({ empresaId: suya.id, usuarioId: persona, rol: 'dueno' });
+    expect(await comprobar.ejecutar(persona, suya.id)).toEqual({ empresaId: suya.id, usuarioId: persona, rol: 'dueno', modo: 'simple' });
     expect(await comprobar.ejecutar(persona, ajena.id)).toBeNull();
     expect(await comprobar.ejecutar(persona, IdEmpresa.de('99999999-9999-4999-8999-999999999999'))).toBeNull();
   });

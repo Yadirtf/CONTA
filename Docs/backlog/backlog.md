@@ -170,8 +170,11 @@ Como dueño, quiero invitar a mi cajero con permisos limitados, para que venda s
 - Decisión en [ADR-0012](../decisiones/0012-roles-y-modos.md): roles dueño, contador y cajero con una matriz de permisos en el dominio. Cada endpoint declara `@Requiere(permiso)`, la guarda responde 403 «No tienes permiso» y niega por defecto, y los casos de uso vuelven a exigir el permiso. El modo va en la membresía y no da permisos. Invitar es por celular: la membresía queda invitada hasta que la persona la acepta. El retiro no borra la fila y nunca deja la empresa sin dueño. Los endpoints de informes (EP-16) y anulación (EP-06) llevarán `@Requiere(Permiso.VerInformes)` y `@Requiere(Permiso.AnularDocumentos)`.
 - Módulos: `api/src/compartido/dominio/permisos/`, `api/src/modulos/empresas/`, `app/lib/funcionalidades/empresas/` y `app/lib/funcionalidades/miembros/`.
 
-**HU-04.04 Verificación en dos pasos para contador y consola** (M, S)
+**HU-04.04 Verificación en dos pasos para contador y consola** (M, S) — En revisión
 - Dado un usuario con rol contador o administrador, cuando inicia sesión, entonces se exige el segundo factor.
+- Decisión en [ADR-0013](../decisiones/0013-verificacion-en-dos-pasos.md): app autenticadora (TOTP) con 10 códigos de recuperación. Se exige por membresía, en cada petición de empresa, a quien tiene rol contador o está en modo contador, y vale una jornada (12 horas) por sesión. Cambiar de app exige haber verificado hace poco: el WhatsApp solo nunca basta. El secreto va cifrado con una clave del entorno (`SECRETO_SEGUNDO_FACTOR`) y cada paso queda en un registro de solo inserción.
+- La consola todavía no tiene inicio de sesión ni administradores en la API: la historia que los cree usará este mismo segundo factor, obligatorio y con una ventana más corta. La recuperación asistida (sin app ni códigos) queda para EP-18.
+- Módulos: `api/src/modulos/identidad/` (dominio `segundo-factor/`), `api/src/compartido/dominio/permisos/exige-segundo-factor.ts` y `app/lib/funcionalidades/verificacion/`.
 
 #### EP-05. Catálogo: clientes y productos — Prioridad M
 

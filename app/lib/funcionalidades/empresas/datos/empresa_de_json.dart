@@ -10,5 +10,11 @@ Membresia? _membresia(Map<dynamic, dynamic> d) {
   final modo = Modo.de(d['modo']);
   final permisos = d['permisos'];
   if (rol == null || modo == null || permisos is! List) return null;
-  return Membresia(rol: rol, modo: modo, invitada: d['estado'] == 'invitada', permisos: permisos.whereType<String>().toSet());
+  return Membresia(
+    rol: rol,
+    modo: modo,
+    invitada: d['estado'] == 'invitada',
+    permisos: permisos.whereType<String>().toSet(),
+    exigeSegundoPaso: d['exigeSegundoFactor'] == true,
+  );
 }

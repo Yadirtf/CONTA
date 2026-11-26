@@ -39,7 +39,13 @@ abstract final class Permiso {
 
 /// Lo que la membresía le da a la persona en un negocio.
 final class Membresia {
-  const Membresia({required this.rol, required this.modo, required this.invitada, required this.permisos});
+  const Membresia({
+    required this.rol,
+    required this.modo,
+    required this.invitada,
+    required this.permisos,
+    this.exigeSegundoPaso = false,
+  });
 
   final Rol rol;
   final Modo modo;
@@ -47,6 +53,9 @@ final class Membresia {
   /// true si la persona aún no acepta la invitación: no puede entrar todavía.
   final bool invitada;
   final Set<String> permisos;
+
+  /// true si para entrar hay que pasar la verificación en dos pasos (contador o modo contador, HU-04.04).
+  final bool exigeSegundoPaso;
 
   bool puede(String permiso) => permisos.contains(permiso);
 
@@ -59,9 +68,10 @@ final class Membresia {
       other.rol == rol &&
       other.modo == modo &&
       other.invitada == invitada &&
+      other.exigeSegundoPaso == exigeSegundoPaso &&
       other.permisos.length == permisos.length &&
       other.permisos.containsAll(permisos);
 
   @override
-  int get hashCode => Object.hash(rol, modo, invitada, Object.hashAllUnordered(permisos));
+  int get hashCode => Object.hash(rol, modo, invitada, exigeSegundoPaso, Object.hashAllUnordered(permisos));
 }
