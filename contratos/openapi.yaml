@@ -635,6 +635,78 @@ paths:
         (200) sin cambiarlo.
       tags:
         - clientes
+  /productos:
+    get:
+      operationId: ProductosController_listar
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+        - name: buscar
+          required: false
+          in: query
+          description: "Vacío: los primeros 50 por nombre."
+          schema: {}
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaListaDeProductos"
+        "403":
+          description: "El rol no tiene el permiso (permiso.denegado: «No tienes permiso»)."
+      security:
+        - bearer: []
+      summary: Lista productos por parte del nombre (sin importar tildes) o el
+        comienzo del código.
+      tags:
+        - productos
+    post:
+      operationId: ProductosController_crear
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NuevoProducto"
+      responses:
+        "200":
+          description: "Ya existía con ese id: el guardado, sin cambios."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaProducto"
+        "201":
+          description: Creado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaProducto"
+        "403":
+          description: "El rol no tiene el permiso (permiso.denegado: «No tienes permiso»)."
+        "409":
+          description: El código ya es de otro producto (producto.codigo-en-uso).
+        "429":
+          description: Tope de productos nuevos del día de la empresa
+            (producto.limite-diario) o de la persona
+            (producto.limite-por-persona).
+      security:
+        - bearer: []
+      summary: Crea un producto con su precio e IVA. Repetir el mismo id devuelve el
+        guardado (200).
+      tags:
+        - productos
 info:
   title: CONTA API
   description: "API única de CONTA: facturación electrónica DIAN, contabilidad y
@@ -868,6 +940,7 @@ components:
             enum:
               - ver-empresa
               - vender
+              - gestionar-productos
               - ver-informes
               - anular-documentos
               - gestionar-miembros
@@ -1202,3 +1275,134 @@ components:
         - numero
         - nombre
         - tipoDePersona
+    IvaDelProducto:
+      type: object
+      properties:
+        tipo:
+          type: string
+          enum: &a4
+            - gravado
+            - exento
+            - excluido
+        tarifa:
+          type: object
+          nullable: true
+          example: "19"
+          description: 19 o 5 si es gravado; 0 si es exento; null si es excluido.
+      required:
+        - tipo
+        - tarifa
+    PrecioDeUnaUnidad:
+      type: object
+      properties:
+        total:
+          type: string
+          example: "2500.00"
+          description: Precio de venta con IVA incluido.
+        base:
+          type: string
+          example: "2100.84"
+        iva:
+          type: string
+          example: "399.16"
+      required:
+        - total
+        - base
+        - iva
+    RespuestaProducto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+          example: Gaseosa 400 ml
+        codigo:
+          type: object
+          nullable: true
+        unidad:
+          type: string
+          enum:
+            - "94"
+            - KGM
+            - GRM
+            - LBR
+            - LTR
+            - MLT
+            - MTR
+            - HUR
+        iva:
+          $ref: "#/components/schemas/IvaDelProducto"
+        precio:
+          $ref: "#/components/schemas/PrecioDeUnaUnidad"
+      required:
+        - id
+        - nombre
+        - codigo
+        - unidad
+        - iva
+        - precio
+    RespuestaListaDeProductos:
+      type: object
+      properties:
+        productos:
+          description: Hasta 50, ordenados por nombre.
+          type: array
+          items:
+            $ref: "#/components/schemas/RespuestaProducto"
+      required:
+        - productos
+    NuevoProducto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: "Lo elige la app: repetir la petición con el mismo id no crea dos."
+        nombre:
+          type: string
+          example: Gaseosa 400 ml
+          description: Como va en la factura (1 a 300 caracteres).
+        codigo:
+          type: object
+          nullable: true
+          example: "7702004003508"
+          description: Código interno o de barras, único en la empresa.
+        unidad:
+          type: string
+          enum:
+            - "94"
+            - KGM
+            - GRM
+            - LBR
+            - LTR
+            - MLT
+            - MTR
+            - HUR
+          example: "94"
+          description: "UN/ECE. Si no viene: 94 (unidad)."
+        precio:
+          type: string
+          example: "2500"
+          description: En pesos, con punto decimal y hasta 2 decimales. Mayor que cero.
+        precioIncluyeIva:
+          type: boolean
+          description: true (por defecto) si el precio ya trae el IVA. Con false se le
+            suma y se guarda el final.
+        tipoDeIva:
+          type: string
+          enum: *a4
+          description: gravado (19 % o 5 %), exento (0 %) o excluido (no causa IVA).
+        tarifaIva:
+          type: string
+          enum:
+            - "19"
+            - "5"
+          nullable: true
+          description: Solo con gravado.
+      required:
+        - id
+        - nombre
+        - precio
+        - tipoDeIva

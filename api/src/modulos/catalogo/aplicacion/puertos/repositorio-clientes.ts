@@ -18,7 +18,3 @@ export interface RepositorioClientes {
   /** Lo guarda si no choca con otro (mismo id o mismo documento). Devuelve false si chocó. */
   agregarSiNoExiste(cliente: Cliente): Promise<boolean>;
 }
-
-export interface RepositoriosDeCatalogo {
-  readonly clientes: RepositorioClientes;
-}

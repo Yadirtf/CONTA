@@ -1,7 +1,7 @@
 import type { ContextoDeMiembro, UnidadDeTrabajo } from '../../../../compartido/aplicacion/index.js';
 import { exigirPermiso, type Nit, Permiso } from '../../../../compartido/dominio/index.js';
 import { type Cliente, MAXIMO_DE_RESULTADOS, TerminoDeBusqueda } from '../../dominio/clientes/index.js';
-import type { RepositoriosDeCatalogo } from '../puertos/repositorio-clientes.js';
+import type { RepositoriosDeCatalogo } from '../puertos/repositorios-de-catalogo.js';
 
 export interface ResultadoDeBusqueda {
   /** Si lo escrito es un NIT posible, con su dígito de verificación calculado: la app lo muestra al escribir. */

@@ -4,12 +4,20 @@ import type { Rol } from './rol.js';
 /**
  * Única fuente de verdad de lo que puede cada rol (HU-04.03, ADR-0012). Lo que no está aquí, está negado.
  * - Dueño: todo.
- * - Contador: lo contable y fiscal, pero no decide quién trabaja en la empresa.
- * - Cajero: vende y nada más; no ve informes ni anula documentos.
+ * - Contador: lo contable y fiscal (también el precio e IVA de los productos), pero no decide quién trabaja en
+ *   la empresa.
+ * - Cajero: vende y nada más; no crea productos, no ve informes ni anula documentos.
  */
 const MATRIZ: Readonly<Record<Rol, ReadonlySet<Permiso>>> = {
   dueno: new Set(Object.values(Permiso)),
-  contador: new Set([Permiso.VerEmpresa, Permiso.Vender, Permiso.VerInformes, Permiso.AnularDocumentos, Permiso.UsarModoContador]),
+  contador: new Set([
+    Permiso.VerEmpresa,
+    Permiso.Vender,
+    Permiso.GestionarProductos,
+    Permiso.VerInformes,
+    Permiso.AnularDocumentos,
+    Permiso.UsarModoContador,
+  ]),
   cajero: new Set([Permiso.VerEmpresa, Permiso.Vender]),
 };
 

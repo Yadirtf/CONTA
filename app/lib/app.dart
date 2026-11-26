@@ -9,6 +9,8 @@ import 'funcionalidades/empresas/presentacion/pantalla_de_empresa.dart';
 import 'funcionalidades/empresas/presentacion/puerta_de_empresa.dart';
 import 'funcionalidades/miembros/dominio/miembros.dart';
 import 'funcionalidades/miembros/presentacion/pantalla_de_personas.dart';
+import 'funcionalidades/productos/dominio/productos.dart';
+import 'funcionalidades/productos/presentacion/pantalla_productos.dart';
 import 'funcionalidades/salud/dominio/estado_api.dart';
 import 'funcionalidades/salud/presentacion/estado_del_servidor.dart';
 import 'funcionalidades/verificacion/dominio/verificacion.dart';
@@ -24,6 +26,7 @@ class ContaApp extends StatelessWidget {
     required this.empresas,
     required this.miembros,
     required this.clientes,
+    required this.productos,
     required this.verificacion,
     required this.repositorioSalud,
   });
@@ -32,6 +35,7 @@ class ContaApp extends StatelessWidget {
   final RepositorioDeEmpresas empresas;
   final RepositorioDeMiembros miembros;
   final RepositorioDeClientes clientes;
+  final RepositorioDeProductos productos;
   final RepositorioDeVerificacion verificacion;
   final RepositorioSalud repositorioSalud;
 
@@ -67,6 +71,17 @@ class ContaApp extends StatelessWidget {
                   : null,
               alVerCompradores: (empresa.membresia?.puede(Permiso.vender) ?? false)
                   ? () => _verCompradores(contexto, empresa.id)
+                  : null,
+              alVerProductos: (empresa.membresia?.puede(Permiso.vender) ?? false)
+                  ? () => Navigator.of(contexto).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => PantallaProductos(
+                          repositorio: productos,
+                          empresaId: empresa.id,
+                          puedeCrear: empresa.membresia?.puede(Permiso.gestionarProductos) ?? false,
+                        ),
+                      ),
+                    )
                   : null,
               contenido: EstadoDelServidor(repositorio: repositorioSalud),
             ),

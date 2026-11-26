@@ -33,6 +33,7 @@ enum Modo {
 /// quien decide de verdad es la API, que responde «No tienes permiso».
 abstract final class Permiso {
   static const vender = 'vender';
+  static const gestionarProductos = 'gestionar-productos';
   static const verInformes = 'ver-informes';
   static const anularDocumentos = 'anular-documentos';
   static const gestionarMiembros = 'gestionar-miembros';
