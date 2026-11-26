@@ -1,12 +1,6 @@
-import {
-  createParamDecorator,
-  Inject,
-  Injectable,
-  UnauthorizedException,
-  type CanActivate,
-  type ExecutionContext,
-} from '@nestjs/common';
+import { createParamDecorator, Inject, Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
 import type { ContextoEmpresa } from '../../aplicacion/index.js';
+import { excepcionDe } from './rechazos-de-empresa.js';
 import { RESOLUTOR_DE_EMPRESA, type PeticionHttp, type ResolutorDeEmpresa } from './resolutor-de-empresa.js';
 
 const CLAVE = Symbol('contextoEmpresa');
@@ -19,9 +13,9 @@ export class GuardaDeEmpresa implements CanActivate {
 
   async canActivate(contexto: ExecutionContext): Promise<boolean> {
     const peticion = contexto.switchToHttp().getRequest<PeticionConEmpresa>();
-    const empresa = await this.resolutor.resolver(peticion);
-    if (!empresa) throw new UnauthorizedException();
-    peticion[CLAVE] = empresa;
+    const resolucion = await this.resolutor.resolver(peticion);
+    if ('rechazo' in resolucion) throw excepcionDe(resolucion.rechazo);
+    peticion[CLAVE] = resolucion.contexto;
     return true;
   }
 }

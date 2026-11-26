@@ -4,7 +4,7 @@ import '../../../nucleo/componentes/franja_de_aviso.dart';
 import '../../../nucleo/componentes/marco_de_formulario.dart';
 import '../../../nucleo/tema/tema_conta.dart';
 import '../dominio/celular.dart';
-import 'componentes/boton_principal.dart';
+import '../../../nucleo/componentes/boton_principal.dart';
 import 'componentes/boton_otro_codigo.dart';
 import 'controlador_de_acceso.dart';
 

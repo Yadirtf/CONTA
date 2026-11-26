@@ -4,16 +4,20 @@ Cómo se aíslan los datos de cada empresa en la API y qué hay que hacer al cre
 
 ## 1. Cómo funciona
 
-1. **Presentación.** La guarda `GuardaDeEmpresa` pide la empresa al puerto `RESOLUTOR_DE_EMPRESA`. Sin empresa responde 401. El controlador la recibe con `@EmpresaDeLaPeticion()` como un `ContextoEmpresa`.
+1. **Presentación.** La guarda `GuardaDeEmpresa` pide la empresa al puerto `RESOLUTOR_DE_EMPRESA`, que implementa `ResolutorPorMembresia` en el módulo de empresas ([ADR-0011](../decisiones/0011-pertenecer-a-varias-empresas.md)): la sesión (`Authorization: Bearer`) dice quién es, el encabezado `X-Empresa` dice en qué empresa trabaja y la membresía, consultada en cada petición dentro de una transacción de esa empresa, dice si puede. Sin sesión responde 401, sin `X-Empresa` 400 y con una empresa ajena 404. El controlador recibe la empresa con `@EmpresaDeLaPeticion()` como un `ContextoEmpresa`. Un módulo con endpoints de empresa importa `EmpresasModule`, que exporta la guarda y el resolutor.
 2. **Aplicación.** El caso de uso recibe el `ContextoEmpresa` como parámetro y llama a `UnidadDeTrabajo.ejecutar(contexto, ({ repositorio }) => ...)`. No filtra por empresa a mano.
 3. **Infraestructura.** `UnidadDeTrabajoPostgres` abre una transacción, llama a `conta_sistema.fijar_empresa(id)` y crea los repositorios con esa transacción. La función aborta si la conexión ya traía una empresa fijada, para no mezclar empresas en el *pooler*.
 4. **Base de datos.** La API se conecta como `conta_api`, sin `BYPASSRLS` y sin ser dueña de ninguna tabla. Las políticas comparan la columna de empresa con `conta_sistema.empresa_actual()`, que es `NULL` sin empresa fijada: sin contexto no se ve ni se escribe nada.
 
 Un recurso de otra empresa no existe para la API: responde 404, igual que un id inexistente.
 
+### La transacción del usuario (HU-04.02)
+
+Para listar «mis empresas» hay una segunda clase de transacción, `UnidadDeTrabajoDelUsuario`. Llama a `conta_sistema.fijar_usuario(id)` en lugar de fijar una empresa. Las políticas `*_del_usuario_actual` (en `conta.membresias` y `conta.empresas`) son `FOR SELECT` y exigen `conta_sistema.empresa_actual() IS NULL`. En esa transacción solo se leen las membresías de la persona y sus empresas, y no se puede escribir. `fijar_usuario()` y `fijar_empresa()` se excluyen mutuamente: las políticas permisivas se suman con OR y una transacción con las dos vería más de lo debido. La prueba de catálogo exige esa forma a toda política cuyo nombre termine en `_del_usuario_actual`.
+
 Reglas que vigila CI:
 
-- ESLint prohíbe en `src/` `sql.raw` y cualquier texto con `set_config` o `app.empresa_id`.
+- ESLint prohíbe en `src/` `sql.raw` y cualquier texto con `set_config`, `app.empresa_id` o `app.usuario_id`.
 - dependency-cruiser prohíbe importar `pg` fuera de `src/compartido/infraestructura/persistencia/`.
 - La [prueba de catálogo](../../api/test/integracion/aislamiento/catalogo.int-spec.ts) recorre `pg_catalog` y revisa todas las tablas de los esquemas de negocio.
 

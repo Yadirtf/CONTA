@@ -4,6 +4,7 @@ import { BaseDeDatos } from '../../../src/compartido/infraestructura/persistenci
 import { UnidadDeTrabajoPostgres } from '../../../src/compartido/infraestructura/persistencia/unidad-de-trabajo-postgres.js';
 import { Empresa, type RepositoriosDeEmpresas } from '../../../src/modulos/empresas/index.js';
 import { RepositorioEmpresasPostgres } from '../../../src/modulos/empresas/infraestructura/persistencia/repositorio-empresas-postgres.js';
+import { RepositorioMembresiasPostgres } from '../../../src/modulos/empresas/infraestructura/persistencia/repositorio-membresias-postgres.js';
 import { hayBase, nuevoId } from './base-de-pruebas.js';
 
 // La unidad de trabajo con un pool de UNA conexión: la misma conexión física pasa de una empresa a otra,
@@ -16,7 +17,10 @@ describe.skipIf(!hayBase)('UnidadDeTrabajoPostgres (integración)', () => {
 
   beforeAll(async () => {
     baseDeDatos = new BaseDeDatos(process.env, 1);
-    uow = new UnidadDeTrabajoPostgres(baseDeDatos, (ejecutor) => ({ empresas: new RepositorioEmpresasPostgres(ejecutor) }));
+    uow = new UnidadDeTrabajoPostgres(baseDeDatos, (ejecutor) => ({
+      empresas: new RepositorioEmpresasPostgres(ejecutor),
+      membresias: new RepositorioMembresiasPostgres(ejecutor),
+    }));
     // Empresas de prueba con ids al azar: en CI viven en la rama de Neon del PR, que se borra al cerrarlo.
     await uow.ejecutar({ empresaId: a }, ({ empresas }) => empresas.guardar(Empresa.crear(a, 'Prueba A')));
     await uow.ejecutar({ empresaId: b }, ({ empresas }) => empresas.guardar(Empresa.crear(b, 'Prueba B')));

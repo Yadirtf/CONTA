@@ -5,15 +5,15 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 // Aislamiento multiempresa (HU-01.05, ADR-0006): en src/ nadie arma SQL con texto ni toca la empresa de la conexión.
-// La única forma de fijar la empresa es UnidadDeTrabajoPostgres, que llama a conta_sistema.fijar_empresa().
+// Solo las unidades de trabajo fijan la empresa o el usuario, con conta_sistema.fijar_empresa() o fijar_usuario().
 const SQL_SEGURO = [
   {
     selector: "MemberExpression[object.name='sql'][property.name='raw']",
     message: 'sql.raw arma SQL con texto y abre la puerta a inyección: usa parámetros de la plantilla sql`...`.',
   },
   {
-    selector: 'Literal[value=/set_config|app\\.empresa_id/i], TemplateElement[value.raw=/set_config|app\\.empresa_id/i]',
-    message: 'La empresa de la conexión solo la fija UnidadDeTrabajoPostgres con conta_sistema.fijar_empresa().',
+    selector: 'Literal[value=/set_config|app\\.(empresa|usuario)_id/i], TemplateElement[value.raw=/set_config|app\\.(empresa|usuario)_id/i]',
+    message: 'La empresa o el usuario de la conexión solo los fijan las unidades de trabajo con conta_sistema.fijar_empresa() o fijar_usuario().',
   },
 ];
 

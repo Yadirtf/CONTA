@@ -24,12 +24,26 @@ const CUFE_DE_PRUEBA = 'a'.repeat(96);
 /** Inserta un envío a la DIAN de la empresa (HU-02.03). */
 export async function crearEnvioDian(cliente: pg.Client, empresaId: string): Promise<string> {
   await prepararEmpresa(cliente, empresaId);
+  return insertarEnvioDian(cliente, empresaId);
+}
+
+/** Inserta un envío en una empresa que ya existe; deja la transacción como esa empresa. */
+export async function insertarEnvioDian(cliente: pg.Client, empresaId: string): Promise<string> {
+  await comoEmpresa(cliente, empresaId);
   const id = nuevoId();
   await cliente.query(
     `INSERT INTO conta.envios_dian (empresa_id, id, cufe, numero, nit_emisor, anio, consecutivo, xml_firmado, estado)
      VALUES ($1, $2, $3, 'SETP990000001', '900373076', 2026, 1, '<Invoice/>', 'pendiente')`,
     [empresaId, id, CUFE_DE_PRUEBA],
   );
+  return id;
+}
+
+/** Inserta una persona de conta_identidad (sin empresa ni RLS) y devuelve su id. */
+export async function crearUsuario(cliente: pg.Client): Promise<string> {
+  const id = nuevoId();
+  const celular = `+573${String(Math.floor(Math.random() * 1e9)).padStart(9, '0')}`;
+  await cliente.query('INSERT INTO conta_identidad.usuarios (id, celular) VALUES ($1, $2)', [id, celular]);
   return id;
 }
 
@@ -52,6 +66,17 @@ export const FABRICAS: Readonly<Record<string, FabricaDeFilas>> = {
     columnaId: 'id',
     empresaInmutable: true,
     insertar: crearEnvioDian,
+  },
+  'conta.membresias': {
+    columnaEmpresa: 'empresa_id',
+    columnaId: 'usuario_id',
+    empresaInmutable: true,
+    async insertar(cliente, empresaId) {
+      await prepararEmpresa(cliente, empresaId);
+      const usuarioId = await crearUsuario(cliente);
+      await cliente.query('INSERT INTO conta.membresias (empresa_id, usuario_id) VALUES ($1, $2)', [empresaId, usuarioId]);
+      return usuarioId;
+    },
   },
   'conta.intentos_envio_dian': {
     columnaEmpresa: 'empresa_id',

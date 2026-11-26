@@ -77,7 +77,7 @@ Se elige la **alternativa 2 (típica)** con la **9 de la cola** como complemento
 - **RLS forzado.** Cada tabla de negocio tiene `ENABLE` y `FORCE ROW LEVEL SECURITY` y una política `TO conta_api` con `USING` y `WITH CHECK` sobre `conta_sistema.empresa_actual()`, que devuelve `NULL` sin empresa fijada; así, sin empresa no se ve ni se escribe ninguna fila.
 - **Llaves con empresa_id.** FK compuestas, índices únicos que empiezan por `empresa_id`, ids `uuid` sin secuencias.
 - **Una prueba de catálogo** recorre `pg_catalog` en CI y falla si una tabla nueva no cumple lo anterior o no está registrada en las pruebas de aislamiento. La prueba de aislamiento corre para cada tabla registrada.
-- **Empresa de la petición.** La resuelve el puerto `RESOLUTOR_DE_EMPRESA`. Hasta EP-04 la implementación por defecto responde 401; las pruebas e2e la reemplazan con un resolutor que vive en `test/` y nunca se compila en `dist/`. Un recurso de otra empresa responde 404, igual que uno que no existe.
+- **Empresa de la petición.** La resuelve el puerto `RESOLUTOR_DE_EMPRESA`. Hasta EP-04 la implementación por defecto responde 401; las pruebas e2e la reemplazan con un resolutor que vive en `test/` y nunca se compila en `dist/`. Un recurso de otra empresa responde 404, igual que uno que no existe. (Desde HU-04.02 el resolutor real cruza sesión, `X-Empresa` y membresía, y las e2e usan sesiones reales: ver [ADR-0011](0011-pertenecer-a-varias-empresas.md).)
 
 El cómo se aplica a una tabla nueva está en [Multiempresa](../arquitectura/multiempresa.md).
 

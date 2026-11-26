@@ -125,10 +125,63 @@ paths:
       summary: Cierra la sesión de este dispositivo.
       tags:
         - acceso
+  /empresas:
+    get:
+      operationId: MisEmpresasController_listar
+      parameters: []
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RespuestaEmpresa"
+        "401":
+          description: Sin sesión, vencida o cerrada.
+      security:
+        - bearer: []
+      summary: Empresas a las que pertenece la persona de la sesión, por razón social.
+      tags:
+        - empresas
+    post:
+      operationId: MisEmpresasController_crear
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NuevaEmpresa"
+      responses:
+        "201":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaEmpresa"
+        "400":
+          description: Razón social vacía o de más de 450 caracteres.
+        "401":
+          description: Sin sesión, vencida o cerrada.
+        "409":
+          description: La persona ya lleva el máximo de empresas (empresa.limite).
+      security:
+        - bearer: []
+      summary: Crea una empresa; quien la crea queda como miembro.
+      tags:
+        - empresas
   /empresas/{id}:
     get:
       operationId: EmpresasController_obtener
       parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
         - name: id
           required: true
           in: path
@@ -141,11 +194,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RespuestaEmpresa"
+        "400":
+          description: Falta X-Empresa (empresa.sin-elegir).
         "401":
-          description: La petición no pertenece a ninguna empresa.
+          description: Sin sesión, vencida o cerrada.
         "404":
-          description: "No existe o es de otra empresa: la API no distingue los dos casos."
-      summary: Datos de la empresa. Solo responde por la empresa de quien pregunta.
+          description: "No existe, es de otra empresa o la persona no es miembro: la API
+            no distingue."
+      security:
+        - bearer: []
+      summary: Datos de la empresa. Solo responde por la empresa elegida en X-Empresa.
       tags:
         - empresas
 info:
@@ -277,4 +335,13 @@ components:
           example: Tienda Doña Rosa S.A.S.
       required:
         - id
+        - razonSocial
+    NuevaEmpresa:
+      type: object
+      properties:
+        razonSocial:
+          type: string
+          example: Tienda Doña Rosa S.A.S.
+          maxLength: 450
+      required:
         - razonSocial

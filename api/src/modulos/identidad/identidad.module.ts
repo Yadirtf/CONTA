@@ -80,7 +80,7 @@ function enviadorDe(config: ConfiguracionDeAcceso): EnviadorDeCodigos {
     GuardaDeSesion,
     GuardaDeLimitePorOrigen,
   ],
-  // HU-04.02 arma el resolutor de empresa con la sesión y la membresía.
+  // El módulo de empresas arma con SesionDelToken el resolutor de empresa (HU-04.02).
   exports: [GuardaDeSesion, SesionDelToken, ENVIADOR_DE_CODIGOS],
 })
 export class IdentidadModule {}

@@ -25,4 +25,4 @@ Entrar a CONTA con el celular y un código, sin contraseña (HU-04.01, [ADR-0010
 
 ## Para otros módulos
 
-`index.ts` exporta `GuardaDeSesion`, `SesionDeLaPeticion` y `SesionVigente`. HU-04.02 los usa para armar el resolutor de empresa con la membresía. Mientras tanto, `ResolutorSinIdentidad` sigue respondiendo 401.
+`index.ts` exporta `GuardaDeSesion`, `SesionDeLaPeticion`, `SesionVigente`, `SesionDelToken` y `tokenDeLaPeticion`. El módulo de empresas los usa para el resolutor de empresa por membresía (HU-04.02, [ADR-0011](../../../../Docs/decisiones/0011-pertenecer-a-varias-empresas.md)). `IdUsuario` vive en `compartido/dominio/` porque lo usan los dos módulos.
