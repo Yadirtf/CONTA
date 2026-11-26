@@ -2,6 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 import 'funcionalidades/acceso/presentacion/controlador_de_acceso.dart';
 import 'funcionalidades/acceso/presentacion/puerta_de_acceso.dart';
+import 'funcionalidades/clientes/dominio/clientes.dart';
+import 'funcionalidades/clientes/presentacion/pantalla_buscar_comprador.dart';
 import 'funcionalidades/empresas/dominio/empresas.dart';
 import 'funcionalidades/empresas/presentacion/pantalla_de_empresa.dart';
 import 'funcionalidades/empresas/presentacion/puerta_de_empresa.dart';
@@ -21,6 +23,7 @@ class ContaApp extends StatelessWidget {
     required this.acceso,
     required this.empresas,
     required this.miembros,
+    required this.clientes,
     required this.verificacion,
     required this.repositorioSalud,
   });
@@ -28,6 +31,7 @@ class ContaApp extends StatelessWidget {
   final ControladorDeAcceso acceso;
   final RepositorioDeEmpresas empresas;
   final RepositorioDeMiembros miembros;
+  final RepositorioDeClientes clientes;
   final RepositorioDeVerificacion verificacion;
   final RepositorioSalud repositorioSalud;
 
@@ -61,11 +65,23 @@ class ContaApp extends StatelessWidget {
                       ),
                     )
                   : null,
+              alVerCompradores: (empresa.membresia?.puede(Permiso.vender) ?? false)
+                  ? () => _verCompradores(contexto, empresa.id)
+                  : null,
               contenido: EstadoDelServidor(repositorio: repositorioSalud),
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// Mientras no exista la venta (HU-06.01), elegir un comprador solo confirma a quién se eligió.
+  Future<void> _verCompradores(BuildContext contexto, String empresaId) async {
+    final mensajero = ScaffoldMessenger.of(contexto);
+    final elegido = await Navigator.of(contexto).push<Comprador>(
+      MaterialPageRoute(builder: (_) => PantallaBuscarComprador(repositorio: clientes, empresaId: empresaId)),
+    );
+    if (elegido != null) mensajero.showSnackBar(SnackBar(content: Text('Comprador: ${elegido.nombre}')));
   }
 }

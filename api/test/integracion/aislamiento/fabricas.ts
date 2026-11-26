@@ -82,6 +82,23 @@ export const FABRICAS: Readonly<Record<string, FabricaDeFilas>> = {
       return id;
     },
   },
+  'conta.clientes': {
+    columnaEmpresa: 'empresa_id',
+    columnaId: 'id',
+    empresaInmutable: true,
+    async insertar(cliente, empresaId) {
+      await prepararEmpresa(cliente, empresaId);
+      const creadoPor = await crearUsuario(cliente);
+      const id = nuevoId();
+      await cliente.query(
+        `INSERT INTO conta.clientes (empresa_id, id, tipo_identificacion, numero, nombre, tipo_de_persona,
+                                     responsabilidades_fiscales, responsable_de_iva, creado_por)
+         VALUES ($1, $2, '13', $3, 'Rosa Pérez', 'natural', '{R-99-PN}', false, $4)`,
+        [empresaId, id, String(Math.floor(Math.random() * 1e9)), creadoPor],
+      );
+      return id;
+    },
+  },
   'conta.intentos_envio_dian': {
     columnaEmpresa: 'empresa_id',
     columnaId: 'id',
