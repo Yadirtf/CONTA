@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { hayBase } from '../integracion/aislamiento/base-de-pruebas.js';
-import { celularAlAzar, crearAppConCelulares, entrar } from './apoyo/app-con-sesiones.js';
+import { celularAlAzar, crearAppConCelulares, entrar, pasarSegundoFactor } from './apoyo/app-con-sesiones.js';
 import { EndpointsProtegidosModule } from './apoyo/endpoints-protegidos.js';
 
 // HU-04.03 de punta a punta: el dueño invita a su cajero y a su contador; el cajero vende pero recibe
@@ -24,6 +24,7 @@ interface Miembro {
 }
 
 const NO_TIENES_PERMISO = { codigo: 'permiso.denegado', mensaje: 'No tienes permiso' };
+const SIN_SEGUNDO_FACTOR = { codigo: 'acceso.segundo-factor-requerido' };
 
 describe.skipIf(!hayBase)('roles y modos (e2e)', () => {
   const celulares = { dueno: celularAlAzar(), cajero: celularAlAzar(), contador: celularAlAzar() };
@@ -99,7 +100,10 @@ describe.skipIf(!hayBase)('roles y modos (e2e)', () => {
     contador = body as Miembro;
     expect(contador).toMatchObject({ rol: 'contador', modo: 'contador' });
     await aceptar('contador').expect(204);
-    expect(await misEmpresas('contador')).toEqual([expect.objectContaining({ rol: 'contador', modo: 'contador' })]);
+    expect(await misEmpresas('contador')).toEqual([expect.objectContaining({ rol: 'contador', modo: 'contador', exigeSegundoFactor: true })]);
+    // HU-04.04: sin el segundo factor, el contador no trabaja en la empresa.
+    expect((await como('contador').get('/pruebas/informes').expect(403)).body).toMatchObject(SIN_SEGUNDO_FACTOR);
+    await pasarSegundoFactor(app, sesion.contador);
     await como('contador').get('/pruebas/informes').expect(200);
     await como('contador').post('/pruebas/anulaciones').expect(201);
     await como('contador').get('/miembros').expect(403);
@@ -125,8 +129,10 @@ describe.skipIf(!hayBase)('roles y modos (e2e)', () => {
     expect(invalido.body).toMatchObject({ codigo: 'acceso.celular-invalido' });
   }, 30_000);
 
-  it('un cambio de rol cuenta desde la petición siguiente', async () => {
+  it('un cambio de rol cuenta desde la petición siguiente, también para exigir el segundo factor', async () => {
     await como('dueno').patch(`/miembros/${cajero.usuarioId}`, { rol: 'contador' }).expect(200);
+    expect((await como('cajero').get('/pruebas/informes').expect(403)).body).toMatchObject(SIN_SEGUNDO_FACTOR);
+    await pasarSegundoFactor(app, sesion.cajero);
     await como('cajero').get('/pruebas/informes').expect(200);
     await como('dueno').patch(`/miembros/${cajero.usuarioId}`, { rol: 'cajero' }).expect(200);
     await como('cajero').get('/pruebas/informes').expect(403);

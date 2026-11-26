@@ -127,7 +127,7 @@ describe.skipIf(!hayBase)('membresías con roles (integración)', () => {
       }));
       const cambiar = new CambiarMembresia(uow);
       const [a, b] = duenos.map((d) => IdUsuario.de(d)) as [IdUsuario, IdUsuario];
-      const comoDueno = (usuarioId: IdUsuario): ContextoDeMiembro => ({ empresaId: IdEmpresa.de(empresa), usuarioId, rol: 'dueno' });
+      const comoDueno = (usuarioId: IdUsuario): ContextoDeMiembro => ({ empresaId: IdEmpresa.de(empresa), usuarioId, rol: 'dueno', modo: 'simple' });
 
       const resultados = await Promise.allSettled([
         cambiar.ejecutar(comoDueno(a), b, { rol: 'cajero' }),

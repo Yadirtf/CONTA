@@ -11,16 +11,17 @@ const TOKEN = 'a'.repeat(43);
 const SUYA = '11111111-1111-4111-8111-111111111111';
 const AJENA = '22222222-2222-4222-8222-222222222222';
 const persona = IdUsuario.de('33333333-3333-4333-8333-333333333333');
-const sesion = { usuario: { id: persona } } as SesionVigente;
+type Membresia = Pick<ContextoDeMiembro, 'rol' | 'modo'>;
 
-/** Resolutor con dobles: una sesión vigente para TOKEN y membresía solo en SUYA. */
-function resolutor() {
+/** Resolutor con dobles: una sesión vigente para TOKEN y membresía solo en SUYA, con ese rol y modo. */
+function resolutor(membresia: Membresia = { rol: 'cajero', modo: 'simple' }, segundoFactorVigente = false) {
   const preguntas: string[] = [];
+  const sesion = { usuario: { id: persona }, segundoFactorVigente } as SesionVigente;
   const sesionDelToken = { ejecutar: (t: string) => Promise.resolve(t === TOKEN ? sesion : null) } as SesionDelToken;
   const comprobar = {
     ejecutar: (u: IdUsuario, e: IdEmpresa): Promise<ContextoDeMiembro | null> => {
       preguntas.push(`${u.valor}@${e.valor}`);
-      return Promise.resolve(e.valor === SUYA ? { empresaId: e, usuarioId: u, rol: 'cajero' } : null);
+      return Promise.resolve(e.valor === SUYA ? { empresaId: e, usuarioId: u, ...membresia } : null);
     },
   } as ComprobarMembresia;
   return { preguntas, resolutor: new ResolutorPorMembresia(sesionDelToken, comprobar) };
@@ -32,7 +33,7 @@ describe('ResolutorPorMembresia', () => {
   it('con sesión y membresía, la petición corre en la empresa elegida, con el rol del miembro', async () => {
     const { resolutor: r, preguntas } = resolutor();
     const resolucion = await r.resolver(peticion({ authorization: `Bearer ${TOKEN}`, 'x-empresa': SUYA.toUpperCase() }));
-    expect(resolucion).toEqual({ contexto: { empresaId: IdEmpresa.de(SUYA), usuarioId: persona, rol: 'cajero' } });
+    expect(resolucion).toEqual({ contexto: { empresaId: IdEmpresa.de(SUYA), usuarioId: persona, rol: 'cajero', modo: 'simple' } });
     expect(preguntas).toEqual([`${persona.valor}@${SUYA}`]);
   });
 
@@ -48,6 +49,21 @@ describe('ResolutorPorMembresia', () => {
     const { resolutor: r } = resolutor();
     expect(await r.resolver(peticion({ authorization: `Bearer ${TOKEN}` }))).toEqual({ rechazo: 'sin-empresa-elegida' });
     expect(await r.resolver(peticion({ authorization: `Bearer ${TOKEN}`, 'x-empresa': '' }))).toEqual({ rechazo: 'sin-empresa-elegida' });
+  });
+
+  it('contador o modo contador sin el segundo factor vigente: sin-segundo-factor (HU-04.04)', async () => {
+    const conToken = peticion({ authorization: `Bearer ${TOKEN}`, 'x-empresa': SUYA });
+    expect(await resolutor({ rol: 'contador', modo: 'contador' }).resolutor.resolver(conToken)).toEqual({ rechazo: 'sin-segundo-factor' });
+    expect(await resolutor({ rol: 'contador', modo: 'simple' }).resolutor.resolver(conToken)).toEqual({ rechazo: 'sin-segundo-factor' });
+    // Un dueño en modo contador no lo esquiva (ADR-0012).
+    expect(await resolutor({ rol: 'dueno', modo: 'contador' }).resolutor.resolver(conToken)).toEqual({ rechazo: 'sin-segundo-factor' });
+  });
+
+  it('con el segundo factor vigente, el contador entra; dueño y cajero en modo simple no lo necesitan', async () => {
+    const conToken = peticion({ authorization: `Bearer ${TOKEN}`, 'x-empresa': SUYA });
+    expect(await resolutor({ rol: 'contador', modo: 'contador' }, true).resolutor.resolver(conToken)).toHaveProperty('contexto.rol', 'contador');
+    expect(await resolutor({ rol: 'dueno', modo: 'simple' }).resolutor.resolver(conToken)).toHaveProperty('contexto.rol', 'dueno');
+    expect(await resolutor({ rol: 'cajero', modo: 'simple' }).resolutor.resolver(conToken)).toHaveProperty('contexto.rol', 'cajero');
   });
 
   it('empresa ajena, mal escrita o repetida: empresa-ajena, sin distinguir', async () => {
@@ -76,5 +92,8 @@ describe('excepcionDe', () => {
     const sinPermiso = excepcionDe('sin-permiso');
     expect(sinPermiso).toBeInstanceOf(ForbiddenException);
     expect(sinPermiso.getResponse()).toEqual({ codigo: 'permiso.denegado', mensaje: 'No tienes permiso' });
+    const sinSegundoFactor = excepcionDe('sin-segundo-factor');
+    expect(sinSegundoFactor).toBeInstanceOf(ForbiddenException);
+    expect(sinSegundoFactor.getResponse()).toMatchObject({ codigo: 'acceso.segundo-factor-requerido' });
   });
 });
