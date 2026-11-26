@@ -178,7 +178,7 @@ Como dueño, quiero invitar a mi cajero con permisos limitados, para que venda s
 
 #### EP-05. Catálogo: clientes y productos — Prioridad M
 
-**HU-05.01 Buscar cliente por cédula o NIT** (M, M) — En revisión
+**HU-05.01 Buscar cliente por cédula o NIT** (M, M) — Hecha
 Como cajero, quiero buscar al comprador por su documento, para facturar rápido.
 - Dado un NIT, cuando lo escribo, entonces se calcula y valida el dígito de verificación.
 - Dado un comprador nuevo, puedo crearlo con los campos mínimos que exige la DIAN.
