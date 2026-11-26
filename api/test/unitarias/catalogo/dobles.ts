@@ -14,6 +14,8 @@ export class CatalogoEnMemoria implements UnidadDeTrabajo<RepositoriosDeCatalogo
   readonly guardados: Guardado[] = [];
   /** Se llama justo antes de insertar: simula otra petición que gana la carrera. */
   antesDeInsertar: (() => void) | null = null;
+  /** Veces que se pidió el candado de altas. */
+  bloqueos = 0;
 
   ejecutar<T>(contexto: ContextoEmpresa, trabajo: (r: RepositoriosDeCatalogo) => Promise<T>): Promise<T> {
     return trabajo({ clientes: this.repositorio(contexto.empresaId.valor) });
@@ -35,6 +37,10 @@ export class CatalogoEnMemoria implements UnidadDeTrabajo<RepositoriosDeCatalogo
             .sort((a, b) => a.identificacion.numero.localeCompare(b.identificacion.numero))
             .slice(0, limite),
         ),
+      bloquearAltas: () => {
+        this.bloqueos++;
+        return Promise.resolve();
+      },
       conIdentificacion: (identificacion) => Promise.resolve(conIdentificacion(identificacion)),
       contarCreadosDesde: (fecha) => Promise.resolve(deLaEmpresa().filter((c) => c.datos.creadoEn >= fecha).length),
       agregarSiNoExiste: (cliente) => {

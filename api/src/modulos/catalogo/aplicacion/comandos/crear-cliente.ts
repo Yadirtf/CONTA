@@ -25,6 +25,7 @@ export class CrearCliente {
     const ahora = this.reloj.ahora();
     const nuevo = Cliente.crear(datos, contexto.usuarioId.valor, ahora);
     return this.catalogo.ejecutar(contexto, async ({ clientes }) => {
+      await clientes.bloquearAltas();
       const existente = await clientes.conIdentificacion(nuevo.identificacion);
       if (existente) return { cliente: existente, creado: false };
       comprobarQuePuedeCrear(await clientes.contarCreadosDesde(new Date(ahora.getTime() - UN_DIA_EN_MS)));

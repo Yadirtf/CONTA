@@ -17,7 +17,7 @@ export const CONSUMIDOR_FINAL = {
   direccion: null as Direccion | null,
 } as const;
 
-/** El número de consumidor final queda reservado, con cualquier tipo de documento. */
+/** El número de consumidor final queda reservado, con cualquier tipo de documento y con ceros adelante. */
 export function esConsumidorFinal(identificacion: Identificacion): boolean {
-  return identificacion.numero === CONSUMIDOR_FINAL.identificacion.numero;
+  return identificacion.numero.replace(/^0+/, '') === CONSUMIDOR_FINAL.identificacion.numero;
 }

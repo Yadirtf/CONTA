@@ -1,8 +1,9 @@
 import { ErrorDominio, Identificacion, type TipoDeIdentificacion } from '../../../../compartido/dominio/index.js';
-import { correoDe, type Direccion, direccionDe, textoLimpio } from './contacto.js';
+import { correoDe, type Direccion, direccionDe } from './contacto.js';
 import { esConsumidorFinal } from './consumidor-final.js';
 import { datosTributarios, type DatosTributarios, type TipoDePersona } from './datos-tributarios.js';
 import { digitoEscritoEn, numeroDeDocumentoLimpio } from './numero-de-documento.js';
+import { textoLimpio } from './texto-limpio.js';
 
 const LARGO_MAXIMO_DEL_NOMBRE = 450;
 
@@ -55,7 +56,7 @@ export class Cliente {
       id: nuevo.id,
       identificacion,
       nombre,
-      ...datosTributarios(nuevo),
+      ...datosTributarios(nuevo, identificacion.tipo),
       correo: correoDe(nuevo.correo),
       direccion: direccionDe(nuevo.direccion),
       creadoEn: ahora,

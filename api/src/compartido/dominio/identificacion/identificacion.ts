@@ -4,6 +4,10 @@ import { esTipoDeIdentificacion, TIPO_NIT, type TipoDeIdentificacion } from './t
 
 const NUMERO_SIN_NIT = /^[A-Za-z0-9]{1,20}$/;
 
+/** Documentos colombianos que son solo dígitos: sin letras ni ceros adelante («0123» y «123» serían dos). */
+const SOLO_DIGITOS: readonly TipoDeIdentificacion[] = ['12', '13', '22'];
+const NUMERO_DE_DIGITOS = /^[1-9]\d{0,19}$/;
+
 /**
  * Identificación de una persona o empresa ante la DIAN. Con NIT lleva dígito de verificación, que siempre se
  * calcula; con los demás tipos, no lleva. La usan facturación (emisor y adquirente) y catálogo (clientes).
@@ -26,6 +30,9 @@ export class Identificacion {
     if (tipo === TIPO_NIT) return Identificacion.nit(Nit.de(numero));
     if (!NUMERO_SIN_NIT.test(numero)) {
       throw new ErrorDominio('identificacion.numero-invalido', 'El número de identificación tiene de 1 a 20 letras o dígitos');
+    }
+    if (SOLO_DIGITOS.includes(tipo) && !NUMERO_DE_DIGITOS.test(numero)) {
+      throw new ErrorDominio('identificacion.numero-invalido', 'Ese documento lleva solo dígitos y no empieza por cero');
     }
     return new Identificacion(tipo, numero, null);
   }

@@ -40,6 +40,31 @@ export class RespuestaCliente {
   readonly direccion!: DireccionDeCliente | null;
 }
 
+/**
+ * Un comprador en la lista de la búsqueda: solo lo que hace falta para reconocerlo y elegirlo. Sin correo ni
+ * dirección, para que buscar no sirva para sacar los datos de contacto de todos (hallazgo H5 de la prueba de
+ * ataque). La factura leerá el resto en la API a partir del id.
+ */
+export class CompradorEncontrado {
+  @ApiProperty({ format: 'uuid' })
+  readonly id!: string;
+
+  @ApiProperty({ enum: Object.keys(TIPOS_DE_IDENTIFICACION) })
+  readonly tipoDocumento!: TipoDeIdentificacion;
+
+  @ApiProperty({ example: '900373076' })
+  readonly numero!: string;
+
+  @ApiProperty({ nullable: true, example: 4 })
+  readonly digitoVerificacion!: number | null;
+
+  @ApiProperty()
+  readonly nombre!: string;
+
+  @ApiProperty({ enum: TIPOS_DE_PERSONA })
+  readonly tipoDePersona!: TipoDePersona;
+}
+
 export class NitCalculado {
   @ApiProperty({ example: '900373076' })
   readonly numero!: string;
@@ -52,8 +77,8 @@ export class RespuestaBusqueda {
   @ApiProperty({ type: NitCalculado, nullable: true, description: 'Si lo escrito es un NIT posible: su dígito de verificación.' })
   readonly nit!: NitCalculado | null;
 
-  @ApiProperty({ type: [RespuestaCliente], description: 'Hasta 10, ordenados por número.' })
-  readonly clientes!: RespuestaCliente[];
+  @ApiProperty({ type: [CompradorEncontrado], description: 'Hasta 10, ordenados por número.' })
+  readonly clientes!: CompradorEncontrado[];
 }
 
 export const respuestaDeCliente = ({ datos }: Cliente): RespuestaCliente => ({
@@ -70,7 +95,16 @@ export const respuestaDeConsumidorFinal = (): RespuestaCliente => ({
 
 export const respuestaDeBusqueda = ({ nit, clientes }: ResultadoDeBusqueda): RespuestaBusqueda => ({
   nit: nit ? nitCalculado(nit) : null,
-  clientes: clientes.map(respuestaDeCliente),
+  clientes: clientes.map(compradorEncontrado),
+});
+
+const compradorEncontrado = ({ datos }: Cliente): CompradorEncontrado => ({
+  id: datos.id,
+  tipoDocumento: datos.identificacion.tipo,
+  numero: datos.identificacion.numero,
+  digitoVerificacion: datos.identificacion.digitoVerificacion,
+  nombre: datos.nombre,
+  tipoDePersona: datos.tipoDePersona,
 });
 
 const nitCalculado = (nit: Nit): NitCalculado => ({ numero: nit.numero, digitoVerificacion: nit.digitoVerificacion });

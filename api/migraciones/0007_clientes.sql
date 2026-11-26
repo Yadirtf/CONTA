@@ -10,18 +10,31 @@ CREATE TABLE conta.clientes (
   -- no choca, así que el choque no delata que el id exista en otra empresa.
   id uuid NOT NULL,
   tipo_identificacion text NOT NULL CHECK (tipo_identificacion IN ('11', '12', '13', '21', '22', '31', '41', '42', '50', '91')),
-  numero text NOT NULL CHECK (numero ~ '^[A-Z0-9]{1,20}$' AND numero <> '222222222222'),
+  -- Mismas reglas que el dominio: letras A-Z y dígitos; cédula, tarjeta de identidad y cédula de extranjería
+  -- sin ceros adelante; el número del consumidor final, reservado aun con ceros adelante.
+  numero text NOT NULL CHECK (
+    numero ~ '^[A-Z0-9]{1,20}$' AND ltrim(numero, '0') <> '222222222222'
+    AND (tipo_identificacion NOT IN ('12', '13', '22') OR numero ~ '^[1-9][0-9]{0,19}$')
+  ),
   digito_verificacion smallint CHECK (digito_verificacion BETWEEN 0 AND 9),
-  nombre text NOT NULL CHECK (char_length(nombre) BETWEEN 1 AND 450 AND nombre !~ '[[:cntrl:]]'),
-  tipo_de_persona text NOT NULL CHECK (tipo_de_persona IN ('natural', 'juridica')),
-  responsabilidades_fiscales text[] NOT NULL
-    CHECK (array_to_string(responsabilidades_fiscales, ',') ~ '^(O-[0-9]{2}|R-99-PN)(,(O-[0-9]{2}|R-99-PN)){0,9}$'),
+  -- Los textos llegan limpios del dominio (sin controles C0 ni C1); la tabla lo vuelve a exigir.
+  nombre text NOT NULL CHECK (char_length(nombre) BETWEEN 1 AND 450 AND nombre !~ '[\x01-\x1f\x7f-\x9f]'),
+  -- Una persona jurídica se identifica con NIT (31) o NIT de otro país (50).
+  tipo_de_persona text NOT NULL CHECK (tipo_de_persona = 'natural' OR tipo_identificacion IN ('31', '50')),
+  -- Lista cerrada de responsabilidades de la factura electrónica.
+  responsabilidades_fiscales text[] NOT NULL CHECK (
+    cardinality(responsabilidades_fiscales) BETWEEN 1 AND 4
+    AND responsabilidades_fiscales <@ ARRAY['O-13', 'O-15', 'O-23', 'O-47', 'R-99-PN']
+  ),
   responsable_de_iva boolean NOT NULL,
-  correo text CHECK (char_length(correo) <= 254 AND correo ~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'),
-  codigo_municipio text CHECK (codigo_municipio ~ '^[0-9]{5}$'),
-  ciudad text CHECK (char_length(ciudad) BETWEEN 1 AND 200),
-  departamento text CHECK (char_length(departamento) BETWEEN 1 AND 200),
-  direccion text CHECK (char_length(direccion) BETWEEN 1 AND 200),
+  -- ASCII imprimible, sin espacios ni < > ".
+  correo text CHECK (
+    char_length(correo) <= 254 AND correo ~ '^[A-Za-z0-9.!#$%&''*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$'
+  ),
+  codigo_municipio text CHECK (codigo_municipio ~ '^[0-9]{5}$' AND right(codigo_municipio, 3) <> '000'),
+  ciudad text CHECK (char_length(ciudad) BETWEEN 1 AND 200 AND ciudad !~ '[\x01-\x1f\x7f-\x9f]'),
+  departamento text CHECK (char_length(departamento) BETWEEN 1 AND 200 AND departamento !~ '[\x01-\x1f\x7f-\x9f]'),
+  direccion text CHECK (char_length(direccion) BETWEEN 1 AND 200 AND direccion !~ '[\x01-\x1f\x7f-\x9f]'),
   creado_en timestamptz NOT NULL DEFAULT now(),
   creado_por uuid NOT NULL REFERENCES conta_identidad.usuarios (id),
   PRIMARY KEY (empresa_id, id),

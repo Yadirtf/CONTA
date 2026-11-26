@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { hayBase } from '../integracion/aislamiento/base-de-pruebas.js';
+import { MAXIMO_DE_BUSQUEDAS } from '../../src/modulos/catalogo/presentacion/http/limite-de-busquedas.js';
 import { celularAlAzar, crearAppConCelulares, entrar } from './apoyo/app-con-sesiones.js';
 
 // HU-05.01 de punta a punta: el cajero busca al comprador por su documento, ve el dígito de verificación al
@@ -79,7 +80,10 @@ describe.skipIf(!hayBase)('clientes (e2e)', () => {
     const { body } = await como('dueno').post('/clientes', ferreteria({ nombre: 'Otro nombre' })).expect(200);
     expect((body as Respuesta).nombre).toBe('Ferretería El Tornillo S.A.S.');
     const { body: encontrados } = await buscar('cajero', nit.slice(0, 5)).expect(200);
-    expect((encontrados as { clientes: Respuesta[] }).clientes.filter((c) => c.numero === nit)).toHaveLength(1);
+    const iguales = (encontrados as { clientes: Respuesta[] }).clientes.filter((c) => c.numero === nit);
+    expect(iguales).toHaveLength(1);
+    // La lista no trae datos de contacto: buscar no sirve para sacar los correos de todos (ataque H5).
+    expect(Object.keys(iguales[0]!).sort()).toEqual(['digitoVerificacion', 'id', 'nombre', 'numero', 'tipoDePersona', 'tipoDocumento']);
   });
 
   it('repetir la misma petición (mismo id) no crea dos', async () => {
@@ -112,5 +116,21 @@ describe.skipIf(!hayBase)('clientes (e2e)', () => {
     await api().post('/clientes/busqueda').set('Authorization', sesion.cajero).send({ documento: nit }).expect(400);
     expect((await buscar('cajero', '9%').expect(400)).body).toMatchObject({ codigo: 'cliente.busqueda-invalida' });
     expect((await buscar('cajero', '___').expect(400)).body).toMatchObject({ codigo: 'cliente.busqueda-invalida' });
+  });
+
+  it('recorrer prefijos para sacar la lista entera se frena con 429 (ataque H5)', async () => {
+    let respuesta = await buscar('dueno', '100');
+    for (let i = 1; i <= MAXIMO_DE_BUSQUEDAS && respuesta.status === 200; i++) respuesta = await buscar('dueno', String(100 + i));
+    expect(respuesta.status).toBe(429);
+    expect(respuesta.body).toMatchObject({ codigo: 'cliente.limite-de-busquedas' });
+    // El límite es por persona: el cajero sigue buscando.
+    await buscar('cajero', '100').expect(200);
+  }, 30_000);
+
+  it('un nombre con controles C1 o un correo con NUL no rompen la API (ataque H2)', async () => {
+    const conC1 = { id: randomUUID(), tipoDocumento: '13', numero: `2${nit}`, nombre: 'Ro\u0085sa\u202e', tipoDePersona: 'natural' };
+    expect((await como('cajero').post('/clientes', conC1).expect(201)).body).toMatchObject({ nombre: 'Ro sa' });
+    const conNul = { ...conC1, id: randomUUID(), numero: `3${nit}`, correo: 'a\u0000@b.co' };
+    expect((await como('cajero').post('/clientes', conNul).expect(400)).body).toMatchObject({ codigo: 'cliente.correo-invalido' });
   });
 });

@@ -14,7 +14,7 @@ describe('TerminoDeBusqueda', () => {
     expect(TerminoDeBusqueda.de('0123').nit).toBeNull();
   });
 
-  it.each(['', '12', '1.2', '%%%', '12_3', "1' OR '1'='1", 'a'.repeat(21)])('rechaza %j', (texto) => {
+  it.each(['900-373-076', 'stra\u00dfe', '', '12', '1.2', '%%%', '12_3', "1' OR '1'='1", 'a'.repeat(21)])('rechaza %j', (texto) => {
     expect(() => TerminoDeBusqueda.de(texto)).toThrow(ErrorDominio);
   });
 

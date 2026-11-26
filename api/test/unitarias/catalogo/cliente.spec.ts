@@ -40,9 +40,36 @@ describe('Cliente', () => {
     expect(Cliente.crear(vecina({ tipoDeIdentificacion: '41', numero: 'ab 123456' }), CAJERO, AHORA).identificacion.numero).toBe('AB123456');
   });
 
+  it('quita controles C1, bidi, ancho cero y surrogates sueltos (prueba de ataque H2 y H4)', () => {
+    const nombre = 'Ro\u0085sa\u202e P\u200bérez\ud800 \u009b'.normalize('NFD');
+    expect(Cliente.crear(vecina({ nombre }), CAJERO, AHORA).datos.nombre).toBe('Ro sa Pérez');
+    const direccion = { codigoMunicipio: '05001', ciudad: 'Mede\u0085llín', departamento: 'Antioquia', linea: 'Calle\u2028 10' };
+    expect(Cliente.crear(vecina({ direccion }), CAJERO, AHORA).datos.direccion).toEqual({
+      codigoMunicipio: '05001',
+      ciudad: 'Mede llín',
+      departamento: 'Antioquia',
+      linea: 'Calle 10',
+    });
+  });
+
+  it('un número con más de un guion no se corta en silencio (prueba de ataque H3)', () => {
+    expect(codigoAlCrear(vecina({ numero: '103456-23456' }))).toBe('identificacion.numero-invalido');
+    expect(codigoAlCrear(vecina({ numero: '103456-2' }))).toBe('identificacion.digito-sin-nit');
+  });
+
+  it('solo pasa a mayúsculas las letras a-z y rechaza ceros adelante en la cédula (prueba de ataque H7)', () => {
+    expect(codigoAlCrear(vecina({ tipoDeIdentificacion: '41', numero: 'stra\u00dfe1' }))).toBe('identificacion.numero-invalido');
+    expect(codigoAlCrear(vecina({ numero: '01020304050' }))).toBe('identificacion.numero-invalido');
+  });
+
+  it('una empresa extranjera puede ir con NIT de otro país', () => {
+    expect(Cliente.crear(ferreteria({ tipoDeIdentificacion: '50', numero: 'US123456' }), CAJERO, AHORA).datos.tipoDePersona).toBe('juridica');
+  });
+
   it('el número de consumidor final está reservado', () => {
     expect(codigoAlCrear(vecina({ numero: CONSUMIDOR_FINAL.identificacion.numero }))).toBe('cliente.consumidor-final');
     expect(codigoAlCrear(vecina({ tipoDeIdentificacion: '22', numero: '222.222.222.222' }))).toBe('cliente.consumidor-final');
+    expect(codigoAlCrear(vecina({ tipoDeIdentificacion: '41', numero: '0222222222222' }))).toBe('cliente.consumidor-final');
   });
 
   it.each([
@@ -50,6 +77,15 @@ describe('Cliente', () => {
     [{ nombre: 'x'.repeat(451) }, 'cliente.nombre-invalido'],
     [{ tipoDePersona: 'otra' as never }, 'cliente.tipo-de-persona-invalido'],
     [{ responsabilidadesFiscales: ['O-1'] }, 'cliente.responsabilidad-invalida'],
+    [{ responsabilidadesFiscales: ['O-99'] }, 'cliente.responsabilidad-invalida'],
+    [{ tipoDeIdentificacion: '13' as const, numero: '1020304050' }, 'cliente.juridica-sin-nit'],
+    [{ numero: '900-373-076-4' }, 'nit.invalido'],
+    [{ correo: 'a\u0000@b.co' }, 'cliente.correo-invalido'],
+    [{ correo: '"<script>"@b.co' }, 'cliente.correo-invalido'],
+    [{ correo: 'a\u202e@b.co' }, 'cliente.correo-invalido'],
+    [{ nombre: '\u200b\u200b' }, 'cliente.nombre-invalido'],
+    [{ direccion: { codigoMunicipio: '00000', ciudad: 'X', departamento: 'Y', linea: 'Calle 1' } }, 'cliente.direccion-invalida'],
+    [{ direccion: { codigoMunicipio: '11000', ciudad: 'X', departamento: 'Y', linea: 'Calle 1' } }, 'cliente.direccion-invalida'],
     [{ responsabilidadesFiscales: ['R-99-PN', 'O-13'] }, 'cliente.responsabilidad-invalida'],
     [{ correo: 'sin-arroba' }, 'cliente.correo-invalido'],
     [{ correo: `${'a'.repeat(250)}@b.co` }, 'cliente.correo-invalido'],

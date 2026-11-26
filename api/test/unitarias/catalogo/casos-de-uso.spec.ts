@@ -42,6 +42,8 @@ describe('casos de uso de clientes', () => {
       const { cliente, creado } = await crear.ejecutar(miembro('cajero'), ferreteria());
       expect(creado).toBe(true);
       expect(catalogo.guardados).toEqual([{ empresaId: EMPRESA_A, cliente }]);
+      // El candado va antes de contar: dos altas a la vez no pasan el tope diario (prueba de ataque H6).
+      expect(catalogo.bloqueos).toBe(1);
     });
 
     it('repetir la petición con el mismo id no crea dos', async () => {

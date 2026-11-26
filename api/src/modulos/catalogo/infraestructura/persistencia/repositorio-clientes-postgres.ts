@@ -34,6 +34,11 @@ export class RepositorioClientesPostgres implements RepositorioClientes {
     return fila ? clienteDeFila(fila) : null;
   }
 
+  async bloquearAltas(): Promise<void> {
+    // Candado de transacción por empresa: se suelta solo al terminar. hashtextextended da la llave de 64 bits.
+    await this.ejecutor.execute(sql`select pg_advisory_xact_lock(hashtextextended('conta.clientes:' || ${EMPRESA_DE_LA_TRANSACCION}::text, 0))`);
+  }
+
   async contarCreadosDesde(fecha: Date): Promise<number> {
     const [fila] = await this.ejecutor.select({ cuantos: count() }).from(clientes).where(gte(clientes.creadoEn, fecha));
     return fila?.cuantos ?? 0;

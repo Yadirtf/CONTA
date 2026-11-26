@@ -18,6 +18,7 @@ import { CrearCliente } from '../../aplicacion/comandos/crear-cliente.js';
 import { BuscarClientes } from '../../aplicacion/consultas/buscar-clientes.js';
 import { Busqueda, documentoDe } from './cuerpo-de-busqueda.js';
 import { NuevoCliente } from './cuerpo-de-cliente.js';
+import { LimiteDeBusquedas } from './limite-de-busquedas.js';
 import { clienteNuevoDe } from './lectura-de-cliente.js';
 import {
   RespuestaBusqueda,
@@ -47,6 +48,7 @@ export class ClientesController {
   constructor(
     private readonly buscarClientes: BuscarClientes,
     private readonly crearCliente: CrearCliente,
+    private readonly limiteDeBusquedas: LimiteDeBusquedas,
   ) {}
 
   @Post('busqueda')
@@ -56,7 +58,9 @@ export class ClientesController {
   @ApiOperation({ summary: 'Busca compradores por el comienzo de su documento y calcula el dígito de verificación si es un NIT.' })
   @ApiBody({ type: Busqueda })
   @ApiOkResponse({ type: RespuestaBusqueda })
+  @ApiTooManyRequestsResponse({ description: 'Demasiadas búsquedas seguidas (cliente.limite-de-busquedas).' })
   async buscar(@EmpresaDeLaPeticion() miembro: ContextoDeMiembro, @Body() cuerpo: unknown): Promise<RespuestaBusqueda> {
+    this.limiteDeBusquedas.exigir(miembro);
     return respuestaDeBusqueda(await this.buscarClientes.ejecutar(miembro, documentoDe(cuerpo)));
   }
 

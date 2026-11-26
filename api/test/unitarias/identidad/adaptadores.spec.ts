@@ -6,7 +6,7 @@ import { GeneradorDeCodigosNode } from '../../../src/modulos/identidad/infraestr
 import { EnviadorConCelularesDePrueba } from '../../../src/modulos/identidad/infraestructura/envio/enviador-con-celulares-de-prueba.js';
 import { EnviadorConTope } from '../../../src/modulos/identidad/infraestructura/envio/enviador-con-tope.js';
 import { EnviadorWhatsAppCloud } from '../../../src/modulos/identidad/infraestructura/envio/enviador-whatsapp-cloud.js';
-import { LimitadorPorOrigen } from '../../../src/modulos/identidad/presentacion/http/limite-por-origen.js';
+import { LimitadorPorVentana } from '../../../src/compartido/presentacion/limites/limitador-por-ventana.js';
 import { EnviadorEspia, huellas } from './dobles.js';
 
 const celular = Celular.de('3001234567');
@@ -128,10 +128,10 @@ describe('enviadores', () => {
   });
 });
 
-describe('LimitadorPorOrigen', () => {
+describe('LimitadorPorVentana', () => {
   it('admite hasta el máximo por origen y vuelve a admitir en la ventana siguiente', () => {
     let ahora = 0;
-    const limitador = new LimitadorPorOrigen(2, 1000, () => ahora);
+    const limitador = new LimitadorPorVentana(2, 1000, () => ahora);
     expect([limitador.admitir('a'), limitador.admitir('a'), limitador.admitir('a'), limitador.admitir('b')]).toEqual([true, true, false, true]);
     ahora = 1000;
     expect(limitador.admitir('a')).toBe(true);

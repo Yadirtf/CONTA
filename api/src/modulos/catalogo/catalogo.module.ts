@@ -9,6 +9,7 @@ import { BuscarClientes } from './aplicacion/consultas/buscar-clientes.js';
 import type { RepositoriosDeCatalogo } from './aplicacion/puertos/repositorio-clientes.js';
 import { RepositorioClientesPostgres } from './infraestructura/persistencia/repositorio-clientes-postgres.js';
 import { ClientesController } from './presentacion/http/clientes.controller.js';
+import { LimiteDeBusquedas } from './presentacion/http/limite-de-busquedas.js';
 
 const UNIDAD_DE_TRABAJO_CATALOGO = Symbol('UnidadDeTrabajoCatalogo');
 
@@ -26,6 +27,7 @@ const repositoriosDeCatalogo = (ejecutor: Ejecutor): RepositoriosDeCatalogo => (
   imports: [EmpresasModule],
   controllers: [ClientesController],
   providers: [
+    LimiteDeBusquedas,
     { provide: RELOJ, useClass: RelojDelSistema },
     {
       provide: UNIDAD_DE_TRABAJO_CATALOGO,

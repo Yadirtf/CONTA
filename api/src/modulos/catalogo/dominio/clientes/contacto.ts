@@ -1,4 +1,6 @@
 import { ErrorDominio } from '../../../../compartido/dominio/index.js';
+import { esMunicipioDane } from './municipio-dane.js';
+import { textoLimpio } from './texto-limpio.js';
 
 /** Dirección con el código DANE del municipio (5 dígitos; los 2 primeros son el departamento). */
 export interface Direccion {
@@ -8,7 +10,8 @@ export interface Direccion {
   readonly linea: string;
 }
 
-const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Solo ASCII imprimible y sin < > " ni espacios: el correo viaja a encabezados de correo y al XML.
+const CORREO = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/;
 const LARGO_MAXIMO_DEL_CORREO = 254;
 const LARGO_MAXIMO_DE_TEXTO = 200;
 
@@ -31,14 +34,8 @@ export function direccionDe(direccion: Direccion | null): Direccion | null {
     linea: textoLimpio(direccion.linea),
   };
   const textosValidos = [limpia.ciudad, limpia.departamento, limpia.linea].every((t) => t.length > 0 && t.length <= LARGO_MAXIMO_DE_TEXTO);
-  if (!/^\d{5}$/.test(limpia.codigoMunicipio) || !textosValidos) {
-    throw new ErrorDominio('cliente.direccion-invalida', 'La dirección lleva el código DANE de 5 dígitos, ciudad, departamento y dirección');
+  if (!esMunicipioDane(limpia.codigoMunicipio) || !textosValidos) {
+    throw new ErrorDominio('cliente.direccion-invalida', 'La dirección lleva el código DANE del municipio, ciudad, departamento y dirección');
   }
   return limpia;
-}
-
-/** Sin espacios de más ni caracteres de control (no se ven, pero llegarían al XML de la factura). */
-export function textoLimpio(texto: string): string {
-  // eslint-disable-next-line no-control-regex
-  return texto.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
 }
