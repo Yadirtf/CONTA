@@ -698,7 +698,9 @@ paths:
         "409":
           description: El código ya es de otro producto (producto.codigo-en-uso).
         "429":
-          description: Tope de productos nuevos del día (producto.limite-diario).
+          description: Tope de productos nuevos del día de la empresa
+            (producto.limite-diario) o de la persona
+            (producto.limite-por-persona).
       security:
         - bearer: []
       summary: Crea un producto con su precio e IVA. Repetir el mismo id devuelve el

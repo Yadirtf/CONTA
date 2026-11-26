@@ -64,7 +64,9 @@ export class ProductosController {
   @ApiCreatedResponse({ type: RespuestaProducto, description: 'Creado.' })
   @ApiOkResponse({ type: RespuestaProducto, description: 'Ya existía con ese id: el guardado, sin cambios.' })
   @ApiConflictResponse({ description: 'El código ya es de otro producto (producto.codigo-en-uso).' })
-  @ApiTooManyRequestsResponse({ description: 'Tope de productos nuevos del día (producto.limite-diario).' })
+  @ApiTooManyRequestsResponse({
+    description: 'Tope de productos nuevos del día de la empresa (producto.limite-diario) o de la persona (producto.limite-por-persona).',
+  })
   async crear(
     @EmpresaDeLaPeticion() miembro: ContextoDeMiembro,
     @Body() cuerpo: unknown,

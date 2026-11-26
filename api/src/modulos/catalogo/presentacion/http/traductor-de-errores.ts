@@ -8,6 +8,7 @@ const ESTADOS: Readonly<Record<string, HttpStatus>> = {
   'cliente.limite-diario': HttpStatus.TOO_MANY_REQUESTS,
   'producto.codigo-en-uso': HttpStatus.CONFLICT,
   'producto.limite-diario': HttpStatus.TOO_MANY_REQUESTS,
+  'producto.limite-por-persona': HttpStatus.TOO_MANY_REQUESTS,
 };
 
 interface RespuestaHttp {

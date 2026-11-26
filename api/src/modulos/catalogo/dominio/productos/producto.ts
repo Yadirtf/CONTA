@@ -39,7 +39,8 @@ export interface DatosDeProducto {
   readonly creadoPor: string;
 }
 
-const CANTIDAD = /^\d{1,9}(\.\d{1,6})?$/;
+const CANTIDAD = /^\d{1,7}(\.\d{1,6})?$/;
+const CANTIDAD_MAXIMA = DecimalExacto.desde('1000000');
 
 /**
  * Producto del catálogo de una empresa (HU-05.02): nombre, precio de venta con IVA incluido y cómo lo trata el
@@ -84,9 +85,12 @@ export class Producto {
   venta(cantidad: string): Desglose {
     if (!CANTIDAD.test(cantidad)) throw cantidadInvalida();
     const unidades = DecimalExacto.desde(cantidad);
-    if (unidades.esCero()) throw cantidadInvalida();
-    return desglosarDesdeTotal(this.datos.precio.multiplicarPor(unidades), this.datos.iva);
+    if (unidades.esCero() || unidades.comparar(CANTIDAD_MAXIMA) > 0) throw cantidadInvalida();
+    const desglose = desglosarDesdeTotal(this.datos.precio.multiplicarPor(unidades), this.datos.iva);
+    // Una cantidad tan pequeña que la línea vale $0,00 no es una venta (observación de la prueba de ataque).
+    if (desglose.total.esCero()) throw cantidadInvalida();
+    return desglose;
   }
 }
 
-const cantidadInvalida = () => new ErrorDominio('producto.cantidad-invalida', 'La cantidad es mayor que cero y tiene hasta 6 decimales');
+const cantidadInvalida = () => new ErrorDominio('producto.cantidad-invalida', 'La cantidad es mayor que cero, hasta 1.000.000, con hasta 6 decimales, y la línea vale al menos un centavo');

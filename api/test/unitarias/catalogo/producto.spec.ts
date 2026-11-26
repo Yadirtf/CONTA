@@ -104,3 +104,43 @@ describe('BusquedaDeProductos', () => {
     expect(codigo(() => BusquedaDeProductos.de('a'.repeat(61)))).toBe('producto.busqueda-invalida');
   });
 });
+
+describe('prueba de ataque de HU-05.02', () => {
+  it('H2: rechaza nombres que no se ven (marcas solas, rellenos Hangul, braille vacío, CGJ, selector de variante)', () => {
+    for (const invisible of ['́́́', 'ㅤㅤ', '⠀', '͏', 'ﾠ', '️', 'ᅟᅠ']) {
+      expect(codigo(() => crear(gaseosa({ nombre: invisible }))), JSON.stringify(invisible)).toBe('producto.nombre-invalido');
+    }
+    // Un nombre con letras de verdad sigue entrando, aunque lleve un carácter raro.
+    expect(crear(gaseosa({ nombre: 'Té͏ verde' })).nombreParaBuscar).toBe('te verde');
+  });
+
+  it('N3: nombres en otros alfabetos entran y se encuentran', () => {
+    const casos: [string, string][] = [
+      ['Пиво', 'пиво'],
+      ['日本酒', '日本酒'],
+      ['김치', '김치'],
+      ['Weißbier', 'weißbier'],
+      ['Æble', 'æble'],
+      ['شاي ٣', 'شاي ٣'],
+      ['İstanbul', 'istanbul'],
+    ];
+    for (const [nombre, buscado] of casos) {
+      expect(crear(gaseosa({ nombre })).nombreParaBuscar, nombre).toBe(buscado);
+      expect(BusquedaDeProductos.de(` ${nombre} `).nombre, nombre).toBe(buscado);
+    }
+  });
+
+  it('N2: los invisibles se quitan del nombre, no ocupan sus 300 caracteres', () => {
+    const producto = crear(gaseosa({ nombre: `${'ㅤ⠀͏️'.repeat(75)}Pan` }));
+    expect(producto.datos.nombre).toBe('Pan');
+    // Las marcas combinantes seguidas se cortan en 4: «zalgo» no tapa las líneas de al lado.
+    expect(crear(gaseosa({ nombre: `Te${'́'.repeat(40)}` })).datos.nombre).toBe(`Té${'́'.repeat(4)}`);
+  });
+
+  it('una cantidad enorme o tan pequeña que la línea vale $0,00 no es una venta', () => {
+    const producto = crear(gaseosa({ precio: '100' }));
+    expect(codigo(() => producto.venta('1000001'))).toBe('producto.cantidad-invalida');
+    expect(codigo(() => producto.venta('0.00001'))).toBe('producto.cantidad-invalida');
+    expect(textos(producto.venta('1000000'))).toEqual(['84033613.45', '15966386.55', '100000000.00']);
+  });
+});

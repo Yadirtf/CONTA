@@ -2,7 +2,11 @@ import type { ContextoDeMiembro } from '../../../src/compartido/aplicacion/index
 import { ErrorDominio, IdEmpresa, IdUsuario, type Rol } from '../../../src/compartido/dominio/index.js';
 import { CrearProducto } from '../../../src/modulos/catalogo/aplicacion/comandos/crear-producto.js';
 import { BuscarProductos } from '../../../src/modulos/catalogo/aplicacion/consultas/buscar-productos.js';
-import { MAXIMO_DE_PRODUCTOS_NUEVOS_POR_DIA, Producto } from '../../../src/modulos/catalogo/dominio/productos/index.js';
+import {
+  MAXIMO_DE_PRODUCTOS_NUEVOS_POR_DIA,
+  MAXIMO_DE_PRODUCTOS_POR_PERSONA_AL_DIA,
+  Producto,
+} from '../../../src/modulos/catalogo/dominio/productos/index.js';
 import { AHORA, CAJERO, idNuevo } from './datos-de-prueba.js';
 import { gaseosa, arroz } from './datos-de-productos.js';
 import { CatalogoEnMemoria } from './dobles.js';
@@ -89,6 +93,23 @@ describe('casos de uso de productos (HU-05.02)', () => {
       }
       expect(await codigoDe(crear.ejecutar(miembro('dueno'), gaseosa()))).toBe('producto.limite-diario');
       expect((await crear.ejecutar(miembro('dueno', EMPRESA_B), gaseosa())).creado).toBe(true);
+    });
+
+    it(`la persona tiene ${MAXIMO_DE_PRODUCTOS_POR_PERSONA_AL_DIA} altas al día entre todas sus empresas`, async () => {
+      catalogo.productos.cupos.set(CAJERO, MAXIMO_DE_PRODUCTOS_POR_PERSONA_AL_DIA - 1);
+      expect((await crear.ejecutar(miembro('dueno'), gaseosa())).creado).toBe(true);
+      // Otra empresa suya no le da cupo nuevo (hallazgo N1).
+      expect(await codigoDe(crear.ejecutar(miembro('dueno', EMPRESA_B), gaseosa({ id: idNuevo() })))).toBe(
+        'producto.limite-por-persona',
+      );
+      expect(catalogo.productos.guardados).toHaveLength(1);
+    });
+
+    it('un reintento del mismo producto no gasta cupo', async () => {
+      const datos = gaseosa();
+      await crear.ejecutar(miembro('dueno'), datos);
+      await crear.ejecutar(miembro('dueno'), datos);
+      expect(catalogo.productos.cupos.get(CAJERO)).toBe(1);
     });
 
     it('los datos inválidos no abren transacción', async () => {

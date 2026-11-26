@@ -11,7 +11,13 @@ CREATE TABLE conta.productos (
   -- Los textos llegan limpios del dominio (sin controles C0 ni C1 ni «no caracteres»); la tabla lo vuelve a exigir.
   nombre text NOT NULL CHECK (char_length(nombre) BETWEEN 1 AND 300 AND nombre !~ '[\x01-\x1f\x7f-\x9f﷐-﷯￾￿]'),
   -- El nombre sin tildes ni mayúsculas, calculado por el dominio: la búsqueda no necesita la extensión unaccent.
-  nombre_busqueda text NOT NULL CHECK (char_length(nombre_busqueda) <= 300 AND nombre_busqueda ~ '^[a-z0-9 ]*$'),
+  -- Letras y dígitos de cualquier alfabeto (hallazgo N3), con un espacio entre palabras. Nunca vacío ni en blanco
+  -- (hallazgos H2 y O9) y nunca con comodines de LIKE.
+  nombre_busqueda text NOT NULL CHECK (
+    char_length(nombre_busqueda) BETWEEN 1 AND 300
+    AND nombre_busqueda = btrim(nombre_busqueda)
+    AND nombre_busqueda !~ '([%_\\]|\s\s|[\x01-\x1f\x7f-\x9f])'
+  ),
   codigo text CHECK (codigo ~ '^[A-Z0-9._-]{1,40}$'),
   -- Códigos de UN/ECE (Recomendación 20) que acepta la factura electrónica.
   unidad text NOT NULL CHECK (unidad IN ('94', 'KGM', 'GRM', 'LBR', 'LTR', 'MLT', 'MTR', 'HUR')),
@@ -22,11 +28,11 @@ CREATE TABLE conta.productos (
   creado_en timestamptz NOT NULL DEFAULT now(),
   creado_por uuid NOT NULL REFERENCES conta_identidad.usuarios (id),
   PRIMARY KEY (empresa_id, id),
-  -- Gravado lleva 19 o 5; exento, 0 %; excluido no tiene tarifa.
+  -- Gravado lleva 19 o 5; exento, 0 %; excluido no tiene tarifa. Con coalesce, porque con tarifa NULL un «IN» o un
+  -- «=» dan NULL y un CHECK que da NULL deja pasar la fila (hallazgo H1 de la prueba de ataque).
   CHECK (
-    (tipo_de_iva = 'gravado' AND tarifa_iva IN ('19', '5'))
-    OR (tipo_de_iva = 'exento' AND tarifa_iva = '0')
-    OR (tipo_de_iva = 'excluido' AND tarifa_iva IS NULL)
+    (tipo_de_iva, coalesce(tarifa_iva, 'ninguna'))
+      IN (('gravado', '19'), ('gravado', '5'), ('exento', '0'), ('excluido', 'ninguna'))
   )
 );
 --> statement-breakpoint
@@ -50,3 +56,17 @@ CREATE POLICY productos_de_la_empresa_actual ON conta.productos
 --> statement-breakpoint
 -- Sin UPDATE ni DELETE: esta historia solo crea y lista. Cambiar el precio llega con su historia.
 GRANT SELECT, INSERT ON conta.productos TO conta_api;
+--> statement-breakpoint
+-- Cupo diario de cada persona sumando todas sus empresas (hallazgos H3 y N1 de la prueba de ataque). El tope por
+-- empresa no alcanza: con RLS no ve las otras empresas de la persona. Vive en conta_sistema y no tiene RLS, como
+-- la cola de la DIAN: la llave es la persona, no una empresa, y no guarda datos del negocio, solo cuántas altas
+-- lleva en el día de Colombia. Se gasta con un UPSERT atómico dentro de la transacción del alta.
+CREATE TABLE conta_sistema.cupos_diarios (
+  usuario_id uuid NOT NULL REFERENCES conta_identidad.usuarios (id),
+  recurso text NOT NULL CHECK (recurso IN ('productos')),
+  dia date NOT NULL,
+  usados integer NOT NULL CHECK (usados BETWEEN 1 AND 100000),
+  PRIMARY KEY (usuario_id, recurso, dia)
+);
+--> statement-breakpoint
+GRANT SELECT, INSERT, UPDATE ON conta_sistema.cupos_diarios TO conta_api;

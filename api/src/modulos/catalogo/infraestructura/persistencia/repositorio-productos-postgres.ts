@@ -35,6 +35,16 @@ export class RepositorioProductosPostgres implements RepositorioProductos {
     return fila?.cuantos ?? 0;
   }
 
+  async consumirCupoDePersona(usuarioId: string, maximo: number): Promise<boolean> {
+    // Un solo UPSERT atómico: dos altas a la vez no pasan el cupo. El día es el de Colombia.
+    const { rows } = await this.ejecutor.execute(sql`
+      insert into conta_sistema.cupos_diarios as c (usuario_id, recurso, dia, usados)
+      values (${usuarioId}, 'productos', (now() at time zone 'America/Bogota')::date, 1)
+      on conflict (usuario_id, recurso, dia) do update set usados = c.usados + 1 where c.usados < ${maximo}
+      returning c.usados`);
+    return rows.length === 1;
+  }
+
   async agregarSiNoExiste(producto: Producto): Promise<boolean> {
     const insertadas = await this.ejecutor
       .insert(productos)

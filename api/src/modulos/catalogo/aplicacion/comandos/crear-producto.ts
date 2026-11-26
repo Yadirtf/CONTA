@@ -1,7 +1,13 @@
 import type { ContextoDeMiembro, Reloj, UnidadDeTrabajo } from '../../../../compartido/aplicacion/index.js';
 import { ErrorDominio, exigirPermiso, Permiso } from '../../../../compartido/dominio/index.js';
 import { UN_DIA_EN_MS } from '../../dominio/clientes/index.js';
-import { comprobarQuePuedeCrearProductos, type DatosDeProductoNuevo, Producto } from '../../dominio/productos/index.js';
+import {
+  comprobarCupoDePersona,
+  comprobarQuePuedeCrearProductos,
+  type DatosDeProductoNuevo,
+  MAXIMO_DE_PRODUCTOS_POR_PERSONA_AL_DIA,
+  Producto,
+} from '../../dominio/productos/index.js';
 import type { RepositoriosDeCatalogo } from '../puertos/repositorios-de-catalogo.js';
 
 export interface ProductoCreado {
@@ -29,6 +35,7 @@ export class CrearProducto {
       const mismo = await productos.conId(nuevo.id);
       if (mismo) return { producto: mismo, creado: false };
       comprobarQuePuedeCrearProductos(await productos.contarCreadosDesde(new Date(ahora.getTime() - UN_DIA_EN_MS)));
+      comprobarCupoDePersona(await productos.consumirCupoDePersona(contexto.usuarioId.valor, MAXIMO_DE_PRODUCTOS_POR_PERSONA_AL_DIA));
       if (await productos.agregarSiNoExiste(nuevo)) return { producto: nuevo, creado: true };
       // El candado ordena las altas de la empresa: si chocó y el id está libre, el código ya es de otro producto.
       const ganador = await productos.conId(nuevo.id);

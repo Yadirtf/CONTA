@@ -13,6 +13,8 @@ export class ProductosEnMemoria {
   /** Se llama justo antes de insertar: simula otra petición que gana la carrera. */
   antesDeInsertar: (() => void) | null = null;
   bloqueos = 0;
+  /** Altas gastadas por persona hoy, sumando empresas, como conta_sistema.cupos_diarios. */
+  readonly cupos = new Map<string, number>();
 
   guardar(empresaId: string, producto: Producto): void {
     this.guardados.push({ empresaId, producto });
@@ -34,6 +36,12 @@ export class ProductosEnMemoria {
         return Promise.resolve();
       },
       contarCreadosDesde: (fecha) => Promise.resolve(deLaEmpresa().filter((p) => p.datos.creadoEn >= fecha).length),
+      consumirCupoDePersona: (usuarioId, maximo) => {
+        const usados = this.cupos.get(usuarioId) ?? 0;
+        if (usados >= maximo) return Promise.resolve(false);
+        this.cupos.set(usuarioId, usados + 1);
+        return Promise.resolve(true);
+      },
       agregarSiNoExiste: (producto) => {
         this.antesDeInsertar?.();
         const choca = deLaEmpresa().some((p) => p.id === producto.id || (producto.datos.codigo !== null && p.datos.codigo === producto.datos.codigo));

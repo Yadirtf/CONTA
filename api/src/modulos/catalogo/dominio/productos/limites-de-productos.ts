@@ -14,3 +14,19 @@ export function comprobarQuePuedeCrearProductos(creadosEnElDia: number): void {
     );
   }
 }
+
+/**
+ * Productos que una persona puede crear en un día (de Colombia) sumando todas sus empresas (hallazgos H3 y N1 de
+ * la prueba de ataque). El tope por empresa no ve las otras empresas de la persona (RLS) y con 50 empresas daría
+ * 25.000 al día. Se cuenta en la base, así que no se borra cuando la API se reinicia.
+ */
+export const MAXIMO_DE_PRODUCTOS_POR_PERSONA_AL_DIA = 1000;
+
+export function comprobarCupoDePersona(quedabaCupo: boolean): void {
+  if (!quedabaCupo) {
+    throw new ErrorDominio(
+      'producto.limite-por-persona',
+      `Puedes crear hasta ${MAXIMO_DE_PRODUCTOS_POR_PERSONA_AL_DIA} productos por día entre todos tus negocios. Intenta mañana`,
+    );
+  }
+}

@@ -42,4 +42,5 @@ definición del agente.
 
 | Historia | PR | Ataques | Hallazgos | Estado |
 | --- | --- | --- | --- | --- |
-| HU-05.01 Buscar cliente por cédula o NIT | este PR | 147 + 162 | 11 (1 alta, 6 medias, 4 bajas) | Todos cerrados ([informe](informes/hu-05-01.md)) |
+| HU-05.01 Buscar cliente por cédula o NIT | #112 | 147 + 162 | 11 (1 alta, 6 medias, 4 bajas) | Todos cerrados ([informe](informes/hu-05-01.md)) |
+| HU-05.02 Productos con IVA ya marcado | este PR | 288 + 118 | 6 bajas | Todos cerrados ([informe](informes/hu-05-02.md)) |
