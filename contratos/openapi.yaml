@@ -610,7 +610,9 @@ paths:
               $ref: "#/components/schemas/NuevoCliente"
       responses:
         "200":
-          description: Ya existía un comprador con ese documento.
+          description: "Ya existía: con el mismo id (reintento), el comprador completo;
+            con otro id, solo lo de CompradorEncontrado, y cuenta como
+            búsqueda."
           content:
             application/json:
               schema:
