@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'funcionalidades/acceso/dobles.dart';
 import 'funcionalidades/empresas/dobles.dart';
 import 'funcionalidades/miembros/dobles.dart';
+import 'funcionalidades/verificacion/dobles.dart';
 
 class _RepositorioFijo implements RepositorioSalud {
   @override
@@ -21,6 +22,7 @@ void main() {
         acceso: acceso,
         empresas: RepositorioDeEmpresasFalso([panaderia]),
         miembros: RepositorioDeMiembrosFalso(),
+        verificacion: RepositorioDeVerificacionFalso(),
         repositorioSalud: _RepositorioFijo(),
       ),
     );
@@ -41,6 +43,7 @@ void main() {
         acceso: acceso,
         empresas: RepositorioDeEmpresasFalso([panaderia]),
         miembros: RepositorioDeMiembrosFalso(),
+        verificacion: RepositorioDeVerificacionFalso(),
         repositorioSalud: _RepositorioFijo(),
       ),
     );

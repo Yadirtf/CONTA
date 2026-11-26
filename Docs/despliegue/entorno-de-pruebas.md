@@ -122,6 +122,7 @@ En Render: **New → Web Service → Yadirtf/CONTA**.
 | `DIAN_HAB_EMPRESA_ID` | Opcional. Id de la única empresa que puede enviar a habilitación mientras llega HU-07.02 |
 | `DIAN_HAB_P12_BASE64`, `DIAN_HAB_P12_CONTRASENA`, `DIAN_HAB_TEST_SET_ID` | Opcionales. Certificado de habilitación en base64, su contraseña y el TestSetId del set de pruebas |
 | `SECRETO_CODIGOS_ACCESO` | Al menos 32 caracteres al azar (`openssl rand -hex 32`). Firma los códigos de acceso ([ADR-0010](../decisiones/0010-acceso-con-celular-y-codigo-por-whatsapp.md)). Sin él, la API usa uno al azar por proceso y los códigos pendientes se pierden al reiniciar |
+| `SECRETO_SEGUNDO_FACTOR` | Al menos 32 caracteres al azar (`openssl rand -hex 32`), distinto de los demás. Cifra los secretos de las apps de verificación y firma los códigos de recuperación ([ADR-0013](../decisiones/0013-verificacion-en-dos-pasos.md)). Sin él, nadie con rol o modo contador puede trabajar en una empresa (503). Guarda una copia fuera de Render: si se pierde, cada contador debe configurar su app de nuevo |
 | `CONTA_ENTORNO` | `pruebas`. Es lo único que permite `CELULARES_DE_PRUEBA` |
 | `CELULARES_DE_PRUEBA` | Opcional, solo en pruebas. Pares `celular:código` separados por coma (ejemplo: `3000000001:<6 dígitos>`). A esos números no se les envía nada y entran con su código fijo. Usa números que no sean de nadie |
 | `WHATSAPP_TOKEN`, `WHATSAPP_ID_NUMERO` | Opcionales. Token de acceso y id del número de WhatsApp Cloud API (Meta). Sin ellos, pedir un código a un número real responde 503 |

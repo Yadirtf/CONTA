@@ -50,6 +50,7 @@ Membresia membresiaDe(Rol rol, {bool invitada = false}) => Membresia(
   rol: rol,
   modo: rol == Rol.contador ? Modo.contador : Modo.simple,
   invitada: invitada,
+  exigeSegundoPaso: rol == Rol.contador,
   permisos: switch (rol) {
     Rol.dueno => {'ver-empresa', 'vender', Permiso.verInformes, Permiso.anularDocumentos, Permiso.gestionarMiembros, 'usar-modo-contador'},
     Rol.contador => {'ver-empresa', 'vender', Permiso.verInformes, Permiso.anularDocumentos, 'usar-modo-contador'},
