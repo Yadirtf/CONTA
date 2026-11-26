@@ -77,7 +77,7 @@ class _PantallaProductosState extends State<PantallaProductos> {
                 ),
               for (final producto in c.productos) TarjetaDeProducto(producto: producto),
               // Espacio para que el botón flotante no tape el último producto.
-              const SizedBox(height: 88),
+              const SizedBox(height: AlturaConta.botonPrincipal + EspacioConta.s8),
             ],
           );
         },
