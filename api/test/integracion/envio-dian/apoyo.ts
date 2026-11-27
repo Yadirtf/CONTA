@@ -1,3 +1,4 @@
+import { avisosDeAceptacionPostgres } from '../../../src/modulos/facturacion/infraestructura/persistencia/correos/avisos-de-aceptacion-postgres.js';
 import type { Reloj } from '../../../src/compartido/aplicacion/index.js';
 import { IdEmpresa } from '../../../src/compartido/dominio/index.js';
 import { BaseDeDatos } from '../../../src/compartido/infraestructura/persistencia/base-de-datos.js';
@@ -18,6 +19,7 @@ export function unidadDeTrabajoDeEnvios(baseDeDatos: BaseDeDatos): UnidadDeTraba
     envios: new RepositorioDeEnviosPostgres(ejecutor),
     intentos: new RegistroDeIntentosPostgres(ejecutor),
     cola: new ColaDeTrabajosPostgres(ejecutor),
+    avisos: avisosDeAceptacionPostgres(ejecutor),
   }));
 }
 

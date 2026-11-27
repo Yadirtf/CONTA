@@ -3,6 +3,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../../nucleo/componentes/franja_de_aviso.dart';
 import '../../../nucleo/tema/tema_conta.dart';
 import '../dominio/ventas.dart';
+import 'boton_compartir.dart';
+import 'cola_de_comprobantes.dart';
 import 'controlador_de_estado.dart';
 import 'pasos_de_la_factura.dart';
 
@@ -14,12 +16,16 @@ class PantallaListo extends StatefulWidget {
     required this.repositorio,
     required this.empresaId,
     required this.venta,
+    required this.cola,
     this.esperar,
   });
 
   final RepositorioDeVentas repositorio;
   final String empresaId;
   final VentaEmitida venta;
+
+  /// Comparte el PDF (HU-06.08). Vive en la composición: la cola sigue aunque se salga de aquí.
+  final ColaDeComprobantes cola;
 
   /// Para las pruebas: cómo se espera entre consultas.
   final Future<void> Function(Duration)? esperar;
@@ -77,6 +83,10 @@ class _PantallaListoState extends State<PantallaListo> {
                 ),
               ],
               const SizedBox(height: EspacioConta.s8),
+              if (v.estado != EstadoDeLaVenta.rechazada) ...[
+                BotonCompartir(cola: widget.cola, empresaId: widget.empresaId, ventaId: v.id, numero: v.numero),
+                const SizedBox(height: EspacioConta.s4),
+              ],
               SizedBox(
                 height: AlturaConta.botonPrincipal,
                 child: FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Nueva venta')),

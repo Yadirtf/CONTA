@@ -45,3 +45,4 @@ definición del agente.
 | HU-05.01 Buscar cliente por cédula o NIT | #112 | 147 + 162 | 11 (1 alta, 6 medias, 4 bajas) | Todos cerrados ([informe](informes/hu-05-01.md)) |
 | HU-05.02 Productos con IVA ya marcado | este PR | 288 + 118 | 6 bajas | Todos cerrados ([informe](informes/hu-05-02.md)) |
 | HU-06.01 Vender y emitir la factura en 3 toques | este PR | 237 + 212 | 9 (3 medias, 6 bajas) | 8 cerrados; H6 aceptado como riesgo hasta HU-06.04 ([informe](informes/hu-06-01.md)) |
+| HU-06.08 PDF con QR por WhatsApp y correo | este PR | 150 + 126 | 8 (1 media, 7 bajas) | Todos cerrados; el ApplicationResponse forjable queda aceptado hasta el AttachedDocument ([informe](informes/hu-06-08.md)) |

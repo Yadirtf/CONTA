@@ -4,6 +4,7 @@ import '../../../nucleo/componentes/franja_de_aviso.dart';
 import '../../../nucleo/tema/tema_conta.dart';
 import '../dominio/ventas.dart';
 import 'barra_de_cobro.dart';
+import 'cola_de_comprobantes.dart';
 import 'controlador_de_articulos.dart';
 import 'controlador_de_venta.dart';
 import 'pantalla_cobrar.dart';
@@ -16,12 +17,16 @@ class PantallaVender extends StatefulWidget {
     required this.repositorio,
     required this.empresaId,
     required this.buscarArticulos,
+    required this.cola,
     this.elegirComprador,
   });
 
   final RepositorioDeVentas repositorio;
   final String empresaId;
   final BuscarArticulos buscarArticulos;
+
+  /// Comparte las facturas desde «Listo» (HU-06.08).
+  final ColaDeComprobantes cola;
 
   /// Abre la búsqueda de compradores (HU-05.01). Llega desde la composición: ventas no conoce sus datos.
   final Future<CompradorDeLaVenta?> Function(BuildContext contexto)? elegirComprador;
@@ -43,8 +48,12 @@ class _PantallaVenderState extends State<PantallaVender> {
 
   void _cobrar() => Navigator.of(context).push(
     MaterialPageRoute<void>(
-      builder: (_) =>
-          PantallaCobrar(venta: _venta, repositorio: widget.repositorio, elegirComprador: widget.elegirComprador),
+      builder: (_) => PantallaCobrar(
+        venta: _venta,
+        repositorio: widget.repositorio,
+        cola: widget.cola,
+        elegirComprador: widget.elegirComprador,
+      ),
     ),
   );
 

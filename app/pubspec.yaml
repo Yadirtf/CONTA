@@ -41,6 +41,8 @@ dependencies:
   flutter_secure_storage: ^11.2.0
   # QR de la app de verificación en dos pasos (HU-04.04). Dart puro, sin código nativo.
   qr_flutter: ^4.1.0
+  # Menú de compartir del teléfono para mandar el PDF de la factura como archivo (HU-06.08). Versión exacta.
+  share_plus: 13.3.1
 
 dev_dependencies:
   flutter_test:

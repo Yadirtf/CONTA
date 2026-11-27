@@ -189,7 +189,21 @@ describe('catálogo de aislamiento multiempresa (integración)', () => {
         [ESQUEMAS_PROPIOS],
       );
       expect(vistas.map((v) => v.nombre), 'Vistas que corren como su dueño').toEqual([]);
-      expect(funciones.map((f) => f.nombre), 'Funciones SECURITY DEFINER').toEqual([]);
+      // Única excepción (ADR-0015): lee ids de correos vencidos de todas las empresas sin dar a conta_api una tabla
+      // sin RLS. No devuelve datos ni escribe nada; se revisa su definición abajo.
+      expect(funciones.map((f) => f.nombre), 'Funciones SECURITY DEFINER').toEqual(['conta_sistema.correos_vencidos']);
+    });
+
+    it('la función SECURITY DEFINER de los correos fija su search_path y solo devuelve ids', async () => {
+      const [f] = await consultar<{ config: string[] | null; resultado: string; volatilidad: string }>(
+        `SELECT p.proconfig AS config, pg_get_function_result(p.oid) AS resultado, p.provolatile AS volatilidad FROM pg_proc p
+           JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'conta_sistema' AND p.proname = 'correos_vencidos'`,
+        [],
+      );
+      expect(f?.config).toEqual(['search_path=pg_catalog, pg_temp']);
+      // STABLE: no puede escribir (H3, nadie aplaza correos ajenos llamándola).
+      expect(f?.volatilidad).toBe('s');
+      expect(f?.resultado).toBe('TABLE(empresa_id uuid, venta_id uuid)');
     });
   });
 });

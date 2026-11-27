@@ -20,6 +20,7 @@ function memoria() {
   const envio = EnvioDian.solicitar('e1', 'a'.repeat(96), 'SETP1', T0);
   const intentos: IntentoDeEnvio[] = [];
   const cola: { encolados: Date[]; completados: number } = { encolados: [], completados: 0 };
+  const avisados: string[] = [];
   const repositorios: RepositoriosDeEnvio = {
     envios: {
       buscar: () => Promise.resolve(EnvioDian.reconstituir(envio.instantanea())),
@@ -37,9 +38,15 @@ function memoria() {
       encolar: (_t, cuando) => Promise.resolve(void cola.encolados.push(cuando)),
       completar: () => Promise.resolve(void (cola.completados += 1)),
     },
+    avisos: {
+      documentoAceptado: (id) => {
+        avisados.push(id);
+        return Promise.resolve(false);
+      },
+    },
   };
   const uow: UnidadDeTrabajo<RepositoriosDeEnvio> = { ejecutar: (_c, trabajo) => trabajo(repositorios) };
-  return { envio, intentos, cola, uow };
+  return { envio, intentos, cola, uow, avisados };
 }
 
 const accesoValido = { para: () => Promise.resolve({ certificado: CertificadoDeFirma.de(new Uint8Array([1]), 'clave-secreta'), testSetId: TEST_SET_ID }) };
@@ -64,6 +71,19 @@ describe('ProcesarEnvioDian (HU-02.03)', () => {
     expect(p.intentos).toEqual([expect.objectContaining({ numero: 1, operacion: 'SendTestSetAsync', resultado: 'recibido' })]);
     expect(p.cola.encolados).toHaveLength(1);
     expect(p.despertador.programar).toHaveBeenCalledWith(p.envio.proximoIntentoEn);
+  });
+
+  it('al aceptarse avisa en la misma transacción (HU-06.08: correo al comprador)', async () => {
+    const p = procesador({ enviarSetDePruebas: () => Promise.resolve({ tipo: 'recibido', zipKey: 'zip-1' }) });
+    await p.procesar.ejecutar({ empresaId, envioId: 'e1' });
+    expect(p.avisados).toEqual([]);
+    const aceptada = RespuestaDeLaDian.de({ valida: true, codigo: '00', descripcion: 'ok', mensajes: [] });
+    const q = procesador({ consultarValidacion: () => Promise.resolve(aceptada) });
+    q.envio.recibido('zip-1', T0);
+    Object.assign(q.envio, EnvioDian.reconstituir({ ...q.envio.instantanea(), proximoIntentoEn: T0 }));
+    await q.procesar.ejecutar({ empresaId, envioId: 'e1' });
+    expect(q.envio.estado).toBe('aceptado');
+    expect(q.avisados).toEqual(['e1']);
   });
 
   it('una falla de comunicación cuenta como intento y se reintenta más tarde', async () => {

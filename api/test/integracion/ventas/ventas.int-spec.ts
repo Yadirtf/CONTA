@@ -39,7 +39,8 @@ describe.skipIf(!hayBase || !hayDueno)('ventas con factura (integración)', { ti
     } finally {
       await dueno.end();
     }
-  });
+    // Borrar cada empresa toca 15 tablas: contra Neon pasa de los 10 s por defecto de los ganchos.
+  }, LIMITE_MS);
 
   async function nuevo(rango?: { desde: number; hasta: number }): Promise<Escenario> {
     const e = await escenario(baseDeDatos, rango);

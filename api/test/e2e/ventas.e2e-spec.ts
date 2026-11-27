@@ -27,7 +27,8 @@ interface Venta {
 const juego = juegoDeCertificados();
 const accesoDePrueba = { para: () => Promise.resolve({ certificado: CertificadoDeFirma.de(juego.p12, CONTRASENA_DE_PRUEBA), testSetId: 'set' }) };
 
-describe.skipIf(!hayBase || !hayDueno)('ventas (e2e)', () => {
+// Cada prueba hace varias peticiones que firman o leen facturas: contra Neon pasan de los 5 s por defecto de Vitest.
+describe.skipIf(!hayBase || !hayDueno)('ventas (e2e)', { timeout: 30_000 }, () => {
   const celulares = { dueno: celularAlAzar(), cajero: celularAlAzar(), ajeno: celularAlAzar() };
   type Quien = keyof typeof celulares;
   let app: INestApplication;
@@ -134,6 +135,39 @@ describe.skipIf(!hayBase || !hayDueno)('ventas (e2e)', () => {
     await como('cajero').get(`/ventas/${randomUUID()}`).expect(404);
     const { body } = await como('cajero').get("/ventas/1' OR '1'='1").expect(404);
     expect(body).toMatchObject({ codigo: 'venta.no-encontrada' });
+  });
+
+  it('HU-06.08: el comprobante sale en PDF solo cuando la DIAN aceptó, sin caché y solo para su negocio', async () => {
+    const propia = (await como('cajero').post('/ventas', venta()).expect(201)).body as Venta;
+    const enCamino = await como('cajero').get(`/ventas/${propia.id}/comprobante`).expect(409);
+    expect(enCamino.body).toMatchObject({ codigo: 'comprobante.en-camino' });
+
+    // La DIAN de mentiras: el dueño marca el envío aceptado (la API no puede escribir ese estado a mano).
+    const dueno = await conexionDelDueno();
+    try {
+      await dueno.query(
+        `UPDATE conta.envios_dian SET estado = 'aceptado', proximo_intento_en = NULL
+          WHERE id = (SELECT envio_id FROM conta.emisiones_de_venta WHERE venta_id = $1)`,
+        [propia.id],
+      );
+    } finally {
+      await dueno.end();
+    }
+    const pdf = await como('cajero').get(`/ventas/${propia.id}/comprobante`).buffer(true).expect(200);
+    expect(pdf.headers['content-type']).toBe('application/pdf');
+    expect(pdf.headers['cache-control']).toBe('no-store');
+    expect(pdf.headers['content-disposition']).toBe(`attachment; filename="factura-${propia.numero}.pdf"`);
+    expect((pdf.body as Buffer).subarray(0, 5).toString()).toBe('%PDF-');
+
+    await como('ajeno', empresa.ajena).get(`/ventas/${propia.id}/comprobante`).expect(404);
+    await como('ajeno', empresa.propia).get(`/ventas/${propia.id}/comprobante`).expect(404);
+    await api().get(`/ventas/${propia.id}/comprobante`).set('X-Empresa', empresa.propia).expect(401);
+    await como('cajero').get('/ventas/no-es-uuid/comprobante').expect(404);
+
+    const { body: recientes } = await como('cajero').get('/ventas').expect(200);
+    expect((recientes as Venta[])[0]).toMatchObject({ id: propia.id, estado: 'aceptada' });
+    const { body: ajenas } = await como('ajeno', empresa.ajena).get('/ventas').expect(200);
+    expect((ajenas as Venta[]).map((v) => v.id)).not.toContain(propia.id);
   });
 
   it('sin sesión no se vende', async () => {

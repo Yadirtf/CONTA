@@ -18,6 +18,7 @@ Cada decisión de nivel 3 (ver la [guía del coordinador](../forma-de-trabajo/gu
 | [0012](0012-roles-y-modos.md) | Roles y modos: matriz de permisos en el dominio, comprobada en la guarda y otra vez en el caso de uso | Aceptado |
 | [0013](0013-verificacion-en-dos-pasos.md) | Verificación en dos pasos: app autenticadora (TOTP) exigida por membresía al trabajar como contador, por una jornada | Propuesto |
 | [0014](0014-venta-con-numero-reservado-y-emision-aparte.md) | Venta con número reservado en una transacción corta y emisión de la factura aparte | Propuesto |
+| [0015](0015-comprobante-a-pedido-y-correo-al-aceptar.md) | Comprobante PDF a pedido, compartido como archivo, y correo al aceptar | Propuesto |
 
 ## Notas
 

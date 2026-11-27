@@ -26,6 +26,7 @@ export function leerRespuestaDeValidacion(xml: string): RespuestaDeLaDian {
       .filter((t) => t !== '')
       .join(' | '),
     mensajes: errores ? todos(errores, 'string').map(texto) : [],
+    documento: texto(primero(respuesta, 'XmlBase64Bytes')) || null,
   });
 }
 

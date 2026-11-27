@@ -195,7 +195,7 @@ Como dueño, quiero crear productos con su precio e IVA, para no calcular impues
 
 #### EP-06. Emisión de documentos electrónicos — Prioridad M
 
-**HU-06.01 Factura en 3 toques** (M, L) **[VS]** — En revisión
+**HU-06.01 Factura en 3 toques** (M, L) **[VS]** — Hecha
 Como dueño, quiero emitir una factura en 3 toques, para atender al cliente sin demoras.
 - Dado un producto frecuente y consumidor final, cuando toco producto → cobrar → confirmar, entonces la factura queda emitida.
 - La app muestra el estado (pendiente, aceptada, rechazada) con palabras del modo simple.
@@ -203,10 +203,14 @@ Como dueño, quiero emitir una factura en 3 toques, para atender al cliente sin 
 - Decisión ([ADR-0014](../decisiones/0014-venta-con-numero-reservado-y-emision-aparte.md), nivel 3, con Verbalized Sampling y evaluador aparte): la venta reserva su consecutivo con un `UPDATE … RETURNING` sobre la resolución y guarda venta, líneas y emisión pendiente en una transacción corta (todo o nada: sin huecos ni repetidos); después, fuera del bloqueo, arma la factura determinista (misma fecha, mismo CUFE), la firma y la deja en la cola de envío de HU-02.03. Si la firma falla, `conta_sistema.cola_emision_ventas` la termina con el despertador o el endpoint interno. Idempotente por id de la app más la huella SHA-256 del pedido (otro pedido con el mismo id es 409). La app solo manda ids, cantidades en texto y medio de pago; precio e IVA salen del catálogo y cualquier campo extra es 400. Datos fiscales y resoluciones: tablas que la API solo lee, llenadas con `npm run facturacion:configurar`; la configuración del software sale del entorno (`DIAN_HAB_*`) para una sola empresa hasta EP-07. Topes: 3.000 ventas por empresa en 24 h y 3.000 por persona al día; total máximo $1.000.000.000; hasta 100 líneas. Medios de pago: efectivo, tarjetas y transferencia (Nequi y Daviplata); el fiado llega con EP-12.
 - Módulos: `api/src/modulos/facturacion/` (dominio `ventas/`), `api/src/modulos/catalogo/` (`ObtenerParaVender`) y `app/lib/funcionalidades/ventas/`.
 
-**HU-06.08 PDF con QR por WhatsApp y correo** (M, M)
+**HU-06.08 PDF con QR por WhatsApp y correo** (M, M) — En revisión
 Como dueño, quiero compartir la factura en PDF con su QR, para que el comprador la tenga en su celular o su correo.
 - Dada una venta emitida, cuando toco «Compartir», entonces sale el PDF con el QR de la DIAN para WhatsApp.
 - Si el comprador tiene correo, le llega la factura (PDF y XML) al ser aceptada.
+- No existe enlace público: el PDF solo se descarga con sesión de la empresa (criterio reescrito por Inge el 2026-11-27).
+- Sin internet, compartir queda en cola con un aviso en modo simple.
+- Decisión ([ADR-0015](../decisiones/0015-comprobante-a-pedido-y-correo-al-aceptar.md), nivel 3, con Verbalized Sampling y evaluador aparte): `GET /ventas/:id/comprobante` arma el PDF a pedido (pdfkit, QR vectorial, siempre igual) desde la venta y el XML firmado, con sesión, `X-Empresa`, `Permiso.Vender` y RLS, solo para facturas aceptadas, con `no-store` y 30 por 5 minutos. La app lo comparte como archivo (`share_plus`) desde «Listo» y «Mis ventas» (`GET /ventas`, últimas 50); sin internet o mientras la DIAN no aprueba, una cola de hasta 10 reintenta mientras la app está abierta. El correo se pide en la misma transacción que guarda «aceptado» y sale por Brevo (`CORREO_BREVO_LLAVE`, `CORREO_REMITENTE`) con intentos registrados; cada intento se toma antes de llamar al proveedor; los vencidos se leen con la única función `SECURITY DEFINER`, de solo lectura, que solo devuelve ids. El comprobante muestra al emisor como quedó en el XML firmado. El `ApplicationResponse` se guarda para el AttachedDocument, que queda para otra historia.
+- Módulos: `api/src/modulos/facturacion/` (`comprobante/`, `correo/`) y `app/lib/funcionalidades/ventas/`.
 
 **HU-06.02 POS electrónico** (M, M)
 Como cajero, quiero emitir el documento POS electrónico, para ventas rápidas de mostrador.

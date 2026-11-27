@@ -21,6 +21,8 @@ describe('lectura de las respuestas de la DIAN (HU-02.03)', () => {
     expect(r).toMatchObject({ valida: true, codigo: '00', mensajes: [] });
     expect(r.resultado).toBe('aceptado');
     expect(r.descripcion).toContain('ha sido autorizada');
+    // HU-06.08: el ApplicationResponse se conserva para el contenedor que se entrega al comprador.
+    expect(r.documento).toBe('PEFwcGxpY2F0aW9uUmVzcG9uc2UvPg==');
   });
 
   it('lee los códigos de rechazo legibles', () => {

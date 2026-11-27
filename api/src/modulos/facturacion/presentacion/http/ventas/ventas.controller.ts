@@ -18,9 +18,11 @@ import { Permiso } from '../../../../../compartido/dominio/index.js';
 import { EmpresaDeLaPeticion, GuardaDeEmpresa, Requiere } from '../../../../../compartido/presentacion/empresa/index.js';
 import { RegistrarVenta } from '../../../aplicacion/comandos/registrar-venta.js';
 import { ConsultarVenta } from '../../../aplicacion/consultas/consultar-venta.js';
+import { ListarVentasRecientes } from '../../../aplicacion/consultas/listar-ventas-recientes.js';
 import { NuevaVenta } from './cuerpo-de-venta.js';
 import { pedidoDe } from './lectura-de-venta.js';
 import { respuestaDeVenta, RespuestaVenta } from './respuesta-venta.js';
+import { respuestaDeVentaReciente, RespuestaVentaReciente } from './respuesta-venta-reciente.js';
 import { TraductorDeErroresDeVentas } from './traductor-de-errores-de-ventas.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -44,7 +46,17 @@ export class VentasController {
   constructor(
     private readonly registrarVenta: RegistrarVenta,
     private readonly consultarVenta: ConsultarVenta,
+    private readonly listarVentasRecientes: ListarVentasRecientes,
   ) {}
+
+  @Get()
+  @Requiere(Permiso.Vender)
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({ summary: '«Mis ventas»: las 50 más recientes con su estado ante la DIAN, para volver a compartir una.' })
+  @ApiOkResponse({ type: [RespuestaVentaReciente] })
+  async listar(@EmpresaDeLaPeticion() miembro: ContextoDeMiembro): Promise<RespuestaVentaReciente[]> {
+    return (await this.listarVentasRecientes.ejecutar(miembro)).map(respuestaDeVentaReciente);
+  }
 
   @Post()
   @Requiere(Permiso.Vender)

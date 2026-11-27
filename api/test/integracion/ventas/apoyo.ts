@@ -1,3 +1,4 @@
+import { RepositorioDeCorreosPostgres } from '../../../src/modulos/facturacion/infraestructura/persistencia/correos/repositorio-de-correos-postgres.js';
 import { IdEmpresa, IdUsuario } from '../../../src/compartido/dominio/index.js';
 import type { ContextoDeMiembro } from '../../../src/compartido/aplicacion/index.js';
 import type { BaseDeDatos } from '../../../src/compartido/infraestructura/persistencia/base-de-datos.js';
@@ -94,6 +95,7 @@ export async function escenario(baseDeDatos: BaseDeDatos, rango = { desde: 99000
     ventas: new RepositorioDeVentasPostgres(e),
     numeracion: new NumeracionPostgres(e),
     emisiones: new ColaDeEmisionesPostgres(e),
+    correos: new RepositorioDeCorreosPostgres(e),
   }));
   const deCatalogo = new UnidadDeTrabajoPostgres<RepositoriosDeCatalogo>(baseDeDatos, (e) => ({ clientes: new RepositorioClientesPostgres(e), productos: new RepositorioProductosPostgres(e) }));
   const productos = await sembrarProductos(deCatalogo, miembro, reloj.ahora());

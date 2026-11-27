@@ -3,6 +3,7 @@ import type { Ejecutor } from '../../../../compartido/infraestructura/persistenc
 import type { DocumentoDelEnvio, RepositorioDeEnvios } from '../../aplicacion/puertos/repositorio-de-envios.js';
 import { EnvioDian, ESTADOS_DEL_ENVIO, RespuestaDeLaDian, type EstadoDelEnvio } from '../../dominio/index.js';
 import { enviosDian } from './tablas-envio-dian.js';
+import { respuestasDeAceptacion } from './tabla-respuestas-de-aceptacion.js';
 
 // Sin filtro por empresa a mano: la transacción ya la fijó y RLS la impone (ADR-0006).
 // empresa_id se llena con conta_sistema.empresa_actual(): el repositorio no puede escribir en otra empresa.
@@ -77,7 +78,16 @@ export class RepositorioDeEnviosPostgres implements RepositorioDeEnvios {
       .set({ ...columnasDelEstado(envio), actualizadoEn: sql`now()` })
       .where(and(eq(enviosDian.id, envio.id), eq(enviosDian.intentos, intentosLeidos)))
       .returning({ id: enviosDian.id });
-    return filas.length === 1;
+    if (filas.length !== 1) return false;
+    // HU-06.08: el ApplicationResponse de la aceptación se guarda una vez, junto con el estado que lo valida.
+    const documento = envio.estado === 'aceptado' ? envio.respuesta?.documento : null;
+    if (documento) {
+      await this.ejecutor
+        .insert(respuestasDeAceptacion)
+        .values({ empresaId: sql`conta_sistema.empresa_actual()`, envioId: envio.id, xmlBase64: documento })
+        .onConflictDoNothing();
+    }
+    return true;
   }
 
   private async unoDonde(condicion: ReturnType<typeof eq>): Promise<EnvioDian | null> {

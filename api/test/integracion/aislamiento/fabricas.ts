@@ -1,5 +1,6 @@
 import type pg from 'pg';
 import { comoEmpresa, nuevoId } from './base-de-pruebas.js';
+import { FABRICAS_DE_CORREOS } from './fabricas-de-correos.js';
 
 /**
  * Registro de tablas de negocio para la prueba de aislamiento (HU-01.05).
@@ -90,7 +91,12 @@ const COMPRADOR_DE_PRUEBA = JSON.stringify({
  * Inserta una venta de una línea en una empresa que ya tiene resolución, con un número reservado como lo hace la
  * API (los disparadores lo exigen). La transacción queda como esa empresa.
  */
-export async function insertarVenta(cliente: pg.Client, empresaId: string, resolucionId: string): Promise<string> {
+export async function insertarVenta(
+  cliente: pg.Client,
+  empresaId: string,
+  resolucionId: string,
+  comprador: string = COMPRADOR_DE_PRUEBA,
+): Promise<string> {
   await comoEmpresa(cliente, empresaId);
   const creadaPor = await crearUsuario(cliente);
   const id = nuevoId();
@@ -103,7 +109,7 @@ export async function insertarVenta(cliente: pg.Client, empresaId: string, resol
     `INSERT INTO conta.ventas (empresa_id, id, huella, resolucion_id, prefijo, consecutivo, emitida_en, medio_de_pago,
        comprador, base, iva, total, creada_por)
      VALUES ($1, $2, $3, $4, 'SETP', $5, now(), 'efectivo', $6, 2100.84, 399.16, 2500, $7)`,
-    [empresaId, id, 'b'.repeat(64), resolucionId, rows[0]?.consecutivo, COMPRADOR_DE_PRUEBA, creadaPor],
+    [empresaId, id, 'b'.repeat(64), resolucionId, rows[0]?.consecutivo, comprador, creadaPor],
   );
   await cliente.query(
     `INSERT INTO conta.lineas_de_venta (empresa_id, venta_id, orden, producto_id, descripcion, unidad, cantidad, precio,
@@ -247,6 +253,7 @@ export const FABRICAS: Readonly<Record<string, FabricaDeFilas>> = {
       return ventaId;
     },
   },
+  ...FABRICAS_DE_CORREOS,
 };
 
 /** Para tablas hijas: crea la empresa (si es nueva) y deja la transacción como esa empresa. */
