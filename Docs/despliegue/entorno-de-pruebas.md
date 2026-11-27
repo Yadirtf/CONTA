@@ -121,6 +121,8 @@ En Render: **New → Web Service → Yadirtf/CONTA**.
 | `TOKEN_TRABAJOS_INTERNOS` | Al menos 32 caracteres al azar (`openssl rand -hex 32`). El mismo valor va en GitHub (4.3). Protege `POST /interno/trabajos/procesar` ([ADR-0008](../decisiones/0008-envio-dian-con-cola-en-tabla-y-despertador.md)) |
 | `DIAN_HAB_EMPRESA_ID` | Opcional. Id de la única empresa que puede enviar a habilitación mientras llega HU-07.02 |
 | `DIAN_HAB_P12_BASE64`, `DIAN_HAB_P12_CONTRASENA`, `DIAN_HAB_TEST_SET_ID` | Opcionales. Certificado de habilitación en base64, su contraseña y el TestSetId del set de pruebas |
+| `DIAN_HAB_ID_SOFTWARE`, `DIAN_HAB_PIN`, `DIAN_HAB_NIT` | Opcionales. Id y PIN del software registrado en habilitación y NIT del facturador (sin dígito). Con `DIAN_HAB_EMPRESA_ID`, dejan vender a esa empresa (HU-06.01); cualquier otra responde «Tu negocio todavía no está listo para facturar» |
+| `DIAN_HAB_CLAVE_TECNICA` | Opcional. Clave técnica del rango; por defecto, la pública del set de pruebas de habilitación |
 | `SECRETO_CODIGOS_ACCESO` | Al menos 32 caracteres al azar (`openssl rand -hex 32`). Firma los códigos de acceso ([ADR-0010](../decisiones/0010-acceso-con-celular-y-codigo-por-whatsapp.md)). Sin él, la API usa uno al azar por proceso y los códigos pendientes se pierden al reiniciar |
 | `SECRETO_SEGUNDO_FACTOR` | Al menos 32 caracteres al azar (`openssl rand -hex 32`), distinto de los demás. Cifra los secretos de las apps de verificación y firma los códigos de recuperación ([ADR-0013](../decisiones/0013-verificacion-en-dos-pasos.md)). Sin él, nadie con rol o modo contador puede trabajar en una empresa (503). Guarda una copia fuera de Render: si se pierde, cada contador debe configurar su app de nuevo |
 | `CONTA_ENTORNO` | `pruebas`. Es lo único que permite `CELULARES_DE_PRUEBA` |
@@ -186,6 +188,17 @@ Mientras no esté listo, la app de pruebas entra con los celulares de `CELULARES
 2. Aprobar la plantilla de autenticación `codigo_de_acceso` en español.
 3. Generar un token permanente con un usuario del sistema.
 4. Poner `WHATSAPP_TOKEN` y `WHATSAPP_ID_NUMERO` en Render.
+
+### 4.6 Dejar una empresa lista para vender (HU-06.01)
+
+Mientras llega el asistente de habilitación (EP-07), los datos fiscales y la resolución de numeración se cargan una vez con un comando, como `conta_app` (la API solo puede leerlos):
+
+1. En la app, crea la empresa y copia su id (o léelo en Neon, tabla `conta.empresas`).
+2. Escribe un JSON **fuera del repositorio** con el NIT, la razón social, la dirección y la resolución (la forma está al comienzo de `api/scripts/configurar-facturacion.mjs`). Para habilitación sirve la resolución de pruebas: prefijo `SETP`, del 990000000 al 995000000.
+3. Corre `cd api && DATABASE_URL="<cadena de Neon con conta_app>" npm run facturacion:configurar -- /ruta/al/archivo.json`.
+4. En Render pon `DIAN_HAB_EMPRESA_ID` con ese id, más `DIAN_HAB_ID_SOFTWARE`, `DIAN_HAB_PIN`, `DIAN_HAB_NIT` y el certificado (4.2), y reinicia.
+
+Repetir el comando actualiza los datos fiscales. Una resolución guardada nunca cambia: para otro rango, agrega una nueva con otro id.
 
 ## 5. Reglas del entorno de pruebas
 
