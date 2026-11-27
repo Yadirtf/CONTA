@@ -13,6 +13,8 @@ import 'funcionalidades/productos/dominio/productos.dart';
 import 'funcionalidades/productos/presentacion/pantalla_productos.dart';
 import 'funcionalidades/salud/dominio/estado_api.dart';
 import 'funcionalidades/salud/presentacion/estado_del_servidor.dart';
+import 'funcionalidades/ventas/dominio/ventas.dart';
+import 'funcionalidades/ventas/presentacion/pantalla_vender.dart';
 import 'funcionalidades/verificacion/dominio/verificacion.dart';
 import 'funcionalidades/verificacion/presentacion/puerta_de_verificacion.dart';
 import 'nucleo/tema/tema_conta.dart';
@@ -27,6 +29,7 @@ class ContaApp extends StatelessWidget {
     required this.miembros,
     required this.clientes,
     required this.productos,
+    required this.ventas,
     required this.verificacion,
     required this.repositorioSalud,
   });
@@ -36,6 +39,7 @@ class ContaApp extends StatelessWidget {
   final RepositorioDeMiembros miembros;
   final RepositorioDeClientes clientes;
   final RepositorioDeProductos productos;
+  final RepositorioDeVentas ventas;
   final RepositorioDeVerificacion verificacion;
   final RepositorioSalud repositorioSalud;
 
@@ -83,6 +87,18 @@ class ContaApp extends StatelessWidget {
                       ),
                     )
                   : null,
+              alVender: (empresa.membresia?.puede(Permiso.vender) ?? false)
+                  ? () => Navigator.of(contexto).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => PantallaVender(
+                          repositorio: ventas,
+                          empresaId: empresa.id,
+                          buscarArticulos: (texto) => _articulosParaVender(empresa.id, texto),
+                          elegirComprador: (c) => _elegirComprador(c, empresa.id),
+                        ),
+                      ),
+                    )
+                  : null,
               contenido: EstadoDelServidor(repositorio: repositorioSalud),
             ),
           ),
@@ -91,12 +107,35 @@ class ContaApp extends StatelessWidget {
     );
   }
 
-  /// Mientras no exista la venta (HU-06.01), elegir un comprador solo confirma a quién se eligió.
+  /// Fuera de una venta, elegir un comprador solo confirma a quién se eligió.
   Future<void> _verCompradores(BuildContext contexto, String empresaId) async {
     final mensajero = ScaffoldMessenger.of(contexto);
     final elegido = await Navigator.of(contexto).push<Comprador>(
-      MaterialPageRoute(builder: (_) => PantallaBuscarComprador(repositorio: clientes, empresaId: empresaId)),
+      MaterialPageRoute(
+        builder: (_) => PantallaBuscarComprador(repositorio: clientes, empresaId: empresaId),
+      ),
     );
     if (elegido != null) mensajero.showSnackBar(SnackBar(content: Text('Comprador: ${elegido.nombre}')));
   }
+
+  /// La venta (HU-06.01) elige comprador con la búsqueda de clientes, sin conocer sus datos.
+  Future<CompradorDeLaVenta?> _elegirComprador(BuildContext contexto, String empresaId) async {
+    final elegido = await Navigator.of(contexto).push<Comprador>(
+      MaterialPageRoute(
+        builder: (_) => PantallaBuscarComprador(repositorio: clientes, empresaId: empresaId),
+      ),
+    );
+    // El consumidor final no tiene id: la venta va sin comprador, que es lo mismo.
+    final id = elegido?.id;
+    return elegido == null || id == null ? null : CompradorDeLaVenta(id: id, nombre: elegido.nombre);
+  }
+
+  /// La venta muestra los productos del catálogo con su precio con IVA; cobra el que tenga la API.
+  Future<Respuesta<List<ArticuloEnVenta>>> _articulosParaVender(String empresaId, String texto) async =>
+      switch (await productos.buscar(empresaId, texto)) {
+        Exito(:final valor) => Exito([
+          for (final p in valor) ArticuloEnVenta(id: p.id, nombre: p.nombre, precio: p.precio.total),
+        ]),
+        Rechazo(:final codigo, :final mensaje) => Rechazo(codigo, mensaje),
+      };
 }

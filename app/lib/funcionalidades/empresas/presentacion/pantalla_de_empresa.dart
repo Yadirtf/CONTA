@@ -18,6 +18,7 @@ class PantallaDeEmpresa extends StatefulWidget {
     this.alVerPersonas,
     this.alVerCompradores,
     this.alVerProductos,
+    this.alVender,
   });
 
   final Empresa empresa;
@@ -36,6 +37,9 @@ class PantallaDeEmpresa extends StatefulWidget {
 
   /// Ver los productos y, si puede, crearlos (HU-05.02). Solo llega si la membresía puede vender.
   final VoidCallback? alVerProductos;
+
+  /// Vender y facturar en 3 toques (HU-06.01). Solo llega si la membresía puede vender.
+  final VoidCallback? alVender;
 
   @override
   State<PantallaDeEmpresa> createState() => _PantallaDeEmpresaState();
@@ -60,9 +64,17 @@ class _PantallaDeEmpresaState extends State<PantallaDeEmpresa> {
                 icon: const Icon(Icons.inventory_2_outlined),
               ),
             if (widget.alVerCompradores != null)
-              IconButton(onPressed: widget.alVerCompradores, tooltip: 'Compradores', icon: const Icon(Icons.badge_outlined)),
+              IconButton(
+                onPressed: widget.alVerCompradores,
+                tooltip: 'Compradores',
+                icon: const Icon(Icons.badge_outlined),
+              ),
             if (widget.alVerPersonas != null)
-              IconButton(onPressed: widget.alVerPersonas, tooltip: 'Personas del negocio', icon: const Icon(Icons.group_outlined)),
+              IconButton(
+                onPressed: widget.alVerPersonas,
+                tooltip: 'Personas del negocio',
+                icon: const Icon(Icons.group_outlined),
+              ),
             IconButton(onPressed: widget.alCambiar, tooltip: 'Cambiar de negocio', icon: const Icon(Icons.swap_horiz)),
             if (widget.alSalir != null)
               IconButton(onPressed: widget.alSalir, tooltip: 'Salir', icon: const Icon(Icons.logout)),
@@ -78,6 +90,18 @@ class _PantallaDeEmpresaState extends State<PantallaDeEmpresa> {
                 if (widget.empresa.membresia case final membresia?)
                   Text(membresia.descripcion, style: TextStyle(color: context.paleta.textoSuave)),
                 const SizedBox(height: EspacioConta.s4),
+                if (widget.alVender != null) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: AlturaConta.botonPrincipal,
+                    child: FilledButton.icon(
+                      onPressed: widget.alVender,
+                      icon: const Icon(Icons.point_of_sale),
+                      label: const Text('Vender'),
+                    ),
+                  ),
+                  const SizedBox(height: EspacioConta.s4),
+                ],
                 Expanded(child: widget.contenido),
               ],
             ),

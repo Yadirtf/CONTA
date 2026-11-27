@@ -9,6 +9,7 @@ import 'funcionalidades/clientes/dobles.dart';
 import 'funcionalidades/empresas/dobles.dart';
 import 'funcionalidades/miembros/dobles.dart';
 import 'funcionalidades/productos/dobles.dart';
+import 'funcionalidades/ventas/dobles.dart';
 import 'funcionalidades/verificacion/dobles.dart';
 
 class _RepositorioFijo implements RepositorioSalud {
@@ -26,6 +27,7 @@ void main() {
         miembros: RepositorioDeMiembrosFalso(),
         clientes: RepositorioDeClientesFalso(),
         productos: RepositorioDeProductosFalso(),
+        ventas: RepositorioDeVentasFalso(),
         verificacion: RepositorioDeVerificacionFalso(),
         repositorioSalud: _RepositorioFijo(),
       ),
@@ -49,6 +51,7 @@ void main() {
         miembros: RepositorioDeMiembrosFalso(),
         clientes: RepositorioDeClientesFalso(),
         productos: RepositorioDeProductosFalso(),
+        ventas: RepositorioDeVentasFalso(),
         verificacion: RepositorioDeVerificacionFalso(),
         repositorioSalud: _RepositorioFijo(),
       ),
