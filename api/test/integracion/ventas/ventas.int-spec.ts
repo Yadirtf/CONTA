@@ -20,7 +20,11 @@ const codigoDe = async (promesa: Promise<unknown>): Promise<string> => {
   }
 };
 
-describe.skipIf(!hayBase || !hayDueno)('ventas con factura (integración)', () => {
+// Contra Neon cada consulta cruza la red y las ventas de una empresa se ponen en fila por el candado de la
+// resolución, más la firma real de cada factura: 12 a la vez pasan de los 5 s por defecto.
+const LIMITE_MS = 60_000;
+
+describe.skipIf(!hayBase || !hayDueno)('ventas con factura (integración)', { timeout: LIMITE_MS }, () => {
   let baseDeDatos: BaseDeDatos;
   const creadas: string[] = [];
 
