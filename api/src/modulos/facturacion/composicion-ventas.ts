@@ -63,7 +63,8 @@ export const PROVEEDORES_DE_VENTAS: Provider[] = [
       generar: GenerarXmlFactura,
       firmar: FirmarDocumentoElectronico,
       solicitar: SolicitarEnvioDian,
-    ) => new EmitirVenta(uow, configuracion, acceso, generar, firmar, solicitar),
+      reloj: Reloj,
+    ) => new EmitirVenta(uow, configuracion, acceso, generar, firmar, solicitar, reloj),
     inject: [
       UNIDAD_DE_TRABAJO_DE_VENTAS,
       PROVEEDOR_DE_CONFIGURACION_DIAN,
@@ -71,6 +72,7 @@ export const PROVEEDORES_DE_VENTAS: Provider[] = [
       GenerarXmlFactura,
       FirmarDocumentoElectronico,
       SolicitarEnvioDian,
+      RELOJ,
     ],
   },
   {

@@ -64,6 +64,9 @@ export class VentasEnMemoria implements UnidadDeTrabajo<RepositoriosDeVenta> {
           return Promise.resolve();
         },
         completar: () => Promise.resolve(),
+        registrarFalla: () => Promise.resolve(1),
+        reprogramar: () => Promise.resolve(),
+        fallasDe: () => Promise.resolve(null),
       },
     };
   }

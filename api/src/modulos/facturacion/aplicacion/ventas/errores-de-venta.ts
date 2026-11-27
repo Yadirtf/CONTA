@@ -23,6 +23,9 @@ export const limiteDiarioDeVentas = () =>
 export const limiteDeVentasPorPersona = () =>
   new ErrorDominio('venta.limite-por-persona', 'Llegaste al máximo de ventas del día. Si es un error, escríbenos');
 
+export const numeracionEnConflicto = () =>
+  new ErrorDominio('facturacion.numeracion-en-conflicto', 'El siguiente número de factura ya está usado: revisa la resolución');
+
 export const ventaNoEncontrada = () => new ErrorDominio('venta.no-encontrada', 'No encontramos esa venta');
 
 /** Otra petición con el mismo id ganó la carrera: se deshace esta transacción (y su número) y se lee la ganadora. */

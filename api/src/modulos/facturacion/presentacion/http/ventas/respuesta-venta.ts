@@ -11,6 +11,8 @@ const MENSAJES: Readonly<Record<EstadoDeLaVenta, string>> = {
   rechazada: 'La DIAN no la aceptó.',
 };
 
+const DEMORADA = 'Guardada. Hay una demora para enviarla a la DIAN; seguimos intentando.';
+
 export class RespuestaVenta {
   @ApiProperty({ format: 'uuid' })
   readonly id!: string;
@@ -40,7 +42,7 @@ export class RespuestaVenta {
   readonly motivos!: string[];
 }
 
-export function respuestaDeVenta({ venta, estado, motivos }: VentaConEstado): RespuestaVenta {
+export function respuestaDeVenta({ venta, estado, motivos, demorada }: VentaConEstado): RespuestaVenta {
   const { datos } = venta;
   return {
     id: datos.id,
@@ -50,7 +52,7 @@ export function respuestaDeVenta({ venta, estado, motivos }: VentaConEstado): Re
     total: venta.total.aTexto(),
     iva: venta.iva.aTexto(),
     estado,
-    mensaje: MENSAJES[estado],
+    mensaje: estado === 'pendiente' && demorada ? DEMORADA : MENSAJES[estado],
     motivos: [...motivos],
   };
 }

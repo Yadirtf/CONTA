@@ -79,16 +79,37 @@ export async function crearResolucion(dueno: pg.Client, empresaId: string, desde
   return id;
 }
 
-/** Inserta una venta de una línea en una empresa que ya tiene resolución; la transacción queda como esa empresa. */
-export async function insertarVenta(cliente: pg.Client, empresaId: string, resolucionId: string, consecutivo = 990000001): Promise<string> {
+const COMPRADOR_DE_PRUEBA = JSON.stringify({
+  tipoIdentificacion: '13',
+  numero: '222222222222',
+  razonSocial: 'Consumidor final',
+  tipoDePersona: 'natural',
+});
+
+/**
+ * Inserta una venta de una línea en una empresa que ya tiene resolución, con un número reservado como lo hace la
+ * API (los disparadores lo exigen). La transacción queda como esa empresa.
+ */
+export async function insertarVenta(cliente: pg.Client, empresaId: string, resolucionId: string): Promise<string> {
   await comoEmpresa(cliente, empresaId);
   const creadaPor = await crearUsuario(cliente);
   const id = nuevoId();
+  const { rows } = await cliente.query<{ consecutivo: string }>(
+    `UPDATE conta.resoluciones_de_numeracion SET siguiente = siguiente + 1 WHERE empresa_id = $1 AND id = $2
+     RETURNING siguiente - 1 AS consecutivo`,
+    [empresaId, resolucionId],
+  );
   await cliente.query(
     `INSERT INTO conta.ventas (empresa_id, id, huella, resolucion_id, prefijo, consecutivo, emitida_en, medio_de_pago,
        comprador, base, iva, total, creada_por)
-     VALUES ($1, $2, $3, $4, 'SETP', $5, now(), 'efectivo', '{"numero":"222222222222"}', 2100.84, 399.16, 2500, $6)`,
-    [empresaId, id, 'b'.repeat(64), resolucionId, consecutivo, creadaPor],
+     VALUES ($1, $2, $3, $4, 'SETP', $5, now(), 'efectivo', $6, 2100.84, 399.16, 2500, $7)`,
+    [empresaId, id, 'b'.repeat(64), resolucionId, rows[0]?.consecutivo, COMPRADOR_DE_PRUEBA, creadaPor],
+  );
+  await cliente.query(
+    `INSERT INTO conta.lineas_de_venta (empresa_id, venta_id, orden, producto_id, descripcion, unidad, cantidad, precio,
+       tipo_de_iva, tarifa_iva, base, iva, total)
+     VALUES ($1, $2, 1, $3, 'Gaseosa', '94', 1, 2500, 'gravado', '19', 2100.84, 399.16, 2500)`,
+    [empresaId, id, nuevoId()],
   );
   return id;
 }
@@ -209,14 +230,8 @@ export const FABRICAS: Readonly<Record<string, FabricaDeFilas>> = {
     delDueno: true,
     async insertar(dueno, empresaId) {
       await dueno.query('INSERT INTO conta.empresas (id, razon_social) VALUES ($1, $2)', [empresaId, `Empresa ${empresaId}`]);
-      const ventaId = await insertarVenta(dueno, empresaId, await crearResolucion(dueno, empresaId));
-      await dueno.query(
-        `INSERT INTO conta.lineas_de_venta (empresa_id, venta_id, orden, producto_id, descripcion, unidad, cantidad, precio,
-           tipo_de_iva, tarifa_iva, base, iva, total)
-         VALUES ($1, $2, 1, $3, 'Gaseosa', '94', 1, 2500, 'gravado', '19', 2100.84, 399.16, 2500)`,
-        [empresaId, ventaId, nuevoId()],
-      );
-      return ventaId;
+      // insertarVenta ya deja su línea (orden 1): toda venta tiene al menos una.
+      return insertarVenta(dueno, empresaId, await crearResolucion(dueno, empresaId));
     },
   },
   'conta.emisiones_de_venta': {

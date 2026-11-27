@@ -10,6 +10,7 @@ const ESTADOS: Readonly<Record<string, HttpStatus>> = {
   'venta.comprador-no-encontrado': HttpStatus.UNPROCESSABLE_ENTITY,
   'facturacion.no-habilitada': HttpStatus.CONFLICT,
   'facturacion.sin-numeracion': HttpStatus.CONFLICT,
+  'facturacion.numeracion-en-conflicto': HttpStatus.CONFLICT,
   'venta.limite-diario': HttpStatus.TOO_MANY_REQUESTS,
   'venta.limite-por-persona': HttpStatus.TOO_MANY_REQUESTS,
 };

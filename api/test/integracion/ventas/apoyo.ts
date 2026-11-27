@@ -105,6 +105,7 @@ export async function escenario(baseDeDatos: BaseDeDatos, rango = { desde: 99000
     new GenerarXmlFactura(new GeneradorUblDian()),
     new FirmarDocumentoElectronico(new FirmadorXadesDian(reloj)),
     new SolicitarEnvioDian(unidadDeTrabajoDeEnvios(baseDeDatos), reloj, despertador),
+    reloj,
   );
   const catalogo = new CatalogoDeVentaConCatalogo(new ObtenerParaVender(deCatalogo));
   return {

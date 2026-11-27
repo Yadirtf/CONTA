@@ -51,6 +51,11 @@ export class RepositorioDeEnviosPostgres implements RepositorioDeEnvios {
   }
 
   async siguienteConsecutivo(anio: number): Promise<number> {
+    // Un candado de la transacción por empresa y año: dos envíos a la vez no toman el mismo número de archivo
+    // (hallazgo H1 de la prueba de ataque de HU-06.01). Se suelta al confirmar o deshacer.
+    await this.ejecutor.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext('envios_dian:' || conta_sistema.empresa_actual()::text || ':' || ${anio}::text))`,
+    );
     const [fila] = await this.ejecutor.select({ ultimo: max(enviosDian.consecutivo) }).from(enviosDian).where(eq(enviosDian.anio, anio));
     return (fila?.ultimo ?? 0) + 1;
   }

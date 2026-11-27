@@ -2,6 +2,7 @@ import { asc, count, eq, gte, sql } from 'drizzle-orm';
 import type { Ejecutor } from '../../../../../compartido/infraestructura/persistencia/base-de-datos.js';
 import type { EnvioDeLaVenta, RepositorioDeVentas, VentaGuardada } from '../../../aplicacion/puertos/repositorio-de-ventas.js';
 import type { Venta } from '../../../dominio/index.js';
+import { numeracionEnConflicto } from '../../../aplicacion/ventas/errores-de-venta.js';
 import { RepositorioDeEnviosPostgres } from '../repositorio-de-envios-postgres.js';
 import { emisionesDeVenta, lineasDeVenta, ventas } from './tablas-ventas.js';
 import { filasDeVenta, ventaDeFilas } from './venta-de-filas.js';
@@ -31,7 +32,12 @@ export class RepositorioDeVentasPostgres implements RepositorioDeVentas {
       .insert(ventas)
       .values({ ...filas.venta, empresaId: EMPRESA })
       .onConflictDoNothing({ target: [ventas.empresaId, ventas.id] })
-      .returning({ id: ventas.id });
+      .returning({ id: ventas.id })
+      .catch((error: unknown) => {
+        // El número reservado ya es de otra venta (una resolución mal cargada): 409 con palabras, no un 500.
+        if (restriccionDe(error) === NUMERO_UNICO) throw numeracionEnConflicto();
+        throw error;
+      });
     if (insertadas.length === 0) return false;
     await this.ejecutor.insert(lineasDeVenta).values(filas.lineas.map((l) => ({ ...l, empresaId: EMPRESA })));
     return true;
@@ -68,4 +74,13 @@ export class RepositorioDeVentasPostgres implements RepositorioDeVentas {
     const { estado, respuesta } = envio.instantanea();
     return { envioId: fila.envioId, estado, respuesta };
   }
+}
+
+const NUMERO_UNICO = 'ventas_empresa_id_prefijo_consecutivo_key';
+
+function restriccionDe(error: unknown): string | undefined {
+  for (let e: unknown = error; e instanceof Error; e = e.cause) {
+    if ('constraint' in e && typeof e.constraint === 'string') return e.constraint;
+  }
+  return undefined;
 }

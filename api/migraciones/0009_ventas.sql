@@ -54,17 +54,36 @@ CREATE TABLE conta.resoluciones_de_numeracion (
   CHECK (siguiente BETWEEN desde AND hasta + 1)
 );
 --> statement-breakpoint
--- Defensa en profundidad: aunque conta_api pueda actualizar `siguiente`, nunca lo puede bajar ni dejarlo igual.
+-- Defensa en profundidad: aunque conta_api pueda actualizar `siguiente`, solo puede reservar de a un número. Ni
+-- bajarlo ni saltar (huecos o un rango agotado a propósito: hallazgo H4 de la prueba de ataque).
 CREATE FUNCTION conta_sistema.consecutivo_solo_sube() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.siguiente <= OLD.siguiente THEN
-    RAISE EXCEPTION 'El consecutivo de la resolución solo puede subir' USING ERRCODE = 'check_violation';
+  IF NEW.siguiente <> OLD.siguiente + 1 THEN
+    RAISE EXCEPTION 'El consecutivo de la resolución solo sube de a uno' USING ERRCODE = 'check_violation';
   END IF;
   RETURN NEW;
 END $$;
 --> statement-breakpoint
 CREATE TRIGGER consecutivo_solo_sube BEFORE UPDATE OF siguiente ON conta.resoluciones_de_numeracion
   FOR EACH ROW EXECUTE FUNCTION conta_sistema.consecutivo_solo_sube();
+--> statement-breakpoint
+-- Dos resoluciones del mismo prefijo no pueden cruzar sus rangos: cada número se reservaría dos veces y todas las
+-- ventas chocarían (hallazgo H3). Un candado por empresa y prefijo evita que dos altas a la vez se crucen.
+CREATE FUNCTION conta_sistema.rango_sin_cruces() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtext('resoluciones:' || NEW.empresa_id::text || ':' || NEW.prefijo));
+  IF EXISTS (
+    SELECT 1 FROM conta.resoluciones_de_numeracion r
+     WHERE r.empresa_id = NEW.empresa_id AND r.prefijo = NEW.prefijo AND r.id <> NEW.id
+       AND r.desde <= NEW.hasta AND NEW.desde <= r.hasta
+  ) THEN
+    RAISE EXCEPTION 'El rango se cruza con otra resolución del mismo prefijo' USING ERRCODE = 'exclusion_violation';
+  END IF;
+  RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER rango_sin_cruces BEFORE INSERT OR UPDATE OF desde, hasta, prefijo ON conta.resoluciones_de_numeracion
+  FOR EACH ROW EXECUTE FUNCTION conta_sistema.rango_sin_cruces();
 --> statement-breakpoint
 ALTER TABLE conta.resoluciones_de_numeracion ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
@@ -93,7 +112,10 @@ CREATE TABLE conta.ventas (
   emitida_en timestamptz NOT NULL,
   medio_de_pago text NOT NULL CHECK (medio_de_pago IN ('efectivo', 'tarjeta-debito', 'tarjeta-credito', 'transferencia')),
   -- El adquirente como quedó en la factura (consumidor final o un comprador del catálogo). Lo valida el dominio.
-  comprador jsonb NOT NULL CHECK (jsonb_typeof(comprador) = 'object' AND pg_column_size(comprador) <= 4096),
+  comprador jsonb NOT NULL CHECK (
+    jsonb_typeof(comprador) = 'object' AND pg_column_size(comprador) <= 4096
+    AND comprador ?& ARRAY['tipoIdentificacion', 'numero', 'razonSocial', 'tipoDePersona']
+  ),
   -- Pesos con centavos; nunca float (ADR-0005). El dominio limita el total a $1.000.000.000.
   base numeric(14, 2) NOT NULL CHECK (base >= 0),
   iva numeric(14, 2) NOT NULL CHECK (iva >= 0),
@@ -106,6 +128,22 @@ CREATE TABLE conta.ventas (
 );
 --> statement-breakpoint
 CREATE INDEX ventas_por_fecha ON conta.ventas (empresa_id, emitida_en);
+--> statement-breakpoint
+-- Defensa en profundidad (hallazgo H5): una venta solo usa un número ya reservado de su resolución, con su prefijo.
+CREATE FUNCTION conta_sistema.venta_con_numero_reservado() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM conta.resoluciones_de_numeracion r
+     WHERE r.empresa_id = NEW.empresa_id AND r.id = NEW.resolucion_id AND r.prefijo = NEW.prefijo
+       AND NEW.consecutivo BETWEEN r.desde AND r.siguiente - 1
+  ) THEN
+    RAISE EXCEPTION 'La venta no tiene un número reservado de su resolución' USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER venta_con_numero_reservado BEFORE INSERT ON conta.ventas
+  FOR EACH ROW EXECUTE FUNCTION conta_sistema.venta_con_numero_reservado();
 --> statement-breakpoint
 ALTER TABLE conta.ventas ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
@@ -155,6 +193,23 @@ CREATE POLICY lineas_de_venta_de_la_empresa_actual ON conta.lineas_de_venta
 --> statement-breakpoint
 GRANT SELECT, INSERT ON conta.lineas_de_venta TO conta_api;
 --> statement-breakpoint
+-- Al confirmar, toda venta tiene al menos una línea y sus líneas suman exactamente la base, el IVA y el total.
+CREATE FUNCTION conta_sistema.venta_cuadra_con_sus_lineas() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+  sumas record;
+BEGIN
+  SELECT count(*) AS cuantas, coalesce(sum(base), 0) AS base, coalesce(sum(iva), 0) AS iva, coalesce(sum(total), 0) AS total
+    INTO sumas FROM conta.lineas_de_venta l WHERE l.empresa_id = NEW.empresa_id AND l.venta_id = NEW.id;
+  IF sumas.cuantas = 0 OR sumas.base <> NEW.base OR sumas.iva <> NEW.iva OR sumas.total <> NEW.total THEN
+    RAISE EXCEPTION 'La venta no cuadra con sus líneas' USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NULL;
+END $$;
+--> statement-breakpoint
+CREATE CONSTRAINT TRIGGER venta_cuadra_con_sus_lineas AFTER INSERT ON conta.ventas
+  DEFERRABLE INITIALLY DEFERRED
+  FOR EACH ROW EXECUTE FUNCTION conta_sistema.venta_cuadra_con_sus_lineas();
+--> statement-breakpoint
 
 -- 4. Qué envío a la DIAN lleva cada venta. Se inserta cuando el documento ya quedó firmado y en cola.
 CREATE TABLE conta.emisiones_de_venta (
@@ -180,11 +235,15 @@ GRANT SELECT, INSERT ON conta.emisiones_de_venta TO conta_api;
 --> statement-breakpoint
 
 -- 5. Ventas guardadas cuyo documento falta firmar y encolar (si la firma falló o la API se reinició a mitad).
---    Como la cola de envíos, vive en conta_sistema sin RLS y solo guarda ids y la hora.
+--    Como la cola de envíos (ADR-0008), vive en conta_sistema sin RLS: el reparador la lee para todas las empresas.
+--    Solo guarda ids, la hora, los intentos y el código de la última falla (nunca su mensaje ni datos del negocio).
+--    Dentro de una petición, la API la filtra siempre por conta_sistema.empresa_actual().
 CREATE TABLE conta_sistema.cola_emision_ventas (
   empresa_id uuid NOT NULL,
   venta_id uuid NOT NULL,
   ejecutar_en timestamptz NOT NULL,
+  intentos integer NOT NULL DEFAULT 0 CHECK (intentos >= 0),
+  ultima_falla text CHECK (ultima_falla ~ '^[A-Za-z0-9._-]{1,64}$'),
   PRIMARY KEY (empresa_id, venta_id),
   FOREIGN KEY (empresa_id, venta_id) REFERENCES conta.ventas (empresa_id, id)
 );
