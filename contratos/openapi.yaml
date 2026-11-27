@@ -840,7 +840,7 @@ paths:
           description: Todavía va para la DIAN (comprobante.en-camino) o la rechazó
             (comprobante.rechazado).
         "429":
-          description: Muchos comprobantes seguidos (comprobante.limite).
+          description: Muchos comprobantes seguidos (comprobante.limite). Trae Retry-After.
       security:
         - bearer: []
       summary: El PDF de la factura con su QR, cuando la DIAN ya la aceptó.

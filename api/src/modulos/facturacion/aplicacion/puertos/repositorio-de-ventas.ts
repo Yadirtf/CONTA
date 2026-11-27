@@ -1,4 +1,4 @@
-import type { EstadoDelEnvio, Venta } from '../../dominio/index.js';
+import type { EstadoDelEnvio, Participante, Venta } from '../../dominio/index.js';
 import type { RespuestaDeLaDian } from '../../dominio/index.js';
 
 /** Una venta guardada y la resolución con la que se numeró. */
@@ -20,6 +20,8 @@ export interface FacturaDeLaVenta {
   readonly cufe: string;
   /** El texto del QR que quedó en el XML firmado. */
   readonly codigoQr: string;
+  /** El emisor tal como quedó en el XML firmado: el comprobante no usa los datos fiscales de hoy. */
+  readonly emisor: Participante;
   readonly xmlFirmado: string;
 }
 

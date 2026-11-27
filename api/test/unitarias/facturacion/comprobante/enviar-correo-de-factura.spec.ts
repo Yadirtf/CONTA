@@ -1,10 +1,12 @@
+import type { UnidadDeTrabajo } from '../../../../src/compartido/aplicacion/index.js';
 import { IdEmpresa } from '../../../../src/compartido/dominio/index.js';
 import { EnviarCorreoDeFactura } from '../../../../src/modulos/facturacion/aplicacion/comandos/enviar-correo-de-factura.js';
 import { EnviarCorreosPendientes } from '../../../../src/modulos/facturacion/aplicacion/comandos/enviar-correos-pendientes.js';
 import { CorreoAlAceptar } from '../../../../src/modulos/facturacion/aplicacion/correo/correo-al-aceptar.js';
 import { FallaDeCorreo } from '../../../../src/modulos/facturacion/aplicacion/correo/falla-de-correo.js';
 import type { CorreoSaliente } from '../../../../src/modulos/facturacion/aplicacion/puertos/enviador-de-correo.js';
-import { CorreoDeFactura } from '../../../../src/modulos/facturacion/dominio/index.js';
+import type { RepositoriosDeVenta } from '../../../../src/modulos/facturacion/aplicacion/puertos/repositorios-de-venta.js';
+import { CorreoDeFactura, MAXIMO_DE_INTENTOS_DE_CORREO } from '../../../../src/modulos/facturacion/dominio/index.js';
 import { RelojDePrueba } from '../../../integracion/envio-dian/apoyo.js';
 import { VentasEnMemoria } from '../ventas/ventas-en-memoria.js';
 import { compradorConCorreo, CUFE, facturaAceptada, VENTA_ID, ventaDePrueba } from './apoyo.js';
@@ -72,19 +74,68 @@ describe('EnviarCorreoDeFactura (HU-06.08)', () => {
 
   it('si el comprobante no se puede armar cuenta como falla y no se retoma sin fin', async () => {
     const { memoria, enviados, enviar } = preparar();
-    memoria.emisor = null;
+    memoria.resolucion = null;
     await enviar.ejecutar({ empresaId }, VENTA_ID);
     expect(enviados).toHaveLength(0);
     expect(memoria.correos.get(VENTA_ID)?.instantanea()).toMatchObject({ intentos: 1, ultimaFalla: 'correo.sin-comprobante' });
   });
 
-  it('el lote sigue aunque un correo falle', async () => {
+  it('si el proceso se cae tras mandar, el intento ya contó: no se repite enseguida ni sin tope (H2 y H4)', async () => {
+    const { reloj, memoria, enviados } = preparar();
+    let transacciones = 0;
+    const caida: UnidadDeTrabajo<RepositoriosDeVenta> = {
+      ejecutar: (c, t) => (++transacciones === 2 ? Promise.reject(new Error('caída al guardar')) : memoria.ejecutar(c, t)),
+    };
+    const enviar = new EnviarCorreoDeFactura(caida, { pdf: () => Promise.resolve(PDF) }, { enviar: (c) => Promise.resolve(void enviados.push(c)) }, reloj);
+    await expect(enviar.ejecutar({ empresaId }, VENTA_ID)).rejects.toThrow('caída al guardar');
+    expect(enviados).toHaveLength(1);
+    expect(memoria.correos.get(VENTA_ID)?.instantanea()).toMatchObject({ estado: 'pendiente', intentos: 1, ultimaFalla: 'correo.en-curso' });
+
+    // Otro procesador, enseguida: el intento está tomado y no manda otra vez.
+    await enviar.ejecutar({ empresaId }, VENTA_ID);
+    expect(enviados).toHaveLength(1);
+
+    // Pasada la espera, cierra el intento perdido con su registro y da el siguiente, que sí cuenta.
+    reloj.adelantar(2 * 60_000);
+    await enviar.ejecutar({ empresaId }, VENTA_ID);
+    expect(memoria.correos.get(VENTA_ID)?.instantanea()).toMatchObject({ estado: 'enviado', intentos: 2 });
+    expect(memoria.intentosDeCorreo.map((i) => [i.numero, i.detalle])).toEqual([
+      [1, 'correo.sin-confirmar'],
+      [2, 'ok'],
+    ]);
+  });
+
+  it('el último intento fallido queda como falla permanente (H5)', async () => {
+    const { reloj, memoria, enviar } = preparar(new FallaDeCorreo('correo.http-503', false));
+    for (let i = 0; i < 12 && memoria.correos.get(VENTA_ID)?.instantanea().estado === 'pendiente'; i++) {
+      await enviar.ejecutar({ empresaId }, VENTA_ID);
+      reloj.adelantar(13 * 60 * 60_000);
+    }
+    expect(memoria.correos.get(VENTA_ID)?.instantanea()).toMatchObject({ estado: 'fallido', intentos: MAXIMO_DE_INTENTOS_DE_CORREO });
+    expect(memoria.intentosDeCorreo.map((i) => i.resultado).at(-1)).toBe('falla-permanente');
+    expect(memoria.intentosDeCorreo).toHaveLength(MAXIMO_DE_INTENTOS_DE_CORREO);
+  });
+
+  it('el lote sigue aunque un correo falle y deja rastro solo con ids y el tipo de error (H2)', async () => {
     const fuente = { tomarVencidos: () => Promise.resolve([{ empresaId, ventaId: 'a' }, { empresaId, ventaId: 'b' }]) };
     let llamadas = 0;
-    const lote = new EnviarCorreosPendientes(fuente, {
-      ejecutar: () => (llamadas++ === 0 ? Promise.reject(new Error('x')) : Promise.resolve()),
-    });
+    const fallas: unknown[] = [];
+    const lote = new EnviarCorreosPendientes(
+      fuente,
+      { ejecutar: () => (llamadas++ === 0 ? Promise.reject(new TypeError('ana@ejemplo.test')) : Promise.resolve()) },
+      true,
+      (f) => fallas.push(f),
+    );
     expect(await lote.ejecutar()).toEqual({ tomados: 2, conError: 1 });
+    expect(fallas).toEqual([{ empresaId: empresaId.valor, ventaId: 'a', tipo: 'TypeError' }]);
+  });
+
+  it('sin proveedor configurado no toma correos: esperan sin gastar intentos (H5)', async () => {
+    let tomados = 0;
+    const fuente = { tomarVencidos: () => Promise.resolve(void tomados++).then(() => []) };
+    const lote = new EnviarCorreosPendientes(fuente, { ejecutar: () => Promise.resolve() }, false);
+    expect(await lote.ejecutar()).toEqual({ tomados: 0, conError: 0 });
+    expect(tomados).toBe(0);
   });
 });
 

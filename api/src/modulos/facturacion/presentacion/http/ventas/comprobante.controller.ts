@@ -1,4 +1,4 @@
-import { Controller, Get, Header, NotFoundException, Param, StreamableFile, UseFilters, UseGuards } from '@nestjs/common';
+import { Controller, Get, Header, NotFoundException, Param, Res, StreamableFile, UseFilters, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
@@ -46,10 +46,14 @@ export class ComprobanteController {
   @ApiOkResponse({ description: 'El PDF (application/pdf).', schema: { type: 'string', format: 'binary' } })
   @ApiNotFoundResponse({ description: 'No es una venta de este negocio (venta.no-encontrada).' })
   @ApiConflictResponse({ description: 'Todavía va para la DIAN (comprobante.en-camino) o la rechazó (comprobante.rechazado).' })
-  @ApiTooManyRequestsResponse({ description: 'Muchos comprobantes seguidos (comprobante.limite).' })
-  async obtener(@EmpresaDeLaPeticion() miembro: ContextoDeMiembro, @Param('id') id: string): Promise<StreamableFile> {
+  @ApiTooManyRequestsResponse({ description: 'Muchos comprobantes seguidos (comprobante.limite). Trae Retry-After.' })
+  async obtener(
+    @EmpresaDeLaPeticion() miembro: ContextoDeMiembro,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) respuesta: { setHeader(nombre: string, valor: string): unknown },
+  ): Promise<StreamableFile> {
     if (!UUID.test(id)) throw new NotFoundException({ codigo: 'venta.no-encontrada', mensaje: 'No encontramos esa venta' });
-    this.limite.exigir(miembro);
+    this.limite.exigir(miembro, respuesta);
     const { nombre, pdf } = await this.obtenerComprobante.ejecutar(miembro, id);
     return new StreamableFile(pdf, { type: 'application/pdf', disposition: `attachment; filename="${nombre}"`, length: pdf.length });
   }

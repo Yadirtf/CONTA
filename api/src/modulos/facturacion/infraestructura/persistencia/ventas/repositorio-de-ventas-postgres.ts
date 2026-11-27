@@ -10,6 +10,7 @@ import type {
 import { ESTADOS_DEL_ENVIO, type EstadoDelEnvio, type Venta } from '../../../dominio/index.js';
 import { numeracionEnConflicto } from '../../../aplicacion/ventas/errores-de-venta.js';
 import { codigoQrDelXml } from '../../dian-directa/ubl/codigo-qr-del-xml.js';
+import { emisorDelXml } from '../../dian-directa/ubl/emisor-del-xml.js';
 import { RepositorioDeEnviosPostgres } from '../repositorio-de-envios-postgres.js';
 import { enviosDian } from '../tablas-envio-dian.js';
 import { emisionesDeVenta, lineasDeVenta, ventas } from './tablas-ventas.js';
@@ -91,7 +92,8 @@ export class RepositorioDeVentasPostgres implements RepositorioDeVentas {
       .where(eq(emisionesDeVenta.ventaId, ventaId))
       .limit(1);
     if (!fila) return null;
-    return { estado: estadoDelEnvioValido(fila.estado), cufe: fila.cufe, codigoQr: codigoQrDelXml(fila.xmlFirmado), xmlFirmado: fila.xmlFirmado };
+    const { xmlFirmado } = fila;
+    return { estado: estadoDelEnvioValido(fila.estado), cufe: fila.cufe, codigoQr: codigoQrDelXml(xmlFirmado), emisor: emisorDelXml(xmlFirmado), xmlFirmado };
   }
 
   async deEnvio(envioId: string): Promise<VentaGuardada | null> {

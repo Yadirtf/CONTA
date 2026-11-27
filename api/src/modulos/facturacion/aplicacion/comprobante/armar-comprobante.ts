@@ -13,7 +13,8 @@ export interface ComprobanteArmado {
 
 /**
  * Lee, dentro de la transacción de la empresa, lo que lleva el comprobante de una venta aceptada por la DIAN: la
- * venta, el emisor, la resolución y el CUFE y el QR tal como quedaron en el XML firmado. Nada se recalcula.
+ * venta, la resolución y el emisor, el CUFE y el QR tal como quedaron en el XML firmado. Nada se recalcula: si
+ * después cambian los datos fiscales del negocio, el comprobante sigue diciendo lo que aceptó la DIAN.
  */
 export async function armarComprobante(
   { ventas, numeracion }: Pick<RepositoriosDeVenta, 'ventas' | 'numeracion'>,
@@ -24,8 +25,9 @@ export async function armarComprobante(
   const factura = await ventas.facturaDe(ventaId);
   if (factura?.estado === 'rechazado') throw comprobanteRechazado();
   if (factura?.estado !== 'aceptado') throw comprobanteEnCamino();
-  const [emisor, resolucion] = await Promise.all([numeracion.emisor(), numeracion.resolucion(guardada.resolucionId)]);
-  if (!emisor || !resolucion) throw facturacionNoHabilitada();
+  const resolucion = await numeracion.resolucion(guardada.resolucionId);
+  if (!resolucion) throw facturacionNoHabilitada();
+  const { emisor } = factura;
   const comprobante = comprobanteDeVenta({
     venta: guardada.venta,
     emisor,

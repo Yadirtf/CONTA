@@ -79,8 +79,9 @@ export class VentasEnMemoria implements UnidadDeTrabajo<RepositoriosDeVenta> {
           if (!this.correos.has(correo.ventaId)) this.correos.set(correo.ventaId, correo);
           return Promise.resolve();
         },
-        actualizar: (correo, intentosLeidos) => {
-          if (this.correos.get(correo.ventaId)?.intentos !== intentosLeidos) return Promise.resolve(false);
+        actualizar: (correo, leido) => {
+          const actual = this.correos.get(correo.ventaId)?.instantanea();
+          if (actual?.intentos !== leido.intentos || actual.ultimaFalla !== leido.ultimaFalla) return Promise.resolve(false);
           this.correos.set(correo.ventaId, CorreoDeFactura.reconstituir(correo.instantanea()));
           return Promise.resolve(true);
         },

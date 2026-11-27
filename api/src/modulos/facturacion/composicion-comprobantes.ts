@@ -1,4 +1,4 @@
-import type { Provider } from '@nestjs/common';
+import { Logger, type Provider } from '@nestjs/common';
 import { RELOJ, type Reloj } from '../../compartido/aplicacion/index.js';
 import { BaseDeDatos } from '../../compartido/infraestructura/persistencia/base-de-datos.js';
 import { EnviarCorreoDeFactura } from './aplicacion/comandos/enviar-correo-de-factura.js';
@@ -17,7 +17,7 @@ import { CorreosPendientesPostgres } from './infraestructura/persistencia/correo
 import { LimiteDeComprobantes } from './presentacion/http/ventas/limite-de-comprobantes.js';
 
 // Composición del comprobante y su correo (HU-06.08): el PDF lo dibuja pdfkit y el correo sale por Brevo si hay
-// llave; sin ella, los correos esperan en su cola. Cambiar de proveedor es cambiar solo ENVIADOR_DE_CORREO.
+// llave; sin ella, los correos esperan en su cola sin gastar intentos. Cambiar de proveedor es cambiar solo ENVIADOR_DE_CORREO.
 
 export const PROVEEDORES_DE_COMPROBANTES: Provider[] = [
   LimiteDeComprobantes,
@@ -52,7 +52,12 @@ export const PROVEEDORES_DE_COMPROBANTES: Provider[] = [
   },
   {
     provide: EnviarCorreosPendientes,
-    useFactory: (fuente: FuenteDeCorreosPendientes, enviar: EnviarCorreoDeFactura) => new EnviarCorreosPendientes(fuente, enviar),
+    useFactory: (fuente: FuenteDeCorreosPendientes, enviar: EnviarCorreoDeFactura) => {
+      const registro = new Logger('CorreoDeFactura');
+      return new EnviarCorreosPendientes(fuente, enviar, configuracionDeCorreoDesde(process.env) !== null, (f) =>
+        registro.error(`No se pudo dar el paso del correo: empresa=${f.empresaId} venta=${f.ventaId} error=${f.tipo}`),
+      );
+    },
     inject: [FUENTE_DE_CORREOS_PENDIENTES, EnviarCorreoDeFactura],
   },
 ];

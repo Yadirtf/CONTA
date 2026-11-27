@@ -49,14 +49,13 @@ CREATE TABLE conta.correos_de_factura (
   estado text NOT NULL CHECK (estado IN ('pendiente', 'enviado', 'fallido')),
   intentos integer NOT NULL DEFAULT 0 CHECK (intentos BETWEEN 0 AND 20),
   proximo_intento_en timestamptz,
-  -- Hasta cuándo lo tiene tomado un procesador (lo fija tomar_correos_vencidos); no es parte del estado.
-  reservado_hasta timestamptz,
   ultima_falla text CHECK (ultima_falla ~ '^[a-z0-9.-]{1,64}$'),
   creado_en timestamptz NOT NULL DEFAULT now(),
   actualizado_en timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (empresa_id, venta_id),
   FOREIGN KEY (empresa_id, venta_id) REFERENCES conta.ventas (empresa_id, id),
-  CHECK ((estado = 'pendiente') = (proximo_intento_en IS NOT NULL))
+  CHECK ((estado = 'pendiente') = (proximo_intento_en IS NOT NULL)),
+  CHECK (isfinite(proximo_intento_en))
 );
 --> statement-breakpoint
 CREATE INDEX correos_de_factura_por_vencer ON conta.correos_de_factura (proximo_intento_en) WHERE estado = 'pendiente';
@@ -74,9 +73,14 @@ GRANT SELECT, INSERT ON conta.correos_de_factura TO conta_api;
 --> statement-breakpoint
 GRANT UPDATE (estado, intentos, proximo_intento_en, ultima_falla, actualizado_en) ON conta.correos_de_factura TO conta_api;
 --> statement-breakpoint
--- Un correo solo se pide para una venta cuya factura la DIAN aceptó y cuyo comprador tiene correo.
+-- Un correo solo se pide para una venta cuya factura la DIAN aceptó y cuyo comprador tiene correo, y nace pendiente,
+-- sin intentos y para ahora (hallazgo H6 de la prueba de ataque: nadie lo crea ya terminado o aplazado).
 CREATE FUNCTION conta_sistema.correo_de_venta_aceptada() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
+  IF NEW.estado IS DISTINCT FROM 'pendiente' OR NEW.intentos IS DISTINCT FROM 0 OR NEW.ultima_falla IS NOT NULL
+     OR NOT coalesce(NEW.proximo_intento_en BETWEEN now() - interval '1 hour' AND now() + interval '1 hour', false) THEN
+    RAISE EXCEPTION 'Un correo nace pendiente, sin intentos y para ahora' USING ERRCODE = 'check_violation';
+  END IF;
   IF NOT EXISTS (
     SELECT 1 FROM conta.ventas v
       JOIN conta.emisiones_de_venta m ON m.empresa_id = v.empresa_id AND m.venta_id = v.id
@@ -92,11 +96,26 @@ END $$;
 CREATE TRIGGER correo_de_venta_aceptada BEFORE INSERT ON conta.correos_de_factura
   FOR EACH ROW EXECUTE FUNCTION conta_sistema.correo_de_venta_aceptada();
 --> statement-breakpoint
--- Un correo terminado no vuelve atrás y los intentos solo suben (nadie lo reabre para mandarlo otra vez).
+-- Un correo terminado no vuelve atrás y cada intento se toma antes de llamar al proveedor (hallazgos H2 y H4): o se
+-- toma uno (intentos + 1, sigue pendiente y marcado 'correo.en-curso') o se cierra el que está en curso (mismos
+-- intentos). La hora del próximo intento, si cambia, queda entre ahora y 13 horas (H6: nadie la aplaza para siempre).
 CREATE FUNCTION conta_sistema.correo_solo_avanza() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF OLD.estado <> 'pendiente' OR NEW.intentos <> OLD.intentos + 1 THEN
-    RAISE EXCEPTION 'El correo solo avanza de a un intento mientras está pendiente' USING ERRCODE = 'check_violation';
+  IF OLD.estado IS DISTINCT FROM 'pendiente' THEN
+    RAISE EXCEPTION 'Un correo terminado no cambia' USING ERRCODE = 'check_violation';
+  END IF;
+  IF NOT (
+    -- IS [NOT] DISTINCT FROM: con NULL, un «=» daría NULL y el IF no rechazaría nada.
+    (NEW.intentos = OLD.intentos + 1 AND NEW.estado = 'pendiente' AND NEW.ultima_falla IS NOT DISTINCT FROM 'correo.en-curso'
+       AND OLD.ultima_falla IS DISTINCT FROM 'correo.en-curso')
+    OR (NEW.intentos = OLD.intentos AND OLD.ultima_falla IS NOT DISTINCT FROM 'correo.en-curso'
+       AND NEW.ultima_falla IS DISTINCT FROM 'correo.en-curso')
+  ) THEN
+    RAISE EXCEPTION 'El correo solo toma un intento o cierra el que está en curso' USING ERRCODE = 'check_violation';
+  END IF;
+  IF NEW.proximo_intento_en IS DISTINCT FROM OLD.proximo_intento_en AND NEW.proximo_intento_en IS NOT NULL
+     AND NOT (NEW.proximo_intento_en BETWEEN now() - interval '5 minutes' AND now() + interval '13 hours') THEN
+    RAISE EXCEPTION 'El próximo intento va entre ahora y 13 horas' USING ERRCODE = 'check_violation';
   END IF;
   RETURN NEW;
 END $$;
@@ -130,24 +149,19 @@ CREATE POLICY intentos_correo_de_la_empresa_actual ON conta.intentos_correo_de_f
 GRANT SELECT, INSERT ON conta.intentos_correo_de_factura TO conta_api;
 --> statement-breakpoint
 
--- 4. Tomar los correos vencidos de todas las empresas sin darle a conta_api una tabla sin RLS (a diferencia de las
---    colas de ADR-0008): esta función, del dueño, solo devuelve ids y marca la reserva con la hora de la base, así
---    que quien la llame no puede ver datos ni aplazar correos ajenos. Lote de 50 como máximo.
-CREATE FUNCTION conta_sistema.tomar_correos_vencidos(p_limite integer)
+-- 4. Ver los correos vencidos de todas las empresas sin darle a conta_api una tabla sin RLS (a diferencia de las
+--    colas de ADR-0008): esta función, del dueño, solo lee y solo devuelve ids, 50 como máximo. No reserva nada
+--    (hallazgo H3 de la prueba de ataque: una reserva dejaba aplazar correos ajenos); lo que evita mandar dos veces
+--    es tomar el intento en la transacción de la empresa, con RLS (correo_solo_avanza).
+CREATE FUNCTION conta_sistema.correos_vencidos(p_limite integer)
   RETURNS TABLE (empresa_id uuid, venta_id uuid)
-  LANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
-  UPDATE conta.correos_de_factura AS c
-     SET reservado_hasta = now() + interval '2 minutes'
-    FROM (SELECT t.empresa_id, t.venta_id FROM conta.correos_de_factura t
-           WHERE t.estado = 'pendiente' AND t.proximo_intento_en <= now()
-             AND (t.reservado_hasta IS NULL OR t.reservado_hasta <= now())
-           ORDER BY t.proximo_intento_en
-           LIMIT least(greatest(p_limite, 0), 50)
-           FOR UPDATE SKIP LOCKED) AS vencidos
-   WHERE c.empresa_id = vencidos.empresa_id AND c.venta_id = vencidos.venta_id
-  RETURNING c.empresa_id, c.venta_id
+  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
+  SELECT t.empresa_id, t.venta_id FROM conta.correos_de_factura t
+   WHERE t.estado = 'pendiente' AND t.proximo_intento_en <= now()
+   ORDER BY t.proximo_intento_en
+   LIMIT least(greatest(p_limite, 0), 50)
 $$;
 --> statement-breakpoint
-REVOKE ALL ON FUNCTION conta_sistema.tomar_correos_vencidos(integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION conta_sistema.correos_vencidos(integer) FROM PUBLIC;
 --> statement-breakpoint
-GRANT EXECUTE ON FUNCTION conta_sistema.tomar_correos_vencidos(integer) TO conta_api;
+GRANT EXECUTE ON FUNCTION conta_sistema.correos_vencidos(integer) TO conta_api;

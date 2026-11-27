@@ -2,7 +2,7 @@ import { Dinero, tratamientoDeIva } from '../../../../src/compartido/dominio/ind
 import type { FacturaDeLaVenta } from '../../../../src/modulos/facturacion/aplicacion/puertos/repositorio-de-ventas.js';
 import { lineaDeVenta, NumeroDeFactura, participante, ResolucionDeNumeracion, Venta } from '../../../../src/modulos/facturacion/dominio/index.js';
 import { Identificacion } from '../../../../src/modulos/facturacion/dominio/index.js';
-import { adquirenteDePrueba } from '../datos-de-prueba.js';
+import { adquirenteDePrueba, emisorDePrueba } from '../datos-de-prueba.js';
 import { arroz, gaseosa } from '../ventas/apoyo.js';
 
 // Datos de prueba del comprobante (HU-06.08): una venta con gravado, exento y excluido, y su factura aceptada.
@@ -58,5 +58,6 @@ export const facturaAceptada = (estado: FacturaDeLaVenta['estado'] = 'aceptado')
   estado,
   cufe: CUFE,
   codigoQr: QR,
+  emisor: emisorDePrueba(),
   xmlFirmado: `<Invoice><sts:QRCode>${QR}</sts:QRCode></Invoice>`,
 });

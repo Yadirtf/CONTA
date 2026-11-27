@@ -162,25 +162,55 @@ describe.skipIf(!hayBase || !hayDueno)('comprobante y correo de la factura (inte
 
   it('conta_api no reabre, edita ni borra correos e intentos, ni pide correos o aceptaciones que no corresponden', async () => {
     const e = await nuevo();
-    const ventaId = await vender(e, await compradorConCorreo(e));
+    const comprador = await compradorConCorreo(e);
+    const ventaId = await vender(e, comprador);
     const pendienteId = await vender(e);
     const envioId = await aceptar(e, ventaId);
     await correos(e, []).ejecutar(50);
+    const otraId = await vender(e, comprador);
+    await aceptar(e, otraId);
 
     await enTransaccionDeshecha(async (cliente) => {
       await comoEmpresa(cliente, e.empresaId);
       const intentar = async (sql: string, valores: unknown[]) => (await errorDe(cliente, sql, valores))?.message ?? 'sin error';
-      expect(await intentar(`UPDATE conta.correos_de_factura SET estado = 'pendiente', intentos = 2, proximo_intento_en = now() WHERE venta_id = $1`, [ventaId])).toMatch(/solo avanza/);
+      expect(await intentar(`UPDATE conta.correos_de_factura SET estado = 'pendiente', intentos = 2, proximo_intento_en = now() WHERE venta_id = $1`, [ventaId])).toMatch(/terminado no cambia/);
+      // Hallazgo H6: un correo pendiente solo toma un intento a la vez y no se aplaza para siempre ni se adelanta sin fin.
+      expect(await intentar('UPDATE conta.correos_de_factura SET intentos = intentos + 2 WHERE venta_id = $1', [otraId])).toMatch(/solo toma un intento/);
+      expect(await intentar(`UPDATE conta.correos_de_factura SET proximo_intento_en = 'infinity' WHERE venta_id = $1`, [otraId])).toMatch(/solo toma un intento/);
+      expect(
+        await intentar(
+          `UPDATE conta.correos_de_factura SET intentos = intentos + 1, ultima_falla = 'correo.en-curso', proximo_intento_en = '-infinity' WHERE venta_id = $1`,
+          [otraId],
+        ),
+      ).toMatch(/entre ahora y 13 horas/);
+      expect(
+        await intentar(
+          `UPDATE conta.correos_de_factura SET intentos = intentos + 1, ultima_falla = 'correo.en-curso', proximo_intento_en = now() + interval '30 days' WHERE venta_id = $1`,
+          [otraId],
+        ),
+      ).toMatch(/entre ahora y 13 horas/);
       expect(await intentar('DELETE FROM conta.correos_de_factura WHERE venta_id = $1', [ventaId])).toMatch(/permission denied/);
       expect(await intentar('UPDATE conta.intentos_correo_de_factura SET detalle = $2 WHERE venta_id = $1', [ventaId, 'ok'])).toMatch(/permission denied/);
       expect(await intentar('DELETE FROM conta.respuestas_de_aceptacion WHERE envio_id = $1', [envioId])).toMatch(/permission denied/);
-      expect(await intentar('UPDATE conta.correos_de_factura SET reservado_hasta = now() WHERE venta_id = $1', [ventaId])).toMatch(/permission denied/);
+      expect(await intentar('UPDATE conta.correos_de_factura SET creado_en = now() WHERE venta_id = $1', [ventaId])).toMatch(/permission denied/);
       expect(
         await intentar(
           `INSERT INTO conta.correos_de_factura (empresa_id, venta_id, estado, intentos, proximo_intento_en) VALUES ($1, $2, 'pendiente', 0, now())`,
           [e.empresaId, pendienteId],
         ),
       ).toMatch(/Solo una venta aceptada/);
+      expect(
+        await intentar(
+          `INSERT INTO conta.correos_de_factura (empresa_id, venta_id, estado, intentos, proximo_intento_en) VALUES ($1, $2, 'pendiente', 0, 'infinity')`,
+          [e.empresaId, pendienteId],
+        ),
+      ).toMatch(/check constraint|nace pendiente/);
+      expect(
+        await intentar(`INSERT INTO conta.correos_de_factura (empresa_id, venta_id, estado, intentos) VALUES ($1, $2, 'enviado', 1)`, [
+          e.empresaId,
+          pendienteId,
+        ]),
+      ).toMatch(/nace pendiente/);
       const envioPendiente = await e.uow.ejecutar(e.miembro, ({ ventas }) => ventas.envioDe(pendienteId));
       expect(
         await intentar(`INSERT INTO conta.respuestas_de_aceptacion (empresa_id, envio_id, xml_base64) VALUES ($1, $2, 'PEE+')`, [
@@ -191,18 +221,19 @@ describe.skipIf(!hayBase || !hayDueno)('comprobante y correo de la factura (inte
     });
   });
 
-  it('tomar correos vencidos solo entrega ids, como conta_api y sin empresa, y no toma uno ya reservado', async () => {
+  it('los correos vencidos solo entregan ids, como conta_api y sin empresa, y leerlos no aplaza nada (H3)', async () => {
     const e = await nuevo();
     const ventaId = await vender(e, await compradorConCorreo(e));
     await aceptar(e, ventaId);
     await enTransaccionDeshecha(async (cliente) => {
       await comoEmpresa(cliente, null);
-      const primera = await cliente.query('SELECT * FROM conta_sistema.tomar_correos_vencidos(1000)');
+      const primera = await cliente.query('SELECT * FROM conta_sistema.correos_vencidos(1000)');
       expect(primera.fields.map((f) => f.name)).toEqual(['empresa_id', 'venta_id']);
       expect(primera.rowCount).toBeLessThanOrEqual(50);
       expect(primera.rows).toContainEqual({ empresa_id: e.empresaId, venta_id: ventaId });
-      const segunda = await cliente.query('SELECT * FROM conta_sistema.tomar_correos_vencidos(50)');
-      expect(segunda.rows).not.toContainEqual({ empresa_id: e.empresaId, venta_id: ventaId });
+      // Leerlos no reserva ni aplaza: el procesador de verdad los sigue viendo.
+      const segunda = await cliente.query('SELECT * FROM conta_sistema.correos_vencidos(50)');
+      expect(segunda.rows).toContainEqual({ empresa_id: e.empresaId, venta_id: ventaId });
     });
   });
 });

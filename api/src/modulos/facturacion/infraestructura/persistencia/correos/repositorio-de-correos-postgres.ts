@@ -1,7 +1,7 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { Ejecutor } from '../../../../../compartido/infraestructura/persistencia/base-de-datos.js';
 import type { IntentoDeCorreo, RepositorioDeCorreos } from '../../../aplicacion/puertos/repositorio-de-correos.js';
-import { CorreoDeFactura, ESTADOS_DEL_CORREO, type EstadoDelCorreo } from '../../../dominio/index.js';
+import { CorreoDeFactura, type DatosDelCorreo, ESTADOS_DEL_CORREO, type EstadoDelCorreo } from '../../../dominio/index.js';
 import { correosDeFactura, intentosCorreoDeFactura } from './tablas-correos.js';
 
 // Corre en la transacción de una empresa: RLS solo deja ver y escribir sus correos. empresa_id sale siempre de
@@ -31,12 +31,18 @@ export class RepositorioDeCorreosPostgres implements RepositorioDeCorreos {
       .onConflictDoNothing();
   }
 
-  async actualizar(correo: CorreoDeFactura, intentosLeidos: number): Promise<boolean> {
+  async actualizar(correo: CorreoDeFactura, leido: DatosDelCorreo): Promise<boolean> {
     const d = correo.instantanea();
     const filas = await this.ejecutor
       .update(correosDeFactura)
       .set({ estado: d.estado, intentos: d.intentos, proximoIntentoEn: d.proximoIntentoEn, ultimaFalla: d.ultimaFalla, actualizadoEn: sql`now()` })
-      .where(and(eq(correosDeFactura.ventaId, d.ventaId), eq(correosDeFactura.intentos, intentosLeidos)))
+      .where(
+        and(
+          eq(correosDeFactura.ventaId, d.ventaId),
+          eq(correosDeFactura.intentos, leido.intentos),
+          leido.ultimaFalla === null ? isNull(correosDeFactura.ultimaFalla) : eq(correosDeFactura.ultimaFalla, leido.ultimaFalla),
+        ),
+      )
       .returning({ ventaId: correosDeFactura.ventaId });
     return filas.length === 1;
   }

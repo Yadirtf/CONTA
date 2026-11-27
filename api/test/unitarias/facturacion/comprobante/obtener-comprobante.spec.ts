@@ -2,7 +2,8 @@ import type { ContextoDeMiembro } from '../../../../src/compartido/aplicacion/in
 import { IdEmpresa, IdUsuario } from '../../../../src/compartido/dominio/index.js';
 import { ListarVentasRecientes } from '../../../../src/modulos/facturacion/aplicacion/consultas/listar-ventas-recientes.js';
 import { ObtenerComprobante } from '../../../../src/modulos/facturacion/aplicacion/consultas/obtener-comprobante.js';
-import type { ComprobanteDeVenta } from '../../../../src/modulos/facturacion/dominio/index.js';
+import { type ComprobanteDeVenta, participante } from '../../../../src/modulos/facturacion/dominio/index.js';
+import { emisorDePrueba } from '../datos-de-prueba.js';
 import { codigoDeAsync } from '../ventas/apoyo.js';
 import { VentasEnMemoria } from '../ventas/ventas-en-memoria.js';
 import { facturaAceptada, VENTA_ID, ventaDePrueba } from './apoyo.js';
@@ -55,10 +56,19 @@ describe('ObtenerComprobante (HU-06.08)', () => {
     expect(await codigoDeAsync(obtener.ejecutar(cajero, '99999999-9999-4999-8999-999999999999'))).toBe('venta.no-encontrada');
   });
 
-  it('sin datos fiscales no inventa el emisor', async () => {
+  it('muestra al emisor como quedó en la factura aceptada, aunque hoy tenga otros datos fiscales (H1)', async () => {
+    const { memoria, dibujados, obtener } = preparar();
+    memoria.facturas.set(VENTA_ID, facturaAceptada());
+    memoria.emisor = participante({ ...emisorDePrueba(), razonSocial: 'Otra Razón Social SAS', correo: 'otro@ejemplo.test' });
+    await obtener.ejecutar(cajero, VENTA_ID);
+    expect(dibujados[0]?.emisor.nombre).toBe(emisorDePrueba().razonSocial);
+    expect(dibujados[0]?.emisor.detalles.join(' ')).not.toContain('otro@ejemplo.test');
+  });
+
+  it('sin la resolución con la que se numeró no inventa el comprobante', async () => {
     const { memoria, obtener } = preparar();
     memoria.facturas.set(VENTA_ID, facturaAceptada());
-    memoria.emisor = null;
+    memoria.resolucion = null;
     expect(await codigoDeAsync(obtener.ejecutar(cajero, VENTA_ID))).toBe('facturacion.no-habilitada');
   });
 });
