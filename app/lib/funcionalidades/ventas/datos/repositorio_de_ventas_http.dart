@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:http/http.dart' as http;
 
 import '../../../nucleo/api/cliente_de_api.dart';
@@ -22,4 +24,16 @@ class RepositorioDeVentasHttp implements RepositorioDeVentas {
   @override
   Future<Respuesta<VentaEmitida>> consultar(String empresaId, String ventaId) =>
       _api.pedir('GET', '/ventas/${Uri.encodeComponent(ventaId)}', ventaDeJson, empresaId: empresaId);
+
+  @override
+  Future<Respuesta<List<VentaReciente>>> recientes(String empresaId) => _api.pedir(
+    'GET',
+    '/ventas',
+    (datos) => [for (final v in datos as List) ventaRecienteDeJson(v)],
+    empresaId: empresaId,
+  );
+
+  @override
+  Future<Respuesta<Uint8List>> comprobante(String empresaId, String ventaId) =>
+      _api.descargarPdf('/ventas/${Uri.encodeComponent(ventaId)}/comprobante', empresaId: empresaId);
 }

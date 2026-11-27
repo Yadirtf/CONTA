@@ -12,7 +12,16 @@ Widget conTema(Widget hijo) => MaterialApp(theme: TemaConta.claro, home: hijo);
 void main() {
   testWidgets('vende en 3 toques: producto, cobrar y confirmar', (tester) async {
     final api = RepositorioDeVentasFalso();
-    await tester.pumpWidget(conTema(PantallaVender(repositorio: api, empresaId: 'e1', buscarArticulos: buscarFijo)));
+    await tester.pumpWidget(
+      conTema(
+        PantallaVender(
+          repositorio: api,
+          empresaId: 'e1',
+          buscarArticulos: buscarFijo,
+          cola: colaDePrueba(api, CompartidorFalso()),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Gaseosa 400 ml')); // 1
@@ -45,6 +54,7 @@ void main() {
           repositorio: api,
           empresaId: 'e1',
           buscarArticulos: buscarFijo,
+          cola: colaDePrueba(api, CompartidorFalso()),
           elegirComprador: (_) async => const CompradorDeLaVenta(id: 'c1', nombre: 'Rosa Pérez'),
         ),
       ),
@@ -76,7 +86,16 @@ void main() {
         'facturacion.no-habilitada',
         'Tu negocio todavía no está listo para facturar',
       );
-    await tester.pumpWidget(conTema(PantallaVender(repositorio: api, empresaId: 'e1', buscarArticulos: buscarFijo)));
+    await tester.pumpWidget(
+      conTema(
+        PantallaVender(
+          repositorio: api,
+          empresaId: 'e1',
+          buscarArticulos: buscarFijo,
+          cola: colaDePrueba(api, CompartidorFalso()),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Gaseosa 400 ml'));
     await tester.pump();
@@ -96,10 +115,18 @@ void main() {
       PedidoDeVenta(id: 'v1', carrito: const Carrito().agregar(gaseosa), medioDePago: MedioDePago.efectivo),
     )) as Exito<VentaEmitida>).valor;
     await tester.pumpWidget(
-      conTema(PantallaListo(repositorio: api, empresaId: 'e1', venta: venta, esperar: (_) async {})),
+      conTema(PantallaListo(
+          repositorio: api,
+          empresaId: 'e1',
+          venta: venta,
+          cola: colaDePrueba(api, CompartidorFalso()),
+          esperar: (_) async {},
+        )),
     );
     await tester.pumpAndSettle();
     expect(find.text('La DIAN no la aceptó'), findsWidgets);
     expect(find.text('Regla FAD06: valor del tributo'), findsOneWidget);
+    // Una factura rechazada no se comparte.
+    expect(find.text('Compartir factura'), findsNothing);
   });
 }

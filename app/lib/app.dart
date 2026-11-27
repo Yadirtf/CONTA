@@ -14,6 +14,8 @@ import 'funcionalidades/productos/presentacion/pantalla_productos.dart';
 import 'funcionalidades/salud/dominio/estado_api.dart';
 import 'funcionalidades/salud/presentacion/estado_del_servidor.dart';
 import 'funcionalidades/ventas/dominio/ventas.dart';
+import 'funcionalidades/ventas/presentacion/cola_de_comprobantes.dart';
+import 'funcionalidades/ventas/presentacion/pantalla_mis_ventas.dart';
 import 'funcionalidades/ventas/presentacion/pantalla_vender.dart';
 import 'funcionalidades/verificacion/dominio/verificacion.dart';
 import 'funcionalidades/verificacion/presentacion/puerta_de_verificacion.dart';
@@ -30,6 +32,7 @@ class ContaApp extends StatelessWidget {
     required this.clientes,
     required this.productos,
     required this.ventas,
+    required this.comprobantes,
     required this.verificacion,
     required this.repositorioSalud,
   });
@@ -40,6 +43,9 @@ class ContaApp extends StatelessWidget {
   final RepositorioDeClientes clientes;
   final RepositorioDeProductos productos;
   final RepositorioDeVentas ventas;
+
+  /// Cola para compartir facturas (HU-06.08): una para toda la app, así sigue aunque se cambie de pantalla.
+  final ColaDeComprobantes comprobantes;
   final RepositorioDeVerificacion verificacion;
   final RepositorioSalud repositorioSalud;
 
@@ -95,7 +101,16 @@ class ContaApp extends StatelessWidget {
                           empresaId: empresa.id,
                           buscarArticulos: (texto) => _articulosParaVender(empresa.id, texto),
                           elegirComprador: (c) => _elegirComprador(c, empresa.id),
+                          cola: comprobantes,
                         ),
+                      ),
+                    )
+                  : null,
+              alVerMisVentas: (empresa.membresia?.puede(Permiso.vender) ?? false)
+                  ? () => Navigator.of(contexto).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) =>
+                            PantallaMisVentas(repositorio: ventas, empresaId: empresa.id, cola: comprobantes),
                       ),
                     )
                   : null,

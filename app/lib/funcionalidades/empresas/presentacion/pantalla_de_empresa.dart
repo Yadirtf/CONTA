@@ -19,6 +19,7 @@ class PantallaDeEmpresa extends StatefulWidget {
     this.alVerCompradores,
     this.alVerProductos,
     this.alVender,
+    this.alVerMisVentas,
   });
 
   final Empresa empresa;
@@ -40,6 +41,9 @@ class PantallaDeEmpresa extends StatefulWidget {
 
   /// Vender y facturar en 3 toques (HU-06.01). Solo llega si la membresía puede vender.
   final VoidCallback? alVender;
+
+  /// Las últimas facturas para compartirlas (HU-06.08). Solo llega si la membresía puede vender.
+  final VoidCallback? alVerMisVentas;
 
   @override
   State<PantallaDeEmpresa> createState() => _PantallaDeEmpresaState();
@@ -98,6 +102,18 @@ class _PantallaDeEmpresaState extends State<PantallaDeEmpresa> {
                       onPressed: widget.alVender,
                       icon: const Icon(Icons.point_of_sale),
                       label: const Text('Vender'),
+                    ),
+                  ),
+                  const SizedBox(height: EspacioConta.s4),
+                ],
+                if (widget.alVerMisVentas != null) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    height: AlturaConta.botonPrincipal,
+                    child: OutlinedButton.icon(
+                      onPressed: widget.alVerMisVentas,
+                      icon: const Icon(Icons.receipt_long_outlined),
+                      label: const Text('Mis ventas'),
                     ),
                   ),
                   const SizedBox(height: EspacioConta.s4),

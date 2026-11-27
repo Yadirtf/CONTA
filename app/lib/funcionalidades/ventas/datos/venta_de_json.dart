@@ -24,3 +24,16 @@ Map<String, Object?> jsonDePedido(PedidoDeVenta pedido) => {
   'compradorId': pedido.comprador?.id,
   'medioDePago': pedido.medioDePago.valor,
 };
+
+/// Lee una fila de «Mis ventas». Igual que la venta: un estado desconocido es un error de formato.
+VentaReciente ventaRecienteDeJson(Object? datos) {
+  final d = datos as Map;
+  return VentaReciente(
+    id: d['id'] as String,
+    numero: d['numero'] as String,
+    emitidaEn: DateTime.parse(d['emitidaEn'] as String),
+    comprador: d['comprador'] as String,
+    total: d['total'] as String,
+    estado: EstadoDeLaVenta.de(d['estado']) ?? (throw const FormatException('Estado desconocido')),
+  );
+}
