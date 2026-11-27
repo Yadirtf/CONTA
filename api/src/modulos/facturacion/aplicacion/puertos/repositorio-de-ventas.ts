@@ -14,6 +14,26 @@ export interface EnvioDeLaVenta {
   readonly respuesta: RespuestaDeLaDian | null;
 }
 
+/** La factura de una venta tal como se envió: lo que el comprobante y el correo toman sin recalcular. */
+export interface FacturaDeLaVenta {
+  readonly estado: EstadoDelEnvio;
+  readonly cufe: string;
+  /** El texto del QR que quedó en el XML firmado. */
+  readonly codigoQr: string;
+  readonly xmlFirmado: string;
+}
+
+/** Una línea de «Mis ventas». */
+export interface ResumenDeVenta {
+  readonly id: string;
+  readonly numero: string;
+  readonly emitidaEn: Date;
+  readonly comprador: string;
+  readonly total: string;
+  /** null si el documento todavía no se firmó ni encoló. */
+  readonly estadoDelEnvio: EstadoDelEnvio | null;
+}
+
 /**
  * Ventas de la empresa de la transacción. Solo lee e inserta: una venta no se edita ni se borra. RLS limita todo a
  * esa empresa, así que ningún método recibe una empresa.
@@ -29,4 +49,10 @@ export interface RepositorioDeVentas {
   /** Enlaza la venta con su envío. Repetirlo no hace nada. */
   registrarEmision(ventaId: string, envioId: string): Promise<void>;
   envioDe(ventaId: string): Promise<EnvioDeLaVenta | null>;
+  /** La factura enviada de la venta, o null si aún no se firmó. */
+  facturaDe(ventaId: string): Promise<FacturaDeLaVenta | null>;
+  /** La venta cuyo documento es este envío, o null si el envío no es de una venta. */
+  deEnvio(envioId: string): Promise<VentaGuardada | null>;
+  /** Las últimas ventas, de la más nueva a la más vieja. */
+  recientes(limite: number): Promise<ResumenDeVenta[]>;
 }

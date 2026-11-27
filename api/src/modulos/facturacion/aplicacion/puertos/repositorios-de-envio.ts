@@ -1,3 +1,4 @@
+import type { AvisosDeAceptacion } from './avisos-de-aceptacion.js';
 import type { ColaDeTrabajos } from './cola-de-trabajos.js';
 import type { RegistroDeIntentos } from './registro-de-intentos.js';
 import type { RepositorioDeEnvios } from './repositorio-de-envios.js';
@@ -7,4 +8,5 @@ export interface RepositoriosDeEnvio {
   readonly envios: RepositorioDeEnvios;
   readonly intentos: RegistroDeIntentos;
   readonly cola: ColaDeTrabajos;
+  readonly avisos: AvisosDeAceptacion;
 }
