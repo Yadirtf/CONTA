@@ -48,7 +48,8 @@ export class RepositorioDeCorreosPostgres implements RepositorioDeCorreos {
   }
 
   async registrarIntento(intento: IntentoDeCorreo): Promise<void> {
-    await this.ejecutor.insert(intentosCorreoDeFactura).values({ empresaId: EMPRESA, ...intento });
+    // Si ya hay un intento con ese número (uno forjado con la credencial de la API), no se pisa ni traba el correo (N1).
+    await this.ejecutor.insert(intentosCorreoDeFactura).values({ empresaId: EMPRESA, ...intento }).onConflictDoNothing();
   }
 }
 

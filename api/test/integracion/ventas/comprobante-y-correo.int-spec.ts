@@ -160,6 +160,23 @@ describe.skipIf(!hayBase || !hayDueno)('comprobante y correo de la factura (inte
     expect(intentos).toEqual([{ numero: 1, resultado: 'enviado', detalle: 'ok' }]);
   });
 
+  it('un intento forjado con el mismo número no traba el correo ni el lote (N1)', async () => {
+    const e = await nuevo();
+    const ventaId = await vender(e, await compradorConCorreo(e));
+    await aceptar(e, ventaId);
+    await dueno.query(
+      `INSERT INTO conta.intentos_correo_de_factura (empresa_id, venta_id, numero, resultado, detalle, duracion_ms, ocurrido_en)
+       VALUES ($1, $2, 1, 'enviado', 'ok', 0, now())`,
+      [e.empresaId, ventaId],
+    );
+    const enviados: CorreoSaliente[] = [];
+    const lote = await correos(e, enviados).ejecutar(50);
+    expect(lote.conError).toBe(0);
+    expect(enviados.filter((c) => c.idempotencia.endsWith(ventaId))).toHaveLength(1);
+    const { rows } = await dueno.query('SELECT estado, intentos FROM conta.correos_de_factura WHERE venta_id = $1', [ventaId]);
+    expect(rows).toEqual([{ estado: 'enviado', intentos: 1 }]);
+  });
+
   it('conta_api no reabre, edita ni borra correos e intentos, ni pide correos o aceptaciones que no corresponden', async () => {
     const e = await nuevo();
     const comprador = await compradorConCorreo(e);

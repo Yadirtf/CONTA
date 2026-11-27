@@ -61,8 +61,10 @@ export const PROVEEDORES_DE_ENVIO_DIAN: Provider[] = [
         const { tomados } = await modulo.get(ProcesarTrabajosVencidos).ejecutar();
         // Al final los correos de las facturas que la DIAN aceptó (HU-06.08).
         const correos = await modulo.get(EnviarCorreosPendientes).ejecutar();
+        // Los correos cuentan solo los que avanzaron: uno que falla siempre no debe hacer sonar el despertador sin parar (N1).
+        const correosAvanzados = correos.tomados - correos.conError;
         return {
-          lleno: tomados >= LOTE_POR_DEFECTO || emisiones.tomados >= LOTE_DE_EMISIONES || correos.tomados >= LOTE_DE_CORREOS,
+          lleno: tomados >= LOTE_POR_DEFECTO || emisiones.tomados >= LOTE_DE_EMISIONES || correosAvanzados >= LOTE_DE_CORREOS,
         };
       }),
     inject: [ModuleRef],

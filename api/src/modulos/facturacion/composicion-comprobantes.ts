@@ -54,7 +54,9 @@ export const PROVEEDORES_DE_COMPROBANTES: Provider[] = [
     provide: EnviarCorreosPendientes,
     useFactory: (fuente: FuenteDeCorreosPendientes, enviar: EnviarCorreoDeFactura) => {
       const registro = new Logger('CorreoDeFactura');
-      return new EnviarCorreosPendientes(fuente, enviar, configuracionDeCorreoDesde(process.env) !== null, (f) =>
+      const activo = configuracionDeCorreoDesde(process.env) !== null;
+      if (!activo) registro.warn('Sin CORREO_BREVO_LLAVE y CORREO_REMITENTE: los correos de factura esperan en su cola (O10).');
+      return new EnviarCorreosPendientes(fuente, enviar, activo, (f) =>
         registro.error(`No se pudo dar el paso del correo: empresa=${f.empresaId} venta=${f.ventaId} error=${f.tipo}`),
       );
     },

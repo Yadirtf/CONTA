@@ -33,9 +33,17 @@ export class EnviarCorreosPendientes {
         await this.enviar.ejecutar({ empresaId }, ventaId);
       } catch (error) {
         conError += 1;
-        this.alFallar({ empresaId: empresaId.valor, ventaId, tipo: error instanceof Error ? error.name : 'desconocido' });
+        this.alFallar({ empresaId: empresaId.valor, ventaId, tipo: tipoDeError(error) });
       }
     }
     return { tomados: pendientes.length, conError };
   }
+}
+
+/** El nombre del error y, si viene de PostgreSQL, su SQLSTATE (O10). Nunca el mensaje, que podría traer datos. */
+function tipoDeError(error: unknown): string {
+  if (!(error instanceof Error)) return 'desconocido';
+  const origen: unknown = (error as { cause?: unknown }).cause ?? error;
+  const codigo = (origen as { code?: unknown }).code;
+  return typeof codigo === 'string' && /^[0-9A-Z]{5}$/.test(codigo) ? `${error.name}:${codigo}` : error.name;
 }

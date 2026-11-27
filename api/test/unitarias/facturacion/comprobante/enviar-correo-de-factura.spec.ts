@@ -130,6 +130,15 @@ describe('EnviarCorreoDeFactura (HU-06.08)', () => {
     expect(fallas).toEqual([{ empresaId: empresaId.valor, ventaId: 'a', tipo: 'TypeError' }]);
   });
 
+  it('el rastro de un error de la base lleva su SQLSTATE, no su mensaje (O10)', async () => {
+    const fuente = { tomarVencidos: () => Promise.resolve([{ empresaId, ventaId: 'a' }]) };
+    const fallas: { tipo: string }[] = [];
+    const deLaBase = Object.assign(new Error('duplicate key ana@ejemplo.test'), { code: '23505' });
+    const lote = new EnviarCorreosPendientes(fuente, { ejecutar: () => Promise.reject(new Error('envuelto', { cause: deLaBase })) }, true, (f) => fallas.push(f));
+    await lote.ejecutar();
+    expect(fallas[0]?.tipo).toBe('Error:23505');
+  });
+
   it('sin proveedor configurado no toma correos: esperan sin gastar intentos (H5)', async () => {
     let tomados = 0;
     const fuente = { tomarVencidos: () => Promise.resolve(void tomados++).then(() => []) };
