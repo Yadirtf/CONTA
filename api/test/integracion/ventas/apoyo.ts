@@ -88,7 +88,8 @@ export async function escenario(baseDeDatos: BaseDeDatos, rango = { desde: 99000
     await dueno.end();
   }
   const miembro: ContextoDeMiembro = { empresaId: IdEmpresa.de(empresaId), usuarioId: IdUsuario.de(usuarioId), rol: 'cajero', modo: 'simple' };
-  const reloj = new RelojDePrueba(new Date('2026-11-27T15:00:00Z'));
+  // La base exige que la venta se emita con la hora actual: el reloj de prueba arranca en «ahora».
+  const reloj = new RelojDePrueba(new Date());
   const uow = new UnidadDeTrabajoPostgres<RepositoriosDeVenta>(baseDeDatos, (e) => ({
     ventas: new RepositorioDeVentasPostgres(e),
     numeracion: new NumeracionPostgres(e),

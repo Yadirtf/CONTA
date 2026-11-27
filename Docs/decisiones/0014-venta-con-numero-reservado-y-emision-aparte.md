@@ -37,7 +37,7 @@ La 1, típica de la ronda completa, combinada con el principio de la 7 y el repa
 3. **Idempotencia:** el id lo elige la app y la huella SHA-256 del pedido distingue un reintento (200, la misma venta) de otro pedido con el mismo id (409).
 4. **Precios solo del catálogo:** la app manda ids, cantidades en texto y el medio de pago; cualquier otro campo es 400.
 5. **Hasta EP-07:** datos fiscales y resoluciones en tablas que `conta_api` solo lee (salvo `siguiente`), llenadas con `npm run facturacion:configurar`; la configuración del software sale de `DIAN_HAB_*` para una sola empresa.
-6. **Defensa en la base:** el consecutivo solo sube de a uno; las resoluciones del mismo prefijo no se cruzan; una venta solo usa un número ya reservado y cuadra con sus líneas al confirmar (hallazgos de la prueba de ataque).
+6. **Defensa en la base:** el consecutivo solo sube de a uno y cada número reservado tiene su venta al confirmar; los prefijos van en mayúsculas y las resoluciones del mismo prefijo no se cruzan; una venta solo usa un número ya reservado, con la hora actual, y cuadra con sus líneas al confirmar (hallazgos de la prueba de ataque).
 
 ## Descartes relevantes
 
@@ -50,5 +50,5 @@ La 1, típica de la ronda completa, combinada con el principio de la 7 y el repa
 - Se gana: número conocido al confirmar, sin huecos ni repetidos (probado con ventas a la vez), firma que no bloquea a otros cajeros y una venta que nunca se pierde aunque la firma falle.
 - Se pierde: hasta EP-07, una sola empresa puede facturar por entorno y los datos fiscales se cargan con un comando.
 - La cola de emisión, como la de envíos, no tiene RLS (ADR-0008): la API la filtra siempre por la empresa de la transacción. HU-06.04 reemplaza las dos colas juntas.
-- Para HU-06.05 (vender sin internet) la misma reserva admite bloques (`siguiente + n`) cambiando el disparador. `envios_dian` numera sus archivos por empresa y año sin prefijo: revisarlo antes de una segunda resolución activa.
+- Para HU-06.05 (vender sin internet) la misma reserva admite bloques (`siguiente + n`) cambiando los disparadores del consecutivo. `envios_dian` numera sus archivos por empresa y año sin prefijo: revisarlo antes de una segunda resolución activa.
 - Para revertir: las tablas son nuevas y no cambian las de HU-02.03; quitar `POST /ventas` deja intactas las facturas ya enviadas.

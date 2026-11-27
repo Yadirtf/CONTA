@@ -9,6 +9,8 @@ import { escenario, type Escenario, pedido } from './apoyo.js';
 // HU-06.01 de punta a punta contra PostgreSQL real: número sin huecos ni repetidos, todo o nada, reintentos que no
 // duplican y un reparador que termina la emisión si la firma falla. La DIAN no se llama: el envío queda en su cola.
 
+const COMPRADOR = JSON.stringify({ tipoIdentificacion: '13', numero: '1', razonSocial: 'X', tipoDePersona: 'natural' });
+
 const codigoDe = async (promesa: Promise<unknown>): Promise<string> => {
   try {
     await promesa;
@@ -173,9 +175,64 @@ describe.skipIf(!hayBase || !hayDueno)('ventas con factura (integración)', () =
         'UPDATE conta.resoluciones_de_numeracion SET siguiente = siguiente + 1 RETURNING siguiente - 1 AS n',
       );
       expect(await insertar(cliente, Number(rows[0]?.n), comprador)).toBeNull();
-      await expect(cliente.query('COMMIT')).rejects.toThrow(/no cuadra/);
+      await expect(cliente.query('COMMIT')).rejects.toThrow(/no cuadra|sin venta/);
     } finally {
       await cliente.end();
+    }
+  });
+
+  it('conta_api no puede dejar números sin venta, agregar líneas a una venta ni atrasar su fecha (N2, N3)', async () => {
+    const e = await nuevo();
+    const { ventaId } = await vender(e);
+    const confirmar = async (trabajo: (c: pg.Client) => Promise<unknown>) => {
+      const cliente = new pg.Client({ connectionString: url });
+      await cliente.connect();
+      try {
+        await cliente.query('BEGIN');
+        await comoEmpresa(cliente, e.empresaId);
+        await trabajo(cliente);
+        await cliente.query('COMMIT');
+        return null;
+      } catch (error) {
+        return error as Error;
+      } finally {
+        await cliente.end();
+      }
+    };
+    expect(await confirmar((c) => c.query('UPDATE conta.resoluciones_de_numeracion SET siguiente = siguiente + 1'))).toMatchObject({
+      message: expect.stringMatching(/sin venta/),
+    });
+    const linea = `INSERT INTO conta.lineas_de_venta (empresa_id, venta_id, orden, producto_id, descripcion, unidad, cantidad, precio,
+       tipo_de_iva, tarifa_iva, base, iva, total) VALUES ($1, $2, 50, $3, 'Extra', '94', 1, 1000, 'excluido', null, 1000, 0, 1000)`;
+    expect(await confirmar((c) => c.query(linea, [e.empresaId, ventaId, nuevoId()]))).toMatchObject({
+      message: expect.stringMatching(/no cuadra/),
+    });
+    const { venta, resolucionId } = (await e.uow.ejecutar(e.miembro, ({ ventas }) => ventas.conId(ventaId)))!;
+    const atrasada = await confirmar(async (c) => {
+      const { rows } = await c.query<{ n: string }>('UPDATE conta.resoluciones_de_numeracion SET siguiente = siguiente + 1 RETURNING siguiente - 1 AS n');
+      await c.query(
+        `INSERT INTO conta.ventas (empresa_id, id, huella, resolucion_id, prefijo, consecutivo, emitida_en, medio_de_pago,
+           comprador, base, iva, total, creada_por)
+         VALUES ($1, $2, $3, $4, 'SETP', $5, now() - interval '400 days', 'efectivo', $6, 1000, 0, 1000, $7)`,
+        [e.empresaId, nuevoId(), 'd'.repeat(64), resolucionId, rows[0]?.n, COMPRADOR, venta.datos.creadaPor],
+      );
+    });
+    expect(atrasada?.message).toMatch(/hora actual/);
+  });
+
+  it('el prefijo va en mayúsculas: «setp» no puede duplicar los números de «SETP» (N1)', async () => {
+    const e = await nuevo();
+    const dueno = await conexionDelDueno();
+    try {
+      await expect(
+        dueno.query(
+          `INSERT INTO conta.resoluciones_de_numeracion (empresa_id, id, numero, prefijo, desde, hasta, vigente_desde, vigente_hasta, siguiente)
+           VALUES ($1, $2, '18760000002', 'setp', 990000000, 995000000, '2019-01-19', '2030-01-19', 990000000)`,
+          [e.empresaId, nuevoId()],
+        ),
+      ).rejects.toThrow(/check/);
+    } finally {
+      await dueno.end();
     }
   });
 

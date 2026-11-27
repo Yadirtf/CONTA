@@ -41,7 +41,7 @@ CREATE TABLE conta.resoluciones_de_numeracion (
   empresa_id uuid NOT NULL REFERENCES conta.empresas (id),
   id uuid NOT NULL,
   numero text NOT NULL CHECK (numero ~ '^[0-9]{1,14}$'),
-  prefijo text NOT NULL CHECK (prefijo ~ '^[A-Za-z0-9]{0,4}$'),
+  prefijo text NOT NULL CHECK (prefijo ~ '^[A-Z0-9]{0,4}$'),
   desde bigint NOT NULL CHECK (desde >= 1),
   hasta bigint NOT NULL CHECK (hasta <= 9007199254740991),
   vigente_desde date NOT NULL,
@@ -66,6 +66,22 @@ END $$;
 --> statement-breakpoint
 CREATE TRIGGER consecutivo_solo_sube BEFORE UPDATE OF siguiente ON conta.resoluciones_de_numeracion
   FOR EACH ROW EXECUTE FUNCTION conta_sistema.consecutivo_solo_sube();
+--> statement-breakpoint
+-- Al confirmar, cada número reservado tiene su venta: reservar sin vender deja un hueco (hallazgo N3).
+CREATE FUNCTION conta_sistema.numero_reservado_con_venta() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM conta.ventas v
+     WHERE v.empresa_id = NEW.empresa_id AND v.resolucion_id = NEW.id AND v.consecutivo = OLD.siguiente
+  ) THEN
+    RAISE EXCEPTION 'Un número reservado quedó sin venta' USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NULL;
+END $$;
+--> statement-breakpoint
+CREATE CONSTRAINT TRIGGER numero_reservado_con_venta AFTER UPDATE OF siguiente ON conta.resoluciones_de_numeracion
+  DEFERRABLE INITIALLY DEFERRED
+  FOR EACH ROW EXECUTE FUNCTION conta_sistema.numero_reservado_con_venta();
 --> statement-breakpoint
 -- Dos resoluciones del mismo prefijo no pueden cruzar sus rangos: cada número se reservaría dos veces y todas las
 -- ventas chocarían (hallazgo H3). Un candado por empresa y prefijo evita que dos altas a la vez se crucen.
@@ -107,7 +123,7 @@ CREATE TABLE conta.ventas (
   id uuid NOT NULL,
   huella text NOT NULL CHECK (huella ~ '^[0-9a-f]{64}$'),
   resolucion_id uuid NOT NULL,
-  prefijo text NOT NULL CHECK (prefijo ~ '^[A-Za-z0-9]{0,4}$'),
+  prefijo text NOT NULL CHECK (prefijo ~ '^[A-Z0-9]{0,4}$'),
   consecutivo bigint NOT NULL CHECK (consecutivo >= 1),
   emitida_en timestamptz NOT NULL,
   medio_de_pago text NOT NULL CHECK (medio_de_pago IN ('efectivo', 'tarjeta-debito', 'tarjeta-credito', 'transferencia')),
@@ -138,6 +154,10 @@ BEGIN
        AND NEW.consecutivo BETWEEN r.desde AND r.siguiente - 1
   ) THEN
     RAISE EXCEPTION 'La venta no tiene un número reservado de su resolución' USING ERRCODE = 'check_violation';
+  END IF;
+  -- Se emite ahora: una fecha atrasada o adelantada firmaría una factura con otra fecha (hallazgo N3).
+  IF NEW.emitida_en NOT BETWEEN now() - interval '10 minutes' AND now() + interval '10 minutes' THEN
+    RAISE EXCEPTION 'La venta se emite con la hora actual' USING ERRCODE = 'check_violation';
   END IF;
   RETURN NEW;
 END $$;
@@ -209,6 +229,25 @@ END $$;
 CREATE CONSTRAINT TRIGGER venta_cuadra_con_sus_lineas AFTER INSERT ON conta.ventas
   DEFERRABLE INITIALLY DEFERRED
   FOR EACH ROW EXECUTE FUNCTION conta_sistema.venta_cuadra_con_sus_lineas();
+--> statement-breakpoint
+-- Una línea agregada después (en otra transacción) también tiene que cuadrar: la venta ya emitida no cambia (N2).
+CREATE FUNCTION conta_sistema.linea_cuadra_con_su_venta() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+  venta record;
+  sumas record;
+BEGIN
+  SELECT base, iva, total INTO venta FROM conta.ventas v WHERE v.empresa_id = NEW.empresa_id AND v.id = NEW.venta_id;
+  SELECT coalesce(sum(base), 0) AS base, coalesce(sum(iva), 0) AS iva, coalesce(sum(total), 0) AS total
+    INTO sumas FROM conta.lineas_de_venta l WHERE l.empresa_id = NEW.empresa_id AND l.venta_id = NEW.venta_id;
+  IF venta IS NULL OR sumas.base <> venta.base OR sumas.iva <> venta.iva OR sumas.total <> venta.total THEN
+    RAISE EXCEPTION 'La venta no cuadra con sus líneas' USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NULL;
+END $$;
+--> statement-breakpoint
+CREATE CONSTRAINT TRIGGER linea_cuadra_con_su_venta AFTER INSERT ON conta.lineas_de_venta
+  DEFERRABLE INITIALLY DEFERRED
+  FOR EACH ROW EXECUTE FUNCTION conta_sistema.linea_cuadra_con_su_venta();
 --> statement-breakpoint
 
 -- 4. Qué envío a la DIAN lleva cada venta. Se inserta cuando el documento ya quedó firmado y en cola.
