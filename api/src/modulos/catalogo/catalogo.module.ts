@@ -8,6 +8,7 @@ import { CrearCliente } from './aplicacion/comandos/crear-cliente.js';
 import { CrearProducto } from './aplicacion/comandos/crear-producto.js';
 import { BuscarClientes } from './aplicacion/consultas/buscar-clientes.js';
 import { BuscarProductos } from './aplicacion/consultas/buscar-productos.js';
+import { ObtenerParaVender } from './aplicacion/consultas/obtener-para-vender.js';
 import type { RepositoriosDeCatalogo } from './aplicacion/puertos/repositorios-de-catalogo.js';
 import { RepositorioClientesPostgres } from './infraestructura/persistencia/repositorio-clientes-postgres.js';
 import { RepositorioProductosPostgres } from './infraestructura/persistencia/repositorio-productos-postgres.js';
@@ -46,11 +47,14 @@ const repositoriosDeCatalogo = (ejecutor: Ejecutor): RepositoriosDeCatalogo => (
       inject: [UNIDAD_DE_TRABAJO_CATALOGO, RELOJ],
     },
     { provide: BuscarProductos, useFactory: (uow: DeCatalogo) => new BuscarProductos(uow), inject: [UNIDAD_DE_TRABAJO_CATALOGO] },
+    { provide: ObtenerParaVender, useFactory: (uow: DeCatalogo) => new ObtenerParaVender(uow), inject: [UNIDAD_DE_TRABAJO_CATALOGO] },
     {
       provide: CrearProducto,
       useFactory: (uow: DeCatalogo, reloj: Reloj) => new CrearProducto(uow, reloj),
       inject: [UNIDAD_DE_TRABAJO_CATALOGO, RELOJ],
     },
   ],
+  // Facturación lee aquí lo que se vende (HU-06.01).
+  exports: [ObtenerParaVender],
 })
 export class CatalogoModule {}

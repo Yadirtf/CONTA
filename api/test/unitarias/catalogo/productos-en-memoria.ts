@@ -24,6 +24,7 @@ export class ProductosEnMemoria {
     const deLaEmpresa = () => this.guardados.filter((g) => g.empresaId === empresaId).map((g) => g.producto);
     return {
       conId: (id) => Promise.resolve(deLaEmpresa().find((p) => p.id === id) ?? null),
+      conIds: (ids) => Promise.resolve(deLaEmpresa().filter((p) => ids.includes(p.id))),
       buscar: ({ nombre, codigo }, limite) =>
         Promise.resolve(
           deLaEmpresa()

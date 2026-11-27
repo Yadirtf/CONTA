@@ -35,8 +35,9 @@ sleep 2
 
 PSQL="psql -h localhost -p $PUERTO_PG -U postgres -v ON_ERROR_STOP=1 -qtA"
 if [ -z "$($PSQL -c "select 1 from pg_roles where rolname = 'conta_api'")" ]; then
-  # Claves solo locales y desechables: esta base no guarda nada real.
-  $PSQL -c "create role conta_app login password 'local-app' createrole"
+  # Claves solo locales y desechables: esta base no guarda nada real. conta_app lleva BYPASSRLS como en Neon:
+  # siembra lo que conta_api solo lee (datos fiscales y resoluciones, HU-06.01).
+  $PSQL -c "create role conta_app login password 'local-app' createrole bypassrls"
   $PSQL -c "create role conta_api login password 'local-api' nobypassrls"
   $PSQL -c "create database conta owner conta_app"
 fi

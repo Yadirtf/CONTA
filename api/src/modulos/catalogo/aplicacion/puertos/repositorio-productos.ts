@@ -6,6 +6,8 @@ import type { BusquedaDeProductos, Producto } from '../../dominio/productos/inde
  */
 export interface RepositorioProductos {
   conId(id: string): Promise<Producto | null>;
+  /** Para vender (HU-06.01): los que existan de esos ids, en cualquier orden. */
+  conIds(ids: readonly string[]): Promise<Producto[]>;
   /** Hasta `limite`, ordenados por nombre: los que contienen el nombre buscado o cuyo código empieza así. */
   buscar(busqueda: BusquedaDeProductos, limite: number): Promise<Producto[]>;
   /** Candado de altas de productos de la empresa hasta el final de la transacción (tope diario sin carreras). */

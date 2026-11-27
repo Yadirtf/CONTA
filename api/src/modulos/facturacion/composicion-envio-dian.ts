@@ -3,6 +3,7 @@ import { ModuleRef } from '@nestjs/core';
 import { RELOJ, type Reloj, type UnidadDeTrabajo } from '../../compartido/aplicacion/index.js';
 import { BaseDeDatos } from '../../compartido/infraestructura/persistencia/base-de-datos.js';
 import { UnidadDeTrabajoPostgres } from '../../compartido/infraestructura/persistencia/unidad-de-trabajo-postgres.js';
+import { CompletarEmisionesPendientes, LOTE_DE_EMISIONES } from './aplicacion/comandos/completar-emisiones-pendientes.js';
 import { ProcesarEnvioDian } from './aplicacion/comandos/procesar-envio-dian.js';
 import { LOTE_POR_DEFECTO, ProcesarTrabajosVencidos } from './aplicacion/comandos/procesar-trabajos-vencidos.js';
 import { SolicitarEnvioDian } from './aplicacion/comandos/solicitar-envio-dian.js';
@@ -52,8 +53,10 @@ export const PROVEEDORES_DE_ENVIO_DIAN: Provider[] = [
     provide: DESPERTADOR,
     useFactory: (modulo: ModuleRef): Despertador =>
       new DespertadorEnProceso(async () => {
+        // Primero termina las ventas sin firmar (HU-06.01), que dejan envíos nuevos en la cola; después los envíos.
+        const emisiones = await modulo.get(CompletarEmisionesPendientes).ejecutar();
         const { tomados } = await modulo.get(ProcesarTrabajosVencidos).ejecutar();
-        return { lleno: tomados >= LOTE_POR_DEFECTO };
+        return { lleno: tomados >= LOTE_POR_DEFECTO || emisiones.tomados >= LOTE_DE_EMISIONES };
       }),
     inject: [ModuleRef],
   },

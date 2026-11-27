@@ -10,13 +10,15 @@ export function lineaUbl(l: LineaDeFactura, indice: number): NodoXml {
     el('cbc:ID', String(indice + 1)),
     el('cbc:InvoicedQuantity', l.cantidad.aTexto(), { unitCode: l.unidad }),
     el('cbc:LineExtensionAmount', monto(l.valor), PESOS),
-    grupo('cac:TaxTotal', [el('cbc:TaxAmount', monto(l.iva), PESOS), subtotalDeIva(l.valor, l.iva, l.tarifaIva)]),
+    // Lo excluido del IVA no causa el impuesto: su línea no lleva TaxTotal (sí lo lleva lo exento, al 0 %).
+    l.tarifaIva !== null &&
+      grupo('cac:TaxTotal', [el('cbc:TaxAmount', monto(l.iva), PESOS), subtotalDeIva(l.valor, l.iva, l.tarifaIva)]),
     grupo('cac:Item', [
       el('cbc:Description', l.descripcion),
       l.codigo !== null && grupo('cac:StandardItemIdentification', [el('cbc:ID', l.codigo, { schemeID: '999' })]),
     ]),
     grupo('cac:Price', [
-      el('cbc:PriceAmount', l.precioUnitario.monto.aTexto(2), PESOS),
+      el('cbc:PriceAmount', l.precioUnitario.monto.aTexto(2), PESOS), // hasta 6 decimales (tabla 5)
       el('cbc:BaseQuantity', '1', { unitCode: l.unidad }),
     ]),
   ]);
