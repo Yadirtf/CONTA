@@ -50,16 +50,28 @@ CREATE TRIGGER tiquete_pos_dentro_del_tope BEFORE INSERT ON conta.ventas
   FOR EACH ROW EXECUTE FUNCTION conta_sistema.tiquete_pos_dentro_del_tope();
 --> statement-breakpoint
 
--- 3. Envíos a la DIAN. La clase decide con qué set de pruebas se envía. Tiene que coincidir con el documento firmado:
---    un documento con InvoiceTypeCode 20 es tiquete POS y cualquier otro es factura. conta_api no puede actualizar la columna (sus permisos de
---    UPDATE son solo las columnas de estado, migración 0002).
+-- 3. Envíos a la DIAN. La clase decide con qué set de pruebas se envía. Tiene que coincidir con el documento firmado,
+--    leído como XML y no como texto (hallazgo H1 de la prueba de ataque: un código en un comentario, en otra etiqueta o
+--    con espacios engañaba a una búsqueda de texto). El Invoice debe traer un solo InvoiceTypeCode: 01 es factura y
+--    20 es tiquete POS; cualquier otra cosa, o un XML que no se puede leer, no entra. conta_api no puede actualizar la
+--    columna (sus permisos de UPDATE son solo las columnas de estado, migración 0002).
+CREATE FUNCTION conta_sistema.clase_del_xml(xml_firmado text) RETURNS text LANGUAGE sql IMMUTABLE AS $$
+  SELECT CASE WHEN cardinality(codigos) = 1 THEN
+           CASE codigos[1]::text WHEN '01' THEN 'factura' WHEN '20' THEN 'pos' END
+         END
+    FROM (SELECT xpath(
+            '/i:Invoice/cbc:InvoiceTypeCode/text()',
+            xml_firmado::xml,
+            ARRAY[ARRAY['i', 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2'],
+                  ARRAY['cbc', 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2']]
+          ) AS codigos) AS t
+$$;
+--> statement-breakpoint
 ALTER TABLE conta.envios_dian
   ADD COLUMN clase text NOT NULL DEFAULT 'factura' CHECK (clase IN ('factura', 'pos'));
 --> statement-breakpoint
 ALTER TABLE conta.envios_dian
-  ADD CONSTRAINT envios_dian_clase_del_documento CHECK (
-    (clase = 'pos') = (strpos(xml_firmado, '<cbc:InvoiceTypeCode>20</cbc:InvoiceTypeCode>') > 0)
-  );
+  ADD CONSTRAINT envios_dian_clase_del_documento CHECK (conta_sistema.clase_del_xml(xml_firmado) IS NOT DISTINCT FROM clase);
 --> statement-breakpoint
 ALTER TABLE conta.envios_dian ADD CONSTRAINT envios_dian_empresa_id_id_clase_key UNIQUE (empresa_id, id, clase);
 --> statement-breakpoint

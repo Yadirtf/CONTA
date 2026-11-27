@@ -14,7 +14,22 @@ export function exigirConfiguracion(c: ConfiguracionDian, clase: ClaseDeDocument
   if (!/^\S{1,100}$/.test(c.pinSoftware)) throw new Error('Configuración DIAN: falta el PIN del software');
 }
 
+/** Lo mismo que exigirConfiguracion, sin lanzar: para decidir antes de reservar un número (hallazgo H3). */
+export function configuracionValida(c: ConfiguracionDian, clase: ClaseDeDocumento): boolean {
+  try {
+    exigirConfiguracion(c, clase);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Sin caracteres de control: el nombre va tal cual al XML del tiquete. */
+const SIN_CONTROLES = /^[^\p{Cc}\p{Cs}]+$/u;
+
 function fabricanteCompleto({ fabricante }: ConfiguracionDian): boolean {
   if (!fabricante) return false;
-  return [fabricante.nombre, fabricante.razonSocial, fabricante.nombreDelSoftware].every((t) => t.trim().length > 0 && t.length <= 200);
+  return [fabricante.nombre, fabricante.razonSocial, fabricante.nombreDelSoftware].every(
+    (t) => t.trim().length > 0 && t.length <= 200 && SIN_CONTROLES.test(t),
+  );
 }

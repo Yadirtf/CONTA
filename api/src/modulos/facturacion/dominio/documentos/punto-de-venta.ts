@@ -19,7 +19,11 @@ export interface PuntoDeVenta {
 
 const LARGO_MAXIMO = 200;
 
-const limpio = (texto: string) => textoLimpio(texto).slice(0, LARGO_MAXIMO);
+/**
+ * Corta por caracteres completos, no por unidades UTF-16: un emoji partido en el corte dejaría medio par sustituto,
+ * que el XML no admite, y frenaría todos los tiquetes de la empresa (hallazgo H2 de la prueba de ataque).
+ */
+const limpio = (texto: string) => Array.from(textoLimpio(texto)).slice(0, LARGO_MAXIMO).join('');
 
 export function puntoDeVenta(datos: PuntoDeVenta): PuntoDeVenta {
   const caja: PuntoDeVenta = {

@@ -44,4 +44,11 @@ describe('documentos que el firmador rechaza (HU-02.02)', () => {
     );
     expect(firmar(dosExtensiones)).toThrow(/extensiones que no corresponden/);
   });
+
+  it('HU-06.02: rechaza dos InvoiceTypeCode o uno con CDATA (O3)', () => {
+    const codigo = '<cbc:InvoiceTypeCode>01</cbc:InvoiceTypeCode>';
+    expect(xml).toContain(codigo);
+    expect(firmar(xml.replace(codigo, codigo + codigo))).toThrow(/extensiones que no corresponden/);
+    expect(firmar(xml.replace(codigo, '<cbc:InvoiceTypeCode><![CDATA[01]]></cbc:InvoiceTypeCode>'))).toThrow(DocumentoNoFirmable);
+  });
 });

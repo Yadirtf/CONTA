@@ -43,7 +43,10 @@ export function documentoPorFirmar(xml: string): string {
 
 /** La de la DIAN y, solo en el tiquete POS, sus tres extensiones en orden: nada más se firma. */
 function extensionesEsperadas(raiz: Element, extensiones: Element[]): boolean {
-  const tipo = hijos(raiz, ESPACIOS_DE_NOMBRES['xmlns:cbc'], 'InvoiceTypeCode')[0]?.textContent;
+  // Un solo código, sin nada más que su texto (observación O3 de la prueba de ataque de HU-06.02).
+  const codigos = hijos(raiz, ESPACIOS_DE_NOMBRES['xmlns:cbc'], 'InvoiceTypeCode');
+  if (codigos.length !== 1 || !Array.from(codigos[0]!.childNodes).every((n) => n.nodeType === 3)) return false;
+  const tipo = codigos[0]!.textContent;
   const esperadas = tipo === '20' ? GRUPOS_DE_EXTENSIONES_POS : [];
   if (extensiones.length !== 1 + esperadas.length) return false;
   return esperadas.every((grupo, i) => {

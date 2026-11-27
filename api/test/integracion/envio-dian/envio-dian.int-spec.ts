@@ -7,6 +7,7 @@ import { RespuestaDeLaDian } from '../../../src/modulos/facturacion/dominio/inde
 import { TrabajosVencidosPostgres } from '../../../src/modulos/facturacion/infraestructura/persistencia/trabajos-vencidos-postgres.js';
 import { comoEmpresa, enTransaccionDeshecha, errorDe, hayBase } from '../aislamiento/base-de-pruebas.js';
 import { cufeAlAzar, nuevaEmpresa, RelojDePrueba, unidadDeTrabajoDeEnvios } from './apoyo.js';
+import { xmlDeTipo } from '../aislamiento/fabricas.js';
 
 // HU-02.03 de punta a punta contra PostgreSQL real, con una DIAN falsa: se guarda la respuesta, el estado
 // llega a «aceptado» o «rechazado» con sus mensajes, cada llamada queda registrada y nada se envía dos veces.
@@ -55,7 +56,7 @@ describe.skipIf(!hayBase)('envío a la DIAN con cola durable (integración)', ()
     const solicitar = new SolicitarEnvioDian(uow, reloj, despertador);
     const procesar = new ProcesarEnvioDian(uow, dian.servicio, acceso, reloj, despertador);
     const cufe = cufeAlAzar();
-    const documento = { xml: '<Invoice/>', cufe };
+    const documento = { xml: xmlDeTipo('01'), cufe };
     const { envioId } = await solicitar.ejecutar({ empresaId }, { documento, numero: 'SETP990000001', nitEmisor: '900373076' });
     const trabajo = { empresaId, envioId };
     return { empresaId, reloj, uow, dian, solicitar, procesar, trabajo, cufe, documento, envioId };

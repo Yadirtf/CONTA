@@ -39,11 +39,17 @@ export async function insertarEnvioDian(cliente: pg.Client, empresaId: string): 
   const id = nuevoId();
   await cliente.query(
     `INSERT INTO conta.envios_dian (empresa_id, id, cufe, numero, nit_emisor, anio, consecutivo, xml_firmado, estado)
-     VALUES ($1, $2, $3, 'SETP990000001', '900373076', 2026, 1, '<Invoice/>', 'pendiente')`,
-    [empresaId, id, CUFE_DE_PRUEBA],
+     VALUES ($1, $2, $3, 'SETP990000001', '900373076', 2026, 1, $4, 'pendiente')`,
+    [empresaId, id, CUFE_DE_PRUEBA, xmlDeTipo('01')],
   );
   return id;
 }
+
+/** El mínimo XML que la base acepta como envío (HU-06.02): un Invoice con su InvoiceTypeCode. */
+export const xmlDeTipo = (codigo: string, extra = ''): string =>
+  '<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" ' +
+  'xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">' +
+  `<cbc:InvoiceTypeCode>${codigo}</cbc:InvoiceTypeCode>${extra}</Invoice>`;
 
 /** Inserta una persona de conta_identidad (sin empresa ni RLS) y devuelve su id. */
 export async function crearUsuario(cliente: pg.Client): Promise<string> {

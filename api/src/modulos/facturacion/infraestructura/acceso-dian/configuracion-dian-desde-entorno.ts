@@ -1,12 +1,13 @@
 import type { ContextoEmpresa } from '../../../../compartido/aplicacion/index.js';
 import type { VariablesDeEntorno } from '../../../../compartido/infraestructura/config/base-de-datos.js';
 import { AccesoDianNoConfigurado } from '../../aplicacion/envio/acceso-dian-no-configurado.js';
-import type { FabricanteDelSoftware } from '../../aplicacion/puertos/generador-de-documento-electronico.js';
+import type { ConfiguracionDian, FabricanteDelSoftware } from '../../aplicacion/puertos/generador-de-documento-electronico.js';
 import type {
   ConfiguracionDeLaEmpresa,
   ProveedorDeConfiguracionDian,
 } from '../../aplicacion/puertos/proveedor-de-configuracion-dian.js';
 import type { ClaseDeDocumento } from '../../dominio/index.js';
+import { configuracionValida } from '../dian-directa/ubl/configuracion-exigida.js';
 import { NOMBRE_DEL_SOFTWARE, VARIABLES_DEL_FABRICANTE, VARIABLES_POR_CLASE } from './variables-por-clase.js';
 
 /** Clave técnica pública del rango de pruebas de habilitación (SETP 990000000-995000000). */
@@ -32,19 +33,20 @@ export class ConfiguracionDianDesdeEntorno implements ProveedorDeConfiguracionDi
       return Promise.reject(new AccesoDianNoConfigurado());
     }
     if (clase === 'pos' && !fabricante) return Promise.reject(new AccesoDianNoConfigurado());
-    return Promise.resolve({
-      configuracion: {
-        ambiente: 'habilitacion',
-        // El CUDE del tiquete POS no usa clave técnica: se calcula con el PIN.
-        claveTecnica: clase === 'factura' ? this.env['DIAN_HAB_CLAVE_TECNICA'] || CLAVE_TECNICA_DE_HABILITACION : '',
-        idSoftware,
-        pinSoftware,
-        // Software propio: el proveedor del software es el mismo facturador.
-        nitProveedorSoftware: nit,
-        fabricante,
-      },
-      nitDelFacturador: nit,
-    });
+    const configuracion: ConfiguracionDian = {
+      ambiente: 'habilitacion',
+      // El CUDE del tiquete POS no usa clave técnica: se calcula con el PIN.
+      claveTecnica: clase === 'factura' ? this.env['DIAN_HAB_CLAVE_TECNICA'] || CLAVE_TECNICA_DE_HABILITACION : '',
+      idSoftware,
+      pinSoftware,
+      // Software propio: el proveedor del software es el mismo facturador.
+      nitProveedorSoftware: nit,
+      fabricante,
+    };
+    // Una configuración que el generador rechazaría cuenta como no configurada: así la venta no elige el POS ni gasta
+    // un número que después no se puede emitir (hallazgo H3 de la prueba de ataque).
+    if (!configuracionValida(configuracion, clase)) return Promise.reject(new AccesoDianNoConfigurado());
+    return Promise.resolve({ configuracion, nitDelFacturador: nit });
   }
 
   private fabricante(): FabricanteDelSoftware | null {

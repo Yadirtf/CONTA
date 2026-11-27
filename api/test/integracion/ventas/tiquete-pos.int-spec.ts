@@ -1,8 +1,9 @@
 import { BaseDeDatos } from '../../../src/compartido/infraestructura/persistencia/base-de-datos.js';
-import { pedidoDeVenta } from '../../../src/modulos/facturacion/dominio/index.js';
+import { Dinero } from '../../../src/compartido/dominio/index.js';
+import { pedidoDeVenta, topeDelPos } from '../../../src/modulos/facturacion/dominio/index.js';
 import type pg from 'pg';
 import { borrarEmpresaDePrueba, comoEmpresa, conexionDelDueno, enTransaccionDeshecha, errorDe, hayBase, hayDueno, nuevoId } from '../aislamiento/base-de-pruebas.js';
-import { crearResolucion } from '../aislamiento/fabricas.js';
+import { crearResolucion, xmlDeTipo } from '../aislamiento/fabricas.js';
 import { escenario, type Escenario, pedido } from './apoyo.js';
 
 // HU-06.02 contra PostgreSQL real: la venta a consumidor final sale con tiquete POS de su propia resolución, y la base
@@ -127,20 +128,44 @@ describe.skipIf(!hayBase || !hayDueno)('tiquete POS electrónico (integración)'
     });
   });
 
-  it('conta_api no puede guardar un envío cuya clase no es la de su XML', async () => {
+  it('conta_api no puede guardar un envío cuya clase no es la de su XML, ni con trucos de texto (H1)', async () => {
     const e = await nuevo();
+    const cbc = 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2';
+    const codigo = (c: string) => `<cbc:InvoiceTypeCode>${c}</cbc:InvoiceTypeCode>`;
+    // [clase declarada, XML, ¿entra?]. Una factura (01) solo entra como factura y un tiquete (20) solo como pos.
+    const casos: [string, string, boolean][] = [
+      ['factura', xmlDeTipo('01'), true],
+      ['pos', xmlDeTipo('20'), true],
+      ['pos', xmlDeTipo('01'), false],
+      ['factura', xmlDeTipo('20'), false],
+      // Factura con un 20 escondido: comentario, otra etiqueta, instrucción de proceso, texto escapado o un segundo código.
+      ['pos', xmlDeTipo('01', `<!--${codigo('20')}-->`), false],
+      ['pos', xmlDeTipo('01', `<x:Otra xmlns:x="urn:x">${codigo('20')}</x:Otra>`), false],
+      ['pos', xmlDeTipo('01', `<?pi ${codigo('20')}?>`), false],
+      ['pos', xmlDeTipo('01', `<cbc:Note>&lt;cbc:InvoiceTypeCode&gt;20&lt;/cbc:InvoiceTypeCode&gt;</cbc:Note>`), false],
+      ['pos', xmlDeTipo('01', codigo('20')), false],
+      // Tiquete escrito de otra forma: para un lector de XML sigue siendo 20, así que no puede pasar por factura.
+      ['factura', xmlDeTipo('<![CDATA[20]]>'), false],
+      ['factura', xmlDeTipo('&#50;0'), false],
+      ['factura', xmlDeTipo('20').replace(`${codigo('20')}`, `<InvoiceTypeCode xmlns="${cbc}">20</InvoiceTypeCode>`), false],
+      // Códigos con espacios o saltos no son ni factura ni tiquete.
+      ['factura', xmlDeTipo(' 20 '), false],
+      ['pos', xmlDeTipo('\n20'), false],
+      // Sin código, o algo que no es XML.
+      ['factura', '<Invoice/>', false],
+      ['factura', 'no es xml', false],
+    ];
     await enTransaccionDeshecha(async (cliente) => {
       await comoEmpresa(cliente, e.empresaId);
-      const insertar = (clase: string, tipo: string, consecutivo: number) =>
-        errorDe(
+      for (const [i, [clase, xml, entra]] of casos.entries()) {
+        const error = await errorDe(
           cliente,
           `INSERT INTO conta.envios_dian (empresa_id, id, cufe, numero, nit_emisor, anio, consecutivo, xml_firmado, estado, clase)
            VALUES ($1, $2, $3, 'X1', '900373076', 2026, $4, $5, 'pendiente', $6)`,
-          [e.empresaId, nuevoId(), String(consecutivo).repeat(96).slice(0, 96), consecutivo, `<Invoice><cbc:InvoiceTypeCode>${tipo}</cbc:InvoiceTypeCode></Invoice>`, clase],
+          [e.empresaId, nuevoId(), String(i % 10).repeat(96), i + 1, xml, clase],
         );
-      expect((await insertar('pos', '01', 1))?.message).toMatch(/envios_dian_clase_del_documento/);
-      expect((await insertar('factura', '20', 2))?.message).toMatch(/envios_dian_clase_del_documento/);
-      expect(await insertar('pos', '20', 3)).toBeNull();
+        expect({ caso: i, entra: error === null }).toEqual({ caso: i, entra });
+      }
     });
   });
 });
@@ -154,3 +179,18 @@ async function idDeResolucion(empresaId: string, clase: 'factura' | 'pos'): Prom
     await dueno.end();
   }
 }
+
+describe.skipIf(!hayBase || !hayDueno)('la UVT del dominio y la de la base (O4)', () => {
+  it('dan el mismo tope del POS en cada año, también antes de cargar el año siguiente', async () => {
+    const dueno = await conexionDelDueno();
+    try {
+      for (const fecha of ['2025-12-31', '2026-01-01', '2026-12-31', '2027-01-01', '2030-06-15']) {
+        const { rows } = await dueno.query<{ tope: string | null }>('SELECT conta_sistema.tope_del_pos($1::date)::text AS tope', [fecha]);
+        const enLaBase = rows[0]?.tope ?? null;
+        expect({ fecha, tope: enLaBase === null ? null : Dinero.de(enLaBase).aTexto() }).toEqual({ fecha, tope: topeDelPos(fecha)?.aTexto() ?? null });
+      }
+    } finally {
+      await dueno.end();
+    }
+  });
+});
