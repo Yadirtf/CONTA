@@ -81,19 +81,19 @@ Para dejar una empresa lista: `npm run facturacion:configurar` ([entorno de prue
 
 El PDF de la factura con su QR y el correo al comprador ([ADR-0015](../../../../Docs/decisiones/0015-comprobante-a-pedido-y-correo-al-aceptar.md)). No hay enlace público: el PDF se arma a pedido con la sesión del negocio y la app lo comparte como archivo.
 
-1. `GET /ventas/:id/comprobante`: `ObtenerComprobante` exige `Permiso.Vender`; `armarComprobante` lee la venta, la factura enviada, el emisor y la resolución, y solo sigue si la DIAN la aceptó. El QR sale del XML firmado (`codigo-qr-del-xml.ts`). `RenderizadorPdfkit` dibuja la hoja carta con el QR vectorial; el PDF sale igual cada vez. 30 por 5 minutos por persona y empresa.
+1. `GET /ventas/:id/comprobante`: `ObtenerComprobante` exige `Permiso.Vender`; `armarComprobante` lee la venta, la factura enviada, el emisor y la resolución, y solo sigue si la DIAN la aceptó. El QR y el emisor salen del XML firmado (`codigo-qr-del-xml.ts`, `emisor-del-xml.ts`). `RenderizadorPdfkit` dibuja la hoja carta con el QR vectorial; el PDF sale igual cada vez. 30 en cualquier lapso de 5 minutos por persona y empresa (`LimitadorDeslizante`), con `Retry-After`.
 2. `GET /ventas`: las últimas 50 ventas con su estado, para «Mis ventas».
-3. Al guardar «aceptado», `ProcesarEnvioDian` llama a `AvisosDeAceptacion` en la misma transacción: `CorreoAlAceptar` pide el correo si el comprador tiene dirección. El despertador corre `EnviarCorreosPendientes`, que toma los vencidos con `conta_sistema.tomar_correos_vencidos` (única función `SECURITY DEFINER`, solo devuelve ids) y manda cada uno con `EnviarCorreoDeFactura`, fuera de la transacción, por `EnviadorDeCorreo` (Brevo). Cada intento queda registrado con un código.
+3. Al guardar «aceptado», `ProcesarEnvioDian` llama a `AvisosDeAceptacion` en la misma transacción: `CorreoAlAceptar` pide el correo si el comprador tiene dirección. El despertador corre `EnviarCorreosPendientes`, que lee los vencidos con `conta_sistema.correos_vencidos` (única función `SECURITY DEFINER`, de solo lectura, solo devuelve ids) y da un paso con cada uno con `EnviarCorreoDeFactura`: toma el intento en la transacción de la empresa, manda fuera de ella por `EnviadorDeCorreo` (Brevo) y lo cierra con su resultado. Cada intento queda registrado con un código. Sin proveedor configurado no toma nada.
 
 | Capa | Archivo | Responsabilidad |
 | --- | --- | --- |
 | `dominio/comprobante/` | `comprobante-de-venta.ts`, `formato-colombiano.ts` | Qué va en la hoja (emisor, comprador, líneas, totales por tarifa, CUFE y QR) y cómo se escriben pesos, cantidades y documentos. |
-| `dominio/correo/` | `correo-de-factura.ts` | Estado del correo (pendiente, enviado, fallido), esperas de 1 a 720 minutos y 8 intentos como máximo. |
+| `dominio/correo/` | `correo-de-factura.ts` | Estado del correo (pendiente, enviado, fallido), intento en curso, esperas de 1 a 720 minutos y 8 intentos como máximo. |
 | `aplicacion/comprobante/`, `aplicacion/consultas/` | `armar-comprobante.ts`, `obtener-comprobante.ts`, `listar-ventas-recientes.ts` | Arma el comprobante desde lo guardado; errores `comprobante.en-camino` y `comprobante.rechazado`. |
-| `aplicacion/correo/`, `aplicacion/comandos/` | `correo-al-aceptar.ts`, `mensaje-de-factura.ts`, `falla-de-correo.ts`, `enviar-correo-de-factura.ts`, `enviar-correos-pendientes.ts` | Pedir el correo, armar el mensaje con el PDF y el XML, y mandarlo con bloqueo optimista por `intentos`. |
+| `aplicacion/correo/`, `aplicacion/comandos/` | `correo-al-aceptar.ts`, `mensaje-de-factura.ts`, `falla-de-correo.ts`, `enviar-correo-de-factura.ts`, `enviar-correos-pendientes.ts` | Pedir el correo, armar el mensaje con el PDF y el XML, y mandarlo tomando el intento antes (bloqueo optimista por `intentos` y la última falla). |
 | `infraestructura/comprobante-pdf/` | `renderizador-pdfkit.ts`, `encabezado.ts`, `tabla-de-lineas.ts`, `pie-fiscal.ts`, `qr-vectorial.ts`, `hoja.ts` | El PDF con pdfkit y Helvetica (solo WinAnsi: lo demás se cambia por «?»). |
 | `infraestructura/correo/` | `enviador-brevo.ts`, `enviador-sin-configurar.ts`, `configuracion-de-correo.ts` | Brevo con tiempo máximo de 15 s y sin redirecciones; un 400 es falla permanente. |
-| `infraestructura/persistencia/correos/` | tablas, repositorio, pendientes y avisos | `correos_de_factura` (solo avanza de a un intento), `intentos_correo_de_factura` y `respuestas_de_aceptacion`, todas con RLS. |
+| `infraestructura/persistencia/correos/` | tablas, repositorio, pendientes y avisos | `correos_de_factura` (nace pendiente; solo toma un intento o cierra el que está en curso), `intentos_correo_de_factura` y `respuestas_de_aceptacion`, todas con RLS. |
 | `presentacion/http/ventas/` | `comprobante.controller.ts`, `limite-de-comprobantes.ts`, `respuesta-venta-reciente.ts` | El PDF con `no-store`, `nosniff` y `attachment`; un id que no es UUID es 404. |
 
 ## Reglas del anexo que se aplican
@@ -131,7 +131,7 @@ El XML se escribe sin indentación ni espacios y con el orden del esquema, siemp
 - `test/unitarias/facturacion/ventas/` y `linea-desde-desglose.spec.ts`: pedido, líneas, medios de pago, estado y las reglas de `RegistrarVenta` con dobles en memoria (topes, sin configuración, otro NIT, rango agotado, reintentos).
 - `test/integracion/ventas/`: contra PostgreSQL con la firma real. Cubre el primer número de la resolución, reintentos sin gastar números, 12 ventas a la vez con números seguidos, el mismo id 5 veces a la vez (una sola venta), la reparación tras una firma fallida, el rango agotado, el producto de otra empresa y que `conta_api` no edita ni borra ventas ni baja el consecutivo.
 - `test/e2e/ventas.e2e-spec.ts`: la API completa con el cajero, campos de más, otra empresa y una empresa sin habilitar.
-- `test/unitarias/facturacion/comprobante/`: comprobante, correo, renderizador (PDF determinista), Brevo con transporte falso y los casos de uso. `test/integracion/ventas/comprobante-y-correo.int-spec.ts`: el correo se pide al aceptar, dos procesadores no lo mandan dos veces, la función de vencidos y lo que `conta_api` no puede cambiar.
+- `test/unitarias/facturacion/comprobante/`: comprobante, correo, renderizador (PDF determinista), Brevo con transporte falso y los casos de uso. `test/integracion/ventas/comprobante-y-correo.int-spec.ts`: el correo se pide al aceptar, dos procesadores no lo mandan dos veces, la función de vencidos (solo lectura) y lo que `conta_api` no puede cambiar.
 - `test/habilitacion/`: envío **real** al set de pruebas. Solo corre en el workflow manual «Habilitación DIAN» con el entorno `SECRETOS`.
 
 ## Qué falta, y en qué historia
