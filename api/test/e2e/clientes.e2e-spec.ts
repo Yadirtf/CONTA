@@ -127,7 +127,8 @@ describe.skipIf(!hayBase)('clientes (e2e)', () => {
     expect(respuesta.body).toMatchObject({ codigo: 'cliente.limite-de-busquedas' });
     // El límite es por persona: el cajero sigue buscando.
     await buscar('cajero', '100').expect(200);
-  }, 30_000);
+    // 61 búsquedas seguidas: con Neon lento (CI del 2026-11-27) pasaron de 30 s.
+  }, 90_000);
 
   it('un nombre con controles C1 o un correo con NUL no rompen la API (ataque H2)', async () => {
     const conC1 = { id: randomUUID(), tipoDocumento: '13', numero: `2${nit}`, nombre: 'Ro\u0085sa\u202e', tipoDePersona: 'natural' };

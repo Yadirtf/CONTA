@@ -27,7 +27,8 @@ interface Venta {
 const juego = juegoDeCertificados();
 const accesoDePrueba = { para: () => Promise.resolve({ certificado: CertificadoDeFirma.de(juego.p12, CONTRASENA_DE_PRUEBA), testSetId: 'set' }) };
 
-describe.skipIf(!hayBase || !hayDueno)('ventas (e2e)', () => {
+// Cada prueba hace varias peticiones que firman o leen facturas: contra Neon pasan de los 5 s por defecto de Vitest.
+describe.skipIf(!hayBase || !hayDueno)('ventas (e2e)', { timeout: 30_000 }, () => {
   const celulares = { dueno: celularAlAzar(), cajero: celularAlAzar(), ajeno: celularAlAzar() };
   type Quien = keyof typeof celulares;
   let app: INestApplication;

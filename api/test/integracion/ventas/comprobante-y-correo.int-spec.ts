@@ -55,7 +55,8 @@ describe.skipIf(!hayBase || !hayDueno)('comprobante y correo de la factura (inte
     } finally {
       await dueno.end();
     }
-  });
+    // Borrar cada empresa toca 15 tablas: contra Neon pasa de los 10 s por defecto de los ganchos.
+  }, LIMITE_MS);
 
   async function nuevo(): Promise<Escenario> {
     const e = await escenario(baseDeDatos);
