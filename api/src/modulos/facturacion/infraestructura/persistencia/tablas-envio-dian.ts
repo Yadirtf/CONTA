@@ -10,6 +10,8 @@ export const enviosDian = conta.table('envios_dian', {
   id: uuid('id').primaryKey(),
   cufe: text('cufe').notNull(),
   numero: text('numero').notNull(),
+  // HU-06.02: factura o pos. Se crea en migraciones/0011_tiquete_pos.sql.
+  clase: text('clase').notNull(),
   nitEmisor: text('nit_emisor').notNull(),
   anio: integer('anio').notNull(),
   consecutivo: integer('consecutivo').notNull(),

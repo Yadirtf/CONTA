@@ -35,7 +35,7 @@ void main() {
 
     expect(api.pedidos.single.medioDePago, MedioDePago.efectivo);
     expect(api.pedidos.single.comprador, isNull);
-    expect(find.text('Factura SETP990000000'), findsOneWidget);
+    expect(find.text('Factura electrónica SETP990000000'), findsOneWidget);
     expect(find.text('Enviándose a la DIAN'), findsOneWidget);
     // Sale del «Listo» con una venta nueva, vacía.
     await tester.tap(find.text('Nueva venta'));
@@ -77,6 +77,48 @@ void main() {
     expect(pedido.carrito.cantidadDe(arroz.id), 2);
     expect(pedido.medioDePago, MedioDePago.transferencia);
     expect(pedido.comprador?.id, 'c1');
+    // HU-06.02: con comprador ya es factura a su nombre; no se ofrece el interruptor.
+    expect(pedido.conFactura, isTrue);
+    await tester.pump(const Duration(minutes: 1));
+  });
+
+  testWidgets('HU-06.02: a consumidor final sale tiquete POS, salvo que el cliente pida factura', (tester) async {
+    final api = RepositorioDeVentasFalso()..documentoSinFactura = DocumentoDeLaVenta.pos;
+    await tester.pumpWidget(
+      conTema(
+        PantallaVender(
+          repositorio: api,
+          empresaId: 'e1',
+          buscarArticulos: buscarFijo,
+          cola: colaDePrueba(api, CompartidorFalso()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    Future<void> vender({required bool pideFactura}) async {
+      await tester.tap(find.text('Gaseosa 400 ml'));
+      await tester.pump();
+      await tester.tap(find.textContaining('Cobrar'));
+      await tester.pumpAndSettle();
+      expect(find.text('El cliente pide factura electrónica'), findsOneWidget);
+      if (pideFactura) await tester.tap(find.text('El cliente pide factura electrónica'));
+      await tester.pump();
+      await tester.tap(find.textContaining('Confirmar venta'));
+      await tester.pump();
+      await tester.pump();
+    }
+
+    await vender(pideFactura: false);
+    expect(api.pedidos.last.conFactura, isFalse);
+    expect(find.text('Tiquete POS electrónico EPOS990000000'), findsOneWidget);
+    await tester.tap(find.text('Nueva venta'));
+    await tester.pumpAndSettle();
+
+    await vender(pideFactura: true);
+    expect(api.pedidos.last.conFactura, isTrue);
+    expect(find.text('Factura electrónica SETP990000001'), findsOneWidget);
+    await tester.tap(find.text('Nueva venta'));
+    await tester.pumpAndSettle();
     await tester.pump(const Duration(minutes: 1));
   });
 

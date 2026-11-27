@@ -1,5 +1,5 @@
 import type { ContextoEmpresa, Reloj, UnidadDeTrabajo } from '../../../../compartido/aplicacion/index.js';
-import { EnvioDian, MomentoDeEmision, type EstadoDelEnvio } from '../../dominio/index.js';
+import { type ClaseDeDocumento, EnvioDian, MomentoDeEmision, type EstadoDelEnvio } from '../../dominio/index.js';
 import type { Despertador } from '../puertos/cola-de-trabajos.js';
 import type { DocumentoElectronico } from '../puertos/generador-de-documento-electronico.js';
 import type { RepositoriosDeEnvio } from '../puertos/repositorios-de-envio.js';
@@ -9,6 +9,8 @@ export interface SolicitudDeEnvio {
   readonly documento: DocumentoElectronico;
   readonly numero: string;
   readonly nitEmisor: string;
+  /** Factura o tiquete POS (HU-06.02). Si no viene, factura. */
+  readonly clase?: ClaseDeDocumento;
 }
 
 export interface EnvioSolicitado {
@@ -37,7 +39,7 @@ export class SolicitarEnvioDian {
       if (existente) return { envioId: existente.id, estado: existente.estado, nuevo: false };
 
       const anio = Number(MomentoDeEmision.desde(ahora).fecha.slice(0, 4));
-      const envio = EnvioDian.solicitar(this.nuevoId(), solicitud.documento.cufe, solicitud.numero, ahora);
+      const envio = EnvioDian.solicitar(this.nuevoId(), solicitud.documento.cufe, solicitud.numero, ahora, solicitud.clase);
       await envios.crear(envio, {
         xmlFirmado: solicitud.documento.xml,
         nitEmisor: solicitud.nitEmisor,

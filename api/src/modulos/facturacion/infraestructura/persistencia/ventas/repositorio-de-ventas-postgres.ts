@@ -7,7 +7,7 @@ import type {
   ResumenDeVenta,
   VentaGuardada,
 } from '../../../aplicacion/puertos/repositorio-de-ventas.js';
-import { ESTADOS_DEL_ENVIO, type EstadoDelEnvio, type Venta } from '../../../dominio/index.js';
+import { type ClaseDeDocumento, claseDeDocumento, ESTADOS_DEL_ENVIO, type EstadoDelEnvio, type Venta } from '../../../dominio/index.js';
 import { numeracionEnConflicto } from '../../../aplicacion/ventas/errores-de-venta.js';
 import { codigoQrDelXml } from '../../dian-directa/ubl/codigo-qr-del-xml.js';
 import { emisorDelXml } from '../../dian-directa/ubl/emisor-del-xml.js';
@@ -67,8 +67,8 @@ export class RepositorioDeVentasPostgres implements RepositorioDeVentas {
     return rows.length === 1;
   }
 
-  async registrarEmision(ventaId: string, envioId: string): Promise<void> {
-    await this.ejecutor.insert(emisionesDeVenta).values({ empresaId: EMPRESA, ventaId, envioId }).onConflictDoNothing();
+  async registrarEmision(ventaId: string, envioId: string, clase: ClaseDeDocumento): Promise<void> {
+    await this.ejecutor.insert(emisionesDeVenta).values({ empresaId: EMPRESA, ventaId, envioId, clase }).onConflictDoNothing();
   }
 
   async envioDe(ventaId: string): Promise<EnvioDeLaVenta | null> {
@@ -111,6 +111,7 @@ export class RepositorioDeVentasPostgres implements RepositorioDeVentas {
         id: ventas.id,
         prefijo: ventas.prefijo,
         consecutivo: ventas.consecutivo,
+        clase: ventas.clase,
         emitidaEn: ventas.emitidaEn,
         comprador: sql<string>`${ventas.comprador} ->> 'razonSocial'`,
         total: ventas.total,
@@ -124,6 +125,7 @@ export class RepositorioDeVentasPostgres implements RepositorioDeVentas {
     return filas.map((f) => ({
       id: f.id,
       numero: `${f.prefijo}${f.consecutivo}`,
+      clase: claseDeDocumento(f.clase),
       emitidaEn: f.emitidaEn,
       comprador: f.comprador,
       total: f.total,

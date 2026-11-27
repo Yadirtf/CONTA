@@ -38,7 +38,7 @@ export class ProcesarEnvioDian {
     if (!lectura) return;
 
     const { envio, documento, intentosLeidos } = lectura;
-    const intento = await llamarALaDian(envio, documento, () => this.acceso.para(contexto), this.servicio, () =>
+    const intento = await llamarALaDian(envio, documento, () => this.acceso.para(contexto, envio.clase), this.servicio, () =>
       this.reloj.ahora(),
     );
 

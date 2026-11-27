@@ -36,6 +36,7 @@ export function ventaDePrueba(id = VENTA_ID, comprador = adquirenteDePrueba()): 
     id,
     huella: 'f'.repeat(64),
     numero: NumeroDeFactura.de('SETP', 990000001),
+    clase: 'factura',
     emitidaEn: new Date('2026-11-27T15:04:05Z'),
     comprador,
     lineas: [lineaDeVenta(gaseosa(), '3'), lineaDeVenta(huevos(), '1'), lineaDeVenta(arroz(), '1.5')],

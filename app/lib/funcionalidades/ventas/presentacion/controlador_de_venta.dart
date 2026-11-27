@@ -19,6 +19,9 @@ class ControladorDeVenta extends ChangeNotifier {
   Carrito carrito = const Carrito();
   MedioDePago medioDePago = MedioDePago.efectivo;
   CompradorDeLaVenta? comprador;
+
+  /// HU-06.02: sin comprador, el cliente puede pedir factura en vez del tiquete POS.
+  bool pideFactura = false;
   bool enviando = false;
   String? aviso;
 
@@ -32,13 +35,21 @@ class ControladorDeVenta extends ChangeNotifier {
   /// null vuelve a consumidor final.
   void elegirComprador(CompradorDeLaVenta? elegido) => _cambiarPedido(() => comprador = elegido);
 
+  void pedirFactura(bool pide) => _cambiarPedido(() => pideFactura = pide);
+
   /// Toque 3. Devuelve la venta guardada, o null con el aviso para la persona.
   Future<VentaEmitida?> confirmar() async {
     if (enviando || carrito.vacio) return null;
     enviando = true;
     aviso = null;
     notifyListeners();
-    final pedido = PedidoDeVenta(id: _id, carrito: carrito, medioDePago: medioDePago, comprador: comprador);
+    final pedido = PedidoDeVenta(
+      id: _id,
+      carrito: carrito,
+      medioDePago: medioDePago,
+      comprador: comprador,
+      pideFactura: pideFactura,
+    );
     final respuesta = await _repositorio.registrar(empresaId, pedido);
     enviando = false;
     switch (respuesta) {
@@ -59,6 +70,7 @@ class ControladorDeVenta extends ChangeNotifier {
     carrito = const Carrito();
     medioDePago = MedioDePago.efectivo;
     comprador = null;
+    pideFactura = false;
     aviso = null;
     _id = _nuevoId();
   }

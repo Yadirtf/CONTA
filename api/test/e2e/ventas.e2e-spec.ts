@@ -22,6 +22,8 @@ interface Venta {
   estado: string;
   mensaje: string;
   comprador: string;
+  documento: string;
+  nombreDelDocumento: string;
 }
 
 const juego = juegoDeCertificados();
@@ -168,6 +170,36 @@ describe.skipIf(!hayBase || !hayDueno)('ventas (e2e)', { timeout: 30_000 }, () =
     expect((recientes as Venta[])[0]).toMatchObject({ id: propia.id, estado: 'aceptada' });
     const { body: ajenas } = await como('ajeno', empresa.ajena).get('/ventas').expect(200);
     expect((ajenas as Venta[]).map((v) => v.id)).not.toContain(propia.id);
+  });
+
+  it('HU-06.02: sin software POS sale factura; el pedido no puede forzar el tiquete POS', async () => {
+    const { body } = await como('cajero').post('/ventas', venta()).expect(201);
+    expect(body).toMatchObject({ documento: 'factura', nombreDelDocumento: 'Factura electrónica' });
+    await como('cajero').post('/ventas', venta(producto.propio, { documento: 'factura' })).expect(201);
+    for (const documento of ['pos', 'FACTURA', 1, 'x'.repeat(500)]) {
+      const { body: error } = await como('cajero').post('/ventas', venta(producto.propio, { documento })).expect((r) => expect([400, 422]).toContain(r.status));
+      expect((error as { codigo: string }).codigo).toMatch(/peticion.campo-invalido|venta.documento-invalido/);
+    }
+  });
+
+  it('HU-06.02: con resolución y software POS, la venta a consumidor final sale con tiquete POS', async () => {
+    const dueno = await conexionDelDueno();
+    try {
+      await crearResolucion(dueno, empresa.propia, 1, 1000, { prefijo: 'EPOS', clase: 'pos' });
+    } finally {
+      await dueno.end();
+    }
+    configuracionDePrueba.posHabilitado = true;
+    try {
+      const { body } = await como('cajero').post('/ventas', venta()).expect(201);
+      expect(body).toMatchObject({ numero: 'EPOS1', documento: 'pos', nombreDelDocumento: 'Tiquete POS electrónico' });
+      const { body: recientes } = await como('cajero').get('/ventas').expect(200);
+      expect((recientes as Venta[])[0]).toMatchObject({ id: (body as Venta).id, documento: 'pos' });
+      const pedida = (await como('cajero').post('/ventas', venta(producto.propio, { documento: 'factura' })).expect(201)).body as Venta;
+      expect(pedida).toMatchObject({ documento: 'factura', numero: expect.stringMatching(/^SETP/) as unknown });
+    } finally {
+      configuracionDePrueba.posHabilitado = false;
+    }
   });
 
   it('sin sesión no se vende', async () => {

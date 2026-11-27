@@ -1,4 +1,4 @@
-import type { EstadoDelEnvio, Participante, Venta } from '../../dominio/index.js';
+import type { ClaseDeDocumento, EstadoDelEnvio, Participante, Venta } from '../../dominio/index.js';
 import type { RespuestaDeLaDian } from '../../dominio/index.js';
 
 /** Una venta guardada y la resolución con la que se numeró. */
@@ -29,6 +29,8 @@ export interface FacturaDeLaVenta {
 export interface ResumenDeVenta {
   readonly id: string;
   readonly numero: string;
+  /** Factura o tiquete POS (HU-06.02). */
+  readonly clase: ClaseDeDocumento;
   readonly emitidaEn: Date;
   readonly comprador: string;
   readonly total: string;
@@ -48,8 +50,8 @@ export interface RepositorioDeVentas {
   contarDesde(fecha: Date): Promise<number>;
   /** Gasta una venta del cupo diario de la persona (todas sus empresas). false, sin gastar, si ya usó `maximo`. */
   consumirCupoDePersona(usuarioId: string, maximo: number): Promise<boolean>;
-  /** Enlaza la venta con su envío. Repetirlo no hace nada. */
-  registrarEmision(ventaId: string, envioId: string): Promise<void>;
+  /** Enlaza la venta con su envío, de la misma clase de documento. Repetirlo no hace nada. */
+  registrarEmision(ventaId: string, envioId: string, clase: ClaseDeDocumento): Promise<void>;
   envioDe(ventaId: string): Promise<EnvioDeLaVenta | null>;
   /** La factura enviada de la venta, o null si aún no se firmó. */
   facturaDe(ventaId: string): Promise<FacturaDeLaVenta | null>;

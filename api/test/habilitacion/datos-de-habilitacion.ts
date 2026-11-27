@@ -32,6 +32,7 @@ export function configuracionDeHabilitacion(datos: DatosDeHabilitacion): Configu
     idSoftware: datos.DIAN_HAB_ID_SOFTWARE,
     pinSoftware: datos.DIAN_HAB_PIN,
     nitProveedorSoftware: datos.DIAN_HAB_NIT,
+    fabricante: null,
   };
 }
 

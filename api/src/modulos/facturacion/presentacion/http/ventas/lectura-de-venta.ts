@@ -3,7 +3,7 @@ import { MAXIMO_DE_LINEAS, pedidoDeVenta, type PedidoDeVenta } from '../../../do
 
 // Solo la forma de la petición; las reglas las aplica el dominio. Un campo que no se espera (un precio, un IVA, un
 // total) se rechaza: la venta nunca toma montos de la app (hallazgo B del contrapunto).
-const CAMPOS_DE_LA_VENTA = new Set(['id', 'lineas', 'compradorId', 'medioDePago']);
+const CAMPOS_DE_LA_VENTA = new Set(['id', 'lineas', 'compradorId', 'medioDePago', 'documento']);
 const CAMPOS_DE_LA_LINEA = new Set(['productoId', 'cantidad']);
 const LARGO_MAXIMO_CORTO = 40;
 
@@ -22,11 +22,12 @@ const textoCorto = (valor: unknown): valor is string => typeof valor === 'string
 /** Lee el cuerpo de POST /ventas. La cantidad llega como texto: un number ya habría perdido precisión. */
 export function pedidoDe(cuerpo: unknown): PedidoDeVenta {
   const campos = objetoCon(cuerpo, CAMPOS_DE_LA_VENTA, 'cuerpo');
-  const { id, lineas, compradorId, medioDePago } = campos;
+  const { id, lineas, compradorId, medioDePago, documento } = campos;
   if (!textoCorto(id)) throw campoInvalido('id');
   if (!Array.isArray(lineas) || lineas.length > MAXIMO_DE_LINEAS) throw campoInvalido('lineas');
   if (compradorId !== undefined && compradorId !== null && !textoCorto(compradorId)) throw campoInvalido('compradorId');
   if (!textoCorto(medioDePago)) throw campoInvalido('medioDePago');
+  if (documento !== undefined && !textoCorto(documento)) throw campoInvalido('documento');
   return pedidoDeVenta({
     id,
     lineas: lineas.map((linea: unknown) => {
@@ -37,5 +38,6 @@ export function pedidoDe(cuerpo: unknown): PedidoDeVenta {
     }),
     compradorId: compradorId ?? null,
     medioDePago,
+    documento,
   });
 }

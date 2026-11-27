@@ -1,12 +1,16 @@
 import { ErrorDominio } from '../../../../compartido/dominio/index.js';
+import type { ClaseDeDocumento } from '../documentos/clase-de-documento.js';
 import { esEstadoFinal, type EstadoDelEnvio } from './estado-del-envio.js';
 import { esperaDeConsulta, esperaTrasFalla, MAXIMO_DE_INTENTOS } from './politica-de-reintentos.js';
 import type { RespuestaDeLaDian } from './respuesta-de-la-dian.js';
 
 export interface DatosDelEnvio {
   readonly id: string;
+  /** El código único del documento: CUFE de la factura o CUDE del tiquete POS (los dos son SHA-384). */
   readonly cufe: string;
   readonly numero: string;
+  /** Factura o tiquete POS: decide con qué set de pruebas se envía (HU-06.02). */
+  readonly clase: ClaseDeDocumento;
   readonly estado: EstadoDelEnvio;
   readonly zipKey: string | null;
   /** Llamadas hechas a la DIAN (envíos y consultas). Sirve también de versión para escrituras concurrentes. */
@@ -25,12 +29,13 @@ export interface DatosDelEnvio {
 export class EnvioDian {
   private constructor(private datos: DatosDelEnvio) {}
 
-  static solicitar(id: string, cufe: string, numero: string, ahora: Date): EnvioDian {
+  static solicitar(id: string, cufe: string, numero: string, ahora: Date, clase: ClaseDeDocumento = 'factura'): EnvioDian {
     if (!/^[0-9a-f]{96}$/.test(cufe)) throw new ErrorDominio('envio-dian.cufe-invalido', 'El CUFE no es válido');
     return new EnvioDian({
       id,
       cufe,
       numero,
+      clase,
       estado: 'pendiente',
       zipKey: null,
       intentos: 0,
@@ -50,6 +55,9 @@ export class EnvioDian {
   }
   get cufe(): string {
     return this.datos.cufe;
+  }
+  get clase(): ClaseDeDocumento {
+    return this.datos.clase;
   }
   get estado(): EstadoDelEnvio {
     return this.datos.estado;

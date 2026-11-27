@@ -1,7 +1,7 @@
 import { and, eq, max, sql } from 'drizzle-orm';
 import type { Ejecutor } from '../../../../compartido/infraestructura/persistencia/base-de-datos.js';
 import type { DocumentoDelEnvio, RepositorioDeEnvios } from '../../aplicacion/puertos/repositorio-de-envios.js';
-import { EnvioDian, ESTADOS_DEL_ENVIO, RespuestaDeLaDian, type EstadoDelEnvio } from '../../dominio/index.js';
+import { claseDeDocumento, EnvioDian, ESTADOS_DEL_ENVIO, RespuestaDeLaDian, type EstadoDelEnvio } from '../../dominio/index.js';
 import { enviosDian } from './tablas-envio-dian.js';
 import { respuestasDeAceptacion } from './tabla-respuestas-de-aceptacion.js';
 
@@ -12,6 +12,7 @@ const COLUMNAS_DEL_ESTADO = {
   id: enviosDian.id,
   cufe: enviosDian.cufe,
   numero: enviosDian.numero,
+  clase: enviosDian.clase,
   estado: enviosDian.estado,
   zipKey: enviosDian.zipKey,
   intentos: enviosDian.intentos,
@@ -69,6 +70,7 @@ export class RepositorioDeEnviosPostgres implements RepositorioDeEnvios {
       id: envio.id,
       cufe: envio.cufe,
       numero: envio.instantanea().numero,
+      clase: envio.clase,
     });
   }
 
@@ -117,6 +119,7 @@ function aEnvio(f: FilaDelEstado): EnvioDian {
     id: f.id,
     cufe: f.cufe,
     numero: f.numero,
+    clase: claseDeDocumento(f.clase),
     estado: estadoValido(f.estado),
     zipKey: f.zipKey,
     intentos: f.intentos,

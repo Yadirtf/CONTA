@@ -6,13 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'dobles.dart';
 import 'pantallas_de_venta_test.dart' show conTema;
 
-VentaReciente _reciente(String id, EstadoDeLaVenta estado) => VentaReciente(
+VentaReciente _reciente(String id, EstadoDeLaVenta estado, {DocumentoDeLaVenta documento = DocumentoDeLaVenta.factura}) =>
+    VentaReciente(
   id: id,
   numero: 'SETP99000000$id',
   emitidaEn: DateTime.utc(2026, 11, 27),
   comprador: 'Consumidor final',
   total: '7500.00',
   estado: estado,
+  documento: documento,
 );
 
 void main() {
@@ -63,7 +65,7 @@ void main() {
     final api = RepositorioDeVentasFalso()
       ..respuestaDeRecientes = Exito([
         _reciente('1', EstadoDeLaVenta.aceptada),
-        _reciente('2', EstadoDeLaVenta.rechazada),
+        _reciente('2', EstadoDeLaVenta.rechazada, documento: DocumentoDeLaVenta.pos),
       ]);
     final compartidor = CompartidorFalso();
     await tester.pumpWidget(
@@ -72,6 +74,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('SETP990000001 · \$ 7.500'), findsOneWidget);
     expect(find.textContaining('No aceptada'), findsOneWidget);
+    // HU-06.02: cada fila dice con qué documento salió.
+    expect(find.textContaining('Factura electrónica · Consumidor final'), findsOneWidget);
+    expect(find.textContaining('Tiquete POS electrónico · Consumidor final'), findsOneWidget);
     expect(find.byTooltip('Compartir factura SETP990000001'), findsOneWidget);
     expect(find.byTooltip('Compartir factura SETP990000002'), findsNothing);
 

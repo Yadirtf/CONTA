@@ -203,7 +203,7 @@ Como dueño, quiero emitir una factura en 3 toques, para atender al cliente sin 
 - Decisión ([ADR-0014](../decisiones/0014-venta-con-numero-reservado-y-emision-aparte.md), nivel 3, con Verbalized Sampling y evaluador aparte): la venta reserva su consecutivo con un `UPDATE … RETURNING` sobre la resolución y guarda venta, líneas y emisión pendiente en una transacción corta (todo o nada: sin huecos ni repetidos); después, fuera del bloqueo, arma la factura determinista (misma fecha, mismo CUFE), la firma y la deja en la cola de envío de HU-02.03. Si la firma falla, `conta_sistema.cola_emision_ventas` la termina con el despertador o el endpoint interno. Idempotente por id de la app más la huella SHA-256 del pedido (otro pedido con el mismo id es 409). La app solo manda ids, cantidades en texto y medio de pago; precio e IVA salen del catálogo y cualquier campo extra es 400. Datos fiscales y resoluciones: tablas que la API solo lee, llenadas con `npm run facturacion:configurar`; la configuración del software sale del entorno (`DIAN_HAB_*`) para una sola empresa hasta EP-07. Topes: 3.000 ventas por empresa en 24 h y 3.000 por persona al día; total máximo $1.000.000.000; hasta 100 líneas. Medios de pago: efectivo, tarjetas y transferencia (Nequi y Daviplata); el fiado llega con EP-12.
 - Módulos: `api/src/modulos/facturacion/` (dominio `ventas/`), `api/src/modulos/catalogo/` (`ObtenerParaVender`) y `app/lib/funcionalidades/ventas/`.
 
-**HU-06.08 PDF con QR por WhatsApp y correo** (M, M) — En revisión
+**HU-06.08 PDF con QR por WhatsApp y correo** (M, M) — Hecha
 Como dueño, quiero compartir la factura en PDF con su QR, para que el comprador la tenga en su celular o su correo.
 - Dada una venta emitida, cuando toco «Compartir», entonces sale el PDF con el QR de la DIAN para WhatsApp.
 - Si el comprador tiene correo, le llega la factura (PDF y XML) al ser aceptada.
@@ -212,9 +212,17 @@ Como dueño, quiero compartir la factura en PDF con su QR, para que el comprador
 - Decisión ([ADR-0015](../decisiones/0015-comprobante-a-pedido-y-correo-al-aceptar.md), nivel 3, con Verbalized Sampling y evaluador aparte): `GET /ventas/:id/comprobante` arma el PDF a pedido (pdfkit, QR vectorial, siempre igual) desde la venta y el XML firmado, con sesión, `X-Empresa`, `Permiso.Vender` y RLS, solo para facturas aceptadas, con `no-store` y 30 por 5 minutos. La app lo comparte como archivo (`share_plus`) desde «Listo» y «Mis ventas» (`GET /ventas`, últimas 50); sin internet o mientras la DIAN no aprueba, una cola de hasta 10 reintenta mientras la app está abierta. El correo se pide en la misma transacción que guarda «aceptado» y sale por Brevo (`CORREO_BREVO_LLAVE`, `CORREO_REMITENTE`) con intentos registrados; cada intento se toma antes de llamar al proveedor; los vencidos se leen con la única función `SECURITY DEFINER`, de solo lectura, que solo devuelve ids. El comprobante muestra al emisor como quedó en el XML firmado. El `ApplicationResponse` se guarda para el AttachedDocument, que queda para otra historia.
 - Módulos: `api/src/modulos/facturacion/` (`comprobante/`, `correo/`) y `app/lib/funcionalidades/ventas/`.
 
-**HU-06.02 POS electrónico** (M, M)
+**HU-06.02 POS electrónico** (M, M) — En revisión
 Como cajero, quiero emitir el documento POS electrónico, para ventas rápidas de mostrador.
 - Cumple el anexo del documento equivalente POS y genera CUDE.
+- Decisión ([ADR-0016](../decisiones/0016-tiquete-pos-en-la-misma-tuberia.md), nivel 3, con Verbalized Sampling y evaluador aparte):
+  - El tiquete POS usa la misma tubería de la factura. La clase (`factura` o `pos`) la fija la resolución de numeración.
+  - La API elige sola: tiquete POS si es a consumidor final, la empresa tiene software y resolución POS, y la base sin impuestos no pasa de 5 UVT ($261.870 en 2026). En cualquier otro caso, factura.
+  - La app manda `documento: automatico | factura`. Con comprador, o con el interruptor «El cliente pide factura electrónica», sale factura. El POS nunca se puede forzar.
+  - El CUDE usa el PIN del software POS. El XML lleva `InvoiceTypeCode` 20 y las extensiones `FabricanteSoftware`, `BeneficiosComprador` y `PuntoVenta`.
+  - La base repite el tope y amarra la clase de la venta a su resolución y la del envío a su XML. `conta_api` no puede cambiar ninguna clase.
+  - El software POS sale del entorno (`DIAN_HAB_POS_*`) hasta EP-07.
+- Módulos: `api/src/modulos/facturacion/` (dominio `documentos/`, `dian-directa/ubl/`) y `app/lib/funcionalidades/ventas/`.
 
 **HU-06.03 Notas crédito y débito** (M, M)
 Como contador, quiero corregir una factura con una nota, porque las facturas no se editan.
@@ -241,6 +249,16 @@ Como administrador, quiero poder cambiar al proveedor externo por configuración
 - Dado un rango con menos del 10% disponible, entonces el dueño y la consola reciben una alerta.
 
 #### EP-07. Asistente de habilitación DIAN en la consola — Prioridad M
+
+**HU-07.04 Pantalla de configuración DIAN por empresa** (M, M) **[VS]**
+Como dueño, quiero cargar en una pantalla los datos que pide la DIAN para facturar, para no depender de variables de entorno ni del comando `facturacion:configurar`.
+- Va primero en EP-07 (decidido por Inge el 2026-11-27): la lista de pasos (HU-07.01) usa estos datos como evidencia.
+- Datos fiscales del facturador validados en la API (NIT con dígito de verificación, razón social, tipo de persona, responsabilidades, dirección y correo).
+- Resoluciones de factura y de tiquete POS (HU-06.02). Una resolución guardada no se edita ni se borra; para otro rango se agrega una nueva.
+- Software por clase de documento: id, PIN, TestSetId, clave técnica (factura) y fabricante (POS). El PIN y la clave técnica se guardan cifrados y nunca se muestran completos ni van a los registros.
+- Preferencia del negocio «siempre factura» (ADR-0016).
+- Solo el dueño, con verificación en dos pasos reciente. Tablas con `empresa_id`, RLS y prueba de aislamiento.
+- Con la configuración guardada, la API deja de leer `DIAN_HAB_*` para esa empresa.
 
 **HU-07.01 Lista de pasos por cliente** (M, M) **[VS]**
 Como administrador, quiero ver los 7 pasos de habilitación de cada cliente con su estado, para habilitarlo en menos de 1 hora.

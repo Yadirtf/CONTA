@@ -21,6 +21,8 @@ export class VentasEnMemoria implements UnidadDeTrabajo<RepositoriosDeVenta> {
     vigenteDesde: '2019-01-19',
     vigenteHasta: '2030-01-19',
   });
+  /** HU-06.02: la resolución del tiquete POS; sin ella, todo sale con factura. */
+  resolucionPos: ResolucionDeNumeracion | null = null;
   siguiente = 990000000;
   ventasDelDia = 0;
   cupoDePersonaAgotado = false;
@@ -42,7 +44,10 @@ export class VentasEnMemoria implements UnidadDeTrabajo<RepositoriosDeVenta> {
   private repositorios(): RepositoriosDeVenta {
     return {
       ventas: {
-        conId: (id) => Promise.resolve(this.guardadas.has(id) ? { venta: this.guardadas.get(id) as Venta, resolucionId: 'r' } : null),
+        conId: (id) => {
+          const venta = this.guardadas.get(id);
+          return Promise.resolve(venta ? { venta, resolucionId: idDeResolucion(venta) } : null);
+        },
         huellaDe: (id) => Promise.resolve(this.guardadas.get(id)?.datos.huella ?? null),
         guardar: (venta) => {
           if (this.guardadas.has(venta.id)) return Promise.resolve(false);
@@ -56,13 +61,14 @@ export class VentasEnMemoria implements UnidadDeTrabajo<RepositoriosDeVenta> {
         facturaDe: (id) => Promise.resolve(this.facturas.get(id) ?? null),
         deEnvio: (envioId) => {
           const venta = this.guardadas.get(envioId.replace(/^envio-/, ''));
-          return Promise.resolve(venta ? { venta, resolucionId: 'r' } : null);
+          return Promise.resolve(venta ? { venta, resolucionId: idDeResolucion(venta) } : null);
         },
         recientes: (limite) =>
           Promise.resolve(
             [...this.guardadas.values()].slice(-limite).reverse().map((v) => ({
               id: v.id,
               numero: v.datos.numero.aTexto(),
+              clase: v.clase,
               emitidaEn: v.datos.emitidaEn,
               comprador: v.datos.comprador.razonSocial,
               total: v.total.aTexto(),
@@ -89,8 +95,13 @@ export class VentasEnMemoria implements UnidadDeTrabajo<RepositoriosDeVenta> {
       },
       numeracion: {
         emisor: () => Promise.resolve(this.emisor),
-        resolucionVigente: () => Promise.resolve(this.resolucion && { id: 'r', resolucion: this.resolucion }),
-        resolucion: () => Promise.resolve(this.resolucion),
+        resolucionVigente: (_fecha, clase) =>
+          Promise.resolve(
+            clase === 'pos'
+              ? this.resolucionPos && { id: 'rpos', resolucion: this.resolucionPos }
+              : this.resolucion && { id: 'r', resolucion: this.resolucion },
+          ),
+        resolucion: (id) => Promise.resolve(id === 'rpos' ? this.resolucionPos : this.resolucion),
         reservarConsecutivo: () => {
           if (this.siguiente > 990000002) return Promise.resolve(null);
           this.siguiente += 1;
@@ -110,6 +121,8 @@ export class VentasEnMemoria implements UnidadDeTrabajo<RepositoriosDeVenta> {
     };
   }
 }
+
+const idDeResolucion = (venta: Venta) => (venta.clase === 'pos' ? 'rpos' : 'r');
 
 /** Catálogo con una gaseosa gravada y un arroz excluido; el comprador existe salvo que se diga lo contrario. */
 export class CatalogoEnMemoria implements CatalogoDeVenta {

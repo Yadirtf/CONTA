@@ -1,6 +1,7 @@
 import { bigint, boolean, date, jsonb, numeric, pgSchema, smallint, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-// Tablas de ventas y numeración para consultar con Drizzle. Se crean en migraciones/0009_ventas.sql.
+// Tablas de ventas y numeración para consultar con Drizzle. Se crean en migraciones/0009_ventas.sql; la clase de
+// documento (factura o pos) llega en 0011_tiquete_pos.sql (HU-06.02).
 // Dinero y cantidades: numeric en modo texto, nunca number (ADR-0005).
 
 const conta = pgSchema('conta');
@@ -30,6 +31,7 @@ export const resoluciones = conta.table('resoluciones_de_numeracion', {
   vigenteDesde: date('vigente_desde', { mode: 'string' }).notNull(),
   vigenteHasta: date('vigente_hasta', { mode: 'string' }).notNull(),
   siguiente: bigint('siguiente', { mode: 'number' }).notNull(),
+  clase: text('clase').notNull(),
   creadaEn: timestamp('creada_en', { withTimezone: true }).notNull(),
 });
 
@@ -40,6 +42,7 @@ export const ventas = conta.table('ventas', {
   resolucionId: uuid('resolucion_id').notNull(),
   prefijo: text('prefijo').notNull(),
   consecutivo: bigint('consecutivo', { mode: 'number' }).notNull(),
+  clase: text('clase').notNull(),
   emitidaEn: timestamp('emitida_en', { withTimezone: true }).notNull(),
   medioDePago: text('medio_de_pago').notNull(),
   comprador: jsonb('comprador').notNull(),
@@ -70,6 +73,7 @@ export const emisionesDeVenta = conta.table('emisiones_de_venta', {
   empresaId: uuid('empresa_id').notNull(),
   ventaId: uuid('venta_id').notNull(),
   envioId: uuid('envio_id').notNull(),
+  clase: text('clase').notNull(),
 });
 
 export type FilaDeVenta = typeof ventas.$inferSelect;

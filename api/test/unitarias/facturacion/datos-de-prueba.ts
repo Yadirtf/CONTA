@@ -41,6 +41,16 @@ export const configuracionDePrueba = (ambiente: ConfiguracionDian['ambiente'] = 
   idSoftware: '56f2ae4e-9812-4fad-9255-08fcfcd5ccb0',
   pinSoftware: '12345',
   nitProveedorSoftware: '900373076',
+  fabricante: null,
+});
+
+/** HU-06.02: el software del tiquete POS, con su fabricante. Su CUDE usa el PIN, no la clave técnica. */
+export const configuracionPosDePrueba = (): ConfiguracionDian => ({
+  ...configuracionDePrueba(),
+  claveTecnica: '',
+  idSoftware: '0b5f1c7e-3d4a-4e8b-9c1f-2a6d7e8f9a0b',
+  pinSoftware: '67890',
+  fabricante: { nombre: 'Equipo CONTA', razonSocial: 'CONTA S.A.S.', nombreDelSoftware: 'CONTA' },
 });
 
 /** Factura del criterio de HU-02.01: dos líneas, una con IVA del 19 % y otra con IVA del 0 %. */

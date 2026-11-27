@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import type { VentaReciente } from '../../../aplicacion/consultas/listar-ventas-recientes.js';
-import type { EstadoDeLaVenta } from '../../../dominio/index.js';
+import { CLASES_DE_DOCUMENTO, type ClaseDeDocumento, type EstadoDeLaVenta } from '../../../dominio/index.js';
 
 const ESTADOS: readonly EstadoDeLaVenta[] = ['pendiente', 'aceptada', 'rechazada'];
 
@@ -11,6 +11,9 @@ export class RespuestaVentaReciente {
 
   @ApiProperty({ example: 'SETP990000123' })
   readonly numero!: string;
+
+  @ApiProperty({ enum: CLASES_DE_DOCUMENTO, description: 'factura (factura electrónica) o pos (tiquete POS electrónico).' })
+  readonly documento!: ClaseDeDocumento;
 
   @ApiProperty({ example: '2026-11-27T15:04:05.000Z' })
   readonly emitidaEn!: string;
@@ -26,5 +29,13 @@ export class RespuestaVentaReciente {
 }
 
 export function respuestaDeVentaReciente(v: VentaReciente): RespuestaVentaReciente {
-  return { id: v.id, numero: v.numero, emitidaEn: v.emitidaEn.toISOString(), comprador: v.comprador, total: v.total, estado: v.estado };
+  return {
+    id: v.id,
+    numero: v.numero,
+    documento: v.clase,
+    emitidaEn: v.emitidaEn.toISOString(),
+    comprador: v.comprador,
+    total: v.total,
+    estado: v.estado,
+  };
 }

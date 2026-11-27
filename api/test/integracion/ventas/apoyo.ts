@@ -16,7 +16,10 @@ import { RegistrarVenta } from '../../../src/modulos/facturacion/aplicacion/coma
 import { SolicitarEnvioDian } from '../../../src/modulos/facturacion/aplicacion/comandos/solicitar-envio-dian.js';
 import { ConsultarVenta } from '../../../src/modulos/facturacion/aplicacion/consultas/consultar-venta.js';
 import { CertificadoDeFirma } from '../../../src/modulos/facturacion/aplicacion/firma/certificado-de-firma.js';
+import { AccesoDianNoConfigurado } from '../../../src/modulos/facturacion/aplicacion/envio/acceso-dian-no-configurado.js';
 import type { ProveedorDeAccesoDian } from '../../../src/modulos/facturacion/aplicacion/puertos/proveedor-de-acceso-dian.js';
+import type { ProveedorDeConfiguracionDian } from '../../../src/modulos/facturacion/aplicacion/puertos/proveedor-de-configuracion-dian.js';
+import type { ClaseDeDocumento } from '../../../src/modulos/facturacion/dominio/index.js';
 import type { RepositoriosDeVenta } from '../../../src/modulos/facturacion/aplicacion/puertos/repositorios-de-venta.js';
 import { CatalogoDeVentaConCatalogo } from '../../../src/modulos/facturacion/infraestructura/catalogo/catalogo-de-venta-con-catalogo.js';
 import { FirmadorXadesDian } from '../../../src/modulos/facturacion/infraestructura/dian-directa/firma/firmador-xades-dian.js';
@@ -36,19 +39,26 @@ import { CONTRASENA_DE_PRUEBA, juegoDeCertificados } from '../../recursos/firma/
 export const NIT_DE_PRUEBA = '900373076';
 const juego = juegoDeCertificados();
 
-export const configuracionDePrueba = {
-  para: () =>
-    Promise.resolve({
+/** El software de factura siempre; el del tiquete POS (HU-06.02) solo si `posHabilitado`. */
+export class ConfiguracionDePrueba implements ProveedorDeConfiguracionDian {
+  posHabilitado = false;
+  para(_contexto: unknown, clase: ClaseDeDocumento) {
+    if (clase === 'pos' && !this.posHabilitado) return Promise.reject(new AccesoDianNoConfigurado());
+    return Promise.resolve({
       configuracion: {
         ambiente: 'habilitacion' as const,
-        claveTecnica: 'fc8eac422eba16e22ffd8c6f94b3f40a6e38162c',
-        idSoftware: 'software-de-prueba',
-        pinSoftware: '12345',
+        claveTecnica: clase === 'factura' ? 'fc8eac422eba16e22ffd8c6f94b3f40a6e38162c' : '',
+        idSoftware: clase === 'factura' ? 'software-de-prueba' : 'software-pos-de-prueba',
+        pinSoftware: clase === 'factura' ? '12345' : '67890',
         nitProveedorSoftware: NIT_DE_PRUEBA,
+        fabricante: clase === 'pos' ? { nombre: 'Equipo CONTA', razonSocial: 'CONTA S.A.S.', nombreDelSoftware: 'CONTA' } : null,
       },
       nitDelFacturador: NIT_DE_PRUEBA,
-    }),
-};
+    });
+  }
+}
+
+export const configuracionDePrueba = new ConfiguracionDePrueba();
 
 /** Acceso que se puede apagar para simular que la firma falla. */
 export class AccesoDePrueba implements ProveedorDeAccesoDian {
@@ -65,6 +75,8 @@ export interface Escenario {
   readonly consultar: ConsultarVenta;
   readonly reparador: CompletarEmisionesPendientes;
   readonly acceso: AccesoDePrueba;
+  /** HU-06.02: se enciende `posHabilitado` para vender con tiquete POS. */
+  readonly configuracion: ConfiguracionDePrueba;
   readonly reloj: RelojDePrueba;
   readonly productos: readonly string[];
   readonly uow: UnidadDeTrabajoPostgres<RepositoriosDeVenta>;
@@ -100,10 +112,11 @@ export async function escenario(baseDeDatos: BaseDeDatos, rango = { desde: 99000
   const deCatalogo = new UnidadDeTrabajoPostgres<RepositoriosDeCatalogo>(baseDeDatos, (e) => ({ clientes: new RepositorioClientesPostgres(e), productos: new RepositorioProductosPostgres(e) }));
   const productos = await sembrarProductos(deCatalogo, miembro, reloj.ahora());
   const acceso = new AccesoDePrueba();
+  const configuracion = new ConfiguracionDePrueba();
   const despertador = { programar: () => undefined };
   const emitir = new EmitirVenta(
     uow,
-    configuracionDePrueba,
+    configuracion,
     acceso,
     new GenerarXmlFactura(new GeneradorUblDian()),
     new FirmarDocumentoElectronico(new FirmadorXadesDian(reloj)),
@@ -113,10 +126,11 @@ export async function escenario(baseDeDatos: BaseDeDatos, rango = { desde: 99000
   const catalogo = new CatalogoDeVentaConCatalogo(new ObtenerParaVender(deCatalogo));
   return {
     miembro,
-    registrar: new RegistrarVenta(uow, catalogo, configuracionDePrueba, emitir, reloj, despertador),
+    registrar: new RegistrarVenta(uow, catalogo, configuracion, emitir, reloj, despertador),
     consultar: new ConsultarVenta(uow),
     reparador: new CompletarEmisionesPendientes(new EmisionesPendientesPostgres(baseDeDatos), emitir, reloj),
     acceso,
+    configuracion,
     reloj,
     productos,
     uow,

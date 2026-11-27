@@ -2,6 +2,7 @@
 
 import 'dart:typed_data';
 
+import 'documento_de_la_venta.dart';
 import 'venta.dart';
 
 /// El PDF de una factura aceptada, listo para compartir como archivo (HU-06.08). No hay enlace público: el PDF
@@ -34,6 +35,7 @@ final class VentaReciente {
     required this.comprador,
     required this.total,
     required this.estado,
+    this.documento = DocumentoDeLaVenta.factura,
   });
 
   final String id;
@@ -42,4 +44,7 @@ final class VentaReciente {
   final String comprador;
   final String total;
   final EstadoDeLaVenta estado;
+
+  /// HU-06.02: factura electrónica o tiquete POS electrónico.
+  final DocumentoDeLaVenta documento;
 }

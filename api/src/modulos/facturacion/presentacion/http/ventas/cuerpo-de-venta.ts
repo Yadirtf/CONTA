@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { MEDIOS_DE_PAGO, type MedioDePago } from '../../../dominio/index.js';
+import { MEDIOS_DE_PAGO, type MedioDePago, PREFERENCIAS_DE_DOCUMENTO, type PreferenciaDeDocumento } from '../../../dominio/index.js';
 
 export class LineaPedida {
   @ApiProperty({ format: 'uuid', description: 'Producto del catálogo de la empresa: el precio y el IVA salen de ahí.' })
@@ -22,4 +22,12 @@ export class NuevaVenta {
 
   @ApiProperty({ enum: MEDIOS_DE_PAGO, description: 'Nequi y Daviplata van como transferencia.' })
   readonly medioDePago!: MedioDePago;
+
+  @ApiPropertyOptional({
+    enum: PREFERENCIAS_DE_DOCUMENTO,
+    default: 'automatico',
+    description:
+      'automatico: tiquete POS electrónico si es a consumidor final, el negocio lo tiene habilitado y no pasa de 5 UVT sin impuestos; si no, factura. factura: el comprador pidió factura electrónica.',
+  })
+  readonly documento?: PreferenciaDeDocumento;
 }

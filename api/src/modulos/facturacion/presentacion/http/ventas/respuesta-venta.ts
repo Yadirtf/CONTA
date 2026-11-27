@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import type { VentaConEstado } from '../../../aplicacion/consultas/consultar-venta.js';
-import type { EstadoDeLaVenta } from '../../../dominio/index.js';
+import { CLASES_DE_DOCUMENTO, type ClaseDeDocumento, type EstadoDeLaVenta, NOMBRE_CORTO_DEL_DOCUMENTO } from '../../../dominio/index.js';
 
 const ESTADOS: readonly EstadoDeLaVenta[] = ['pendiente', 'aceptada', 'rechazada'];
 
@@ -17,8 +17,14 @@ export class RespuestaVenta {
   @ApiProperty({ format: 'uuid' })
   readonly id!: string;
 
-  @ApiProperty({ example: 'SETP990000123', description: 'Número de la factura: prefijo y consecutivo de la resolución.' })
+  @ApiProperty({ example: 'SETP990000123', description: 'Número del documento: prefijo y consecutivo de la resolución.' })
   readonly numero!: string;
+
+  @ApiProperty({ enum: CLASES_DE_DOCUMENTO, description: 'factura (factura electrónica) o pos (tiquete POS electrónico).' })
+  readonly documento!: ClaseDeDocumento;
+
+  @ApiProperty({ example: 'Tiquete POS electrónico', description: 'El nombre del documento para mostrar.' })
+  readonly nombreDelDocumento!: string;
 
   @ApiProperty({ example: '2026-11-27T15:04:05.000Z' })
   readonly emitidaEn!: string;
@@ -47,6 +53,8 @@ export function respuestaDeVenta({ venta, estado, motivos, demorada }: VentaConE
   return {
     id: datos.id,
     numero: datos.numero.aTexto(),
+    documento: datos.clase,
+    nombreDelDocumento: NOMBRE_CORTO_DEL_DOCUMENTO[datos.clase],
     emitidaEn: datos.emitidaEn.toISOString(),
     comprador: datos.comprador.razonSocial,
     total: venta.total.aTexto(),
