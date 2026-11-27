@@ -73,6 +73,19 @@ describe('ProcesarEnvioDian (HU-02.03)', () => {
     expect(p.despertador.programar).toHaveBeenCalledWith(p.envio.proximoIntentoEn);
   });
 
+  it('al aceptarse avisa en la misma transacción (HU-06.08: correo al comprador)', async () => {
+    const p = procesador({ enviarSetDePruebas: () => Promise.resolve({ tipo: 'recibido', zipKey: 'zip-1' }) });
+    await p.procesar.ejecutar({ empresaId, envioId: 'e1' });
+    expect(p.avisados).toEqual([]);
+    const aceptada = RespuestaDeLaDian.de({ valida: true, codigo: '00', descripcion: 'ok', mensajes: [] });
+    const q = procesador({ consultarValidacion: () => Promise.resolve(aceptada) });
+    q.envio.recibido('zip-1', T0);
+    Object.assign(q.envio, EnvioDian.reconstituir({ ...q.envio.instantanea(), proximoIntentoEn: T0 }));
+    await q.procesar.ejecutar({ empresaId, envioId: 'e1' });
+    expect(q.envio.estado).toBe('aceptado');
+    expect(q.avisados).toEqual(['e1']);
+  });
+
   it('una falla de comunicación cuenta como intento y se reintenta más tarde', async () => {
     const p = procesador({ enviarSetDePruebas: () => Promise.reject(new FallaDeComunicacionDian('tiempo de espera agotado')) });
     await p.procesar.ejecutar({ empresaId, envioId: 'e1' });

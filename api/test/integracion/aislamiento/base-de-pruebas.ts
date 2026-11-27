@@ -18,6 +18,9 @@ export const hayDueno = urlDueno !== undefined && urlDueno !== '';
 
 /** Tablas que se limpian, en orden, al borrar lo que sembró el dueño para una empresa de prueba. */
 const SEMBRADAS = [
+  'conta.intentos_correo_de_factura',
+  'conta.correos_de_factura',
+  'conta.respuestas_de_aceptacion',
   'conta_sistema.cola_emision_ventas',
   'conta.emisiones_de_venta',
   'conta.lineas_de_venta',

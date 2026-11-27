@@ -189,7 +189,19 @@ describe('catálogo de aislamiento multiempresa (integración)', () => {
         [ESQUEMAS_PROPIOS],
       );
       expect(vistas.map((v) => v.nombre), 'Vistas que corren como su dueño').toEqual([]);
-      expect(funciones.map((f) => f.nombre), 'Funciones SECURITY DEFINER').toEqual([]);
+      // Única excepción (ADR-0015): toma ids de correos vencidos de todas las empresas sin dar a conta_api una tabla
+      // sin RLS. No devuelve datos y fija la reserva con la hora de la base; se revisa su definición abajo.
+      expect(funciones.map((f) => f.nombre), 'Funciones SECURITY DEFINER').toEqual(['conta_sistema.tomar_correos_vencidos']);
+    });
+
+    it('la función SECURITY DEFINER de los correos fija su search_path y solo devuelve ids', async () => {
+      const [f] = await consultar<{ config: string[] | null; resultado: string }>(
+        `SELECT p.proconfig AS config, pg_get_function_result(p.oid) AS resultado FROM pg_proc p
+           JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'conta_sistema' AND p.proname = 'tomar_correos_vencidos'`,
+        [],
+      );
+      expect(f?.config).toEqual(['search_path=pg_catalog, pg_temp']);
+      expect(f?.resultado).toBe('TABLE(empresa_id uuid, venta_id uuid)');
     });
   });
 });

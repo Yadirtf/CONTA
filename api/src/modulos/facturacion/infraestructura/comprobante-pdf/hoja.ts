@@ -13,5 +13,5 @@ export const LINEA = '#BBBBBB';
  * otro carácter (un emoji en el nombre de un producto) se cambia por «?» en vez de romper el dibujo.
  */
 export function imprimible(texto: string): string {
-  return texto.replace(/[^\u0020-\u007e\u00a0-\u00ff]/g, '?');
+  return texto.replace(/[^\u0020-\u007e\u00a0-\u00ff]/gu, '?');
 }

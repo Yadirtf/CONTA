@@ -708,6 +708,32 @@ paths:
       tags:
         - productos
   /ventas:
+    get:
+      operationId: VentasController_listar
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RespuestaVentaReciente"
+        "403":
+          description: "El rol no tiene el permiso (permiso.denegado: «No tienes permiso»)."
+      security:
+        - bearer: []
+      summary: "«Mis ventas»: las 50 más recientes con su estado ante la DIAN, para
+        volver a compartir una."
+      tags:
+        - ventas
     post:
       operationId: VentasController_crear
       parameters:
@@ -781,6 +807,43 @@ paths:
       security:
         - bearer: []
       summary: Una venta con su estado ante la DIAN, en palabras del modo simple.
+      tags:
+        - ventas
+  /ventas/{id}/comprobante:
+    get:
+      operationId: ComprobanteController_obtener
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: El PDF (application/pdf).
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "403":
+          description: El rol no tiene el permiso (permiso.denegado).
+        "404":
+          description: No es una venta de este negocio (venta.no-encontrada).
+        "409":
+          description: Todavía va para la DIAN (comprobante.en-camino) o la rechazó
+            (comprobante.rechazado).
+        "429":
+          description: Muchos comprobantes seguidos (comprobante.limite).
+      security:
+        - bearer: []
+      summary: El PDF de la factura con su QR, cuando la DIAN ya la aceptó.
       tags:
         - ventas
 info:
@@ -1482,6 +1545,39 @@ components:
         - nombre
         - precio
         - tipoDeIva
+    RespuestaVentaReciente:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        numero:
+          type: string
+          example: SETP990000123
+        emitidaEn:
+          type: string
+          example: 2026-11-27T15:04:05.000Z
+        comprador:
+          type: string
+          example: Consumidor final
+        total:
+          type: string
+          example: "7500.00"
+          description: Lo que pagó el comprador, con IVA.
+        estado:
+          type: string
+          enum:
+            - pendiente
+            - aceptada
+            - rechazada
+          description: pendiente (va a la DIAN), aceptada (se puede compartir) o rechazada.
+      required:
+        - id
+        - numero
+        - emitidaEn
+        - comprador
+        - total
+        - estado
     LineaPedida:
       type: object
       properties:

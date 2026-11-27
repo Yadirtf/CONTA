@@ -92,3 +92,16 @@ describe('EnvioDian: máquina de estados del envío (HU-02.03)', () => {
     expect(r.mensajes).toEqual(['a']);
   });
 });
+
+describe('RespuestaDeLaDian con el ApplicationResponse (HU-06.08)', () => {
+  const de = (documento: string | null | undefined) =>
+    RespuestaDeLaDian.de({ valida: true, codigo: '00', descripcion: 'ok', mensajes: [], documento }).documento;
+
+  it('lo guarda en base64 sin espacios y descarta uno mal formado sin cambiar el resultado', () => {
+    expect(de('PEFw\ncGxp')).toBe('PEFwcGxp');
+    expect(de('<ApplicationResponse/>')).toBeNull();
+    expect(de('')).toBeNull();
+    expect(de(undefined)).toBeNull();
+    expect(RespuestaDeLaDian.de({ valida: true, codigo: '00', descripcion: 'ok', mensajes: [], documento: '<x>' }).resultado).toBe('aceptado');
+  });
+});
