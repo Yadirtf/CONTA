@@ -16,6 +16,11 @@ export interface FabricaDeFilas {
    * exige entonces que el cambio se niegue por permisos, una garantía más fuerte que la de RLS.
    */
   readonly empresaInmutable?: boolean;
+  /**
+   * true si conta_api solo lee la tabla (la llena el comando configurar-facturacion como conta_app). La fila se
+   * inserta entonces con la conexión del dueño (DATABASE_URL_DUENO), se confirma y se borra al terminar.
+   */
+  readonly delDueno?: boolean;
   insertar(cliente: pg.Client, empresaId: string): Promise<string>;
 }
 
@@ -50,6 +55,63 @@ export async function crearUsuario(cliente: pg.Client): Promise<string> {
 export async function crearEmpresa(cliente: pg.Client, empresaId: string): Promise<void> {
   await comoEmpresa(cliente, empresaId);
   await cliente.query('INSERT INTO conta.empresas (id, razon_social) VALUES ($1, $2)', [empresaId, `Empresa ${empresaId}`]);
+}
+
+/** Datos fiscales de la empresa (HU-06.01). Con la conexión del dueño. */
+export async function crearDatosFiscales(dueno: pg.Client, empresaId: string): Promise<string> {
+  await dueno.query(
+    `INSERT INTO conta.datos_fiscales (empresa_id, nit, razon_social, tipo_de_persona, responsabilidades_fiscales,
+       responsable_de_iva, codigo_municipio, ciudad, departamento, direccion)
+     VALUES ($1, '900373076', 'Tienda de Prueba S.A.S.', 'juridica', '{O-13}', true, '11001', 'Bogotá, D.C.', 'Bogotá', 'Calle 1 # 2-3')`,
+    [empresaId],
+  );
+  return empresaId;
+}
+
+/** Resolución de numeración de la empresa (HU-06.01). Con la conexión del dueño. */
+export async function crearResolucion(dueno: pg.Client, empresaId: string, desde = 990000000, hasta = 995000000): Promise<string> {
+  const id = nuevoId();
+  await dueno.query(
+    `INSERT INTO conta.resoluciones_de_numeracion (empresa_id, id, numero, prefijo, desde, hasta, vigente_desde, vigente_hasta, siguiente)
+     VALUES ($1, $2, '18760000001', 'SETP', $3, $4, '2019-01-19', '2030-01-19', $3)`,
+    [empresaId, id, desde, hasta],
+  );
+  return id;
+}
+
+const COMPRADOR_DE_PRUEBA = JSON.stringify({
+  tipoIdentificacion: '13',
+  numero: '222222222222',
+  razonSocial: 'Consumidor final',
+  tipoDePersona: 'natural',
+});
+
+/**
+ * Inserta una venta de una línea en una empresa que ya tiene resolución, con un número reservado como lo hace la
+ * API (los disparadores lo exigen). La transacción queda como esa empresa.
+ */
+export async function insertarVenta(cliente: pg.Client, empresaId: string, resolucionId: string): Promise<string> {
+  await comoEmpresa(cliente, empresaId);
+  const creadaPor = await crearUsuario(cliente);
+  const id = nuevoId();
+  const { rows } = await cliente.query<{ consecutivo: string }>(
+    `UPDATE conta.resoluciones_de_numeracion SET siguiente = siguiente + 1 WHERE empresa_id = $1 AND id = $2
+     RETURNING siguiente - 1 AS consecutivo`,
+    [empresaId, resolucionId],
+  );
+  await cliente.query(
+    `INSERT INTO conta.ventas (empresa_id, id, huella, resolucion_id, prefijo, consecutivo, emitida_en, medio_de_pago,
+       comprador, base, iva, total, creada_por)
+     VALUES ($1, $2, $3, $4, 'SETP', $5, now(), 'efectivo', $6, 2100.84, 399.16, 2500, $7)`,
+    [empresaId, id, 'b'.repeat(64), resolucionId, rows[0]?.consecutivo, COMPRADOR_DE_PRUEBA, creadaPor],
+  );
+  await cliente.query(
+    `INSERT INTO conta.lineas_de_venta (empresa_id, venta_id, orden, producto_id, descripcion, unidad, cantidad, precio,
+       tipo_de_iva, tarifa_iva, base, iva, total)
+     VALUES ($1, $2, 1, $3, 'Gaseosa', '94', 1, 2500, 'gravado', '19', 2100.84, 399.16, 2500)`,
+    [empresaId, id, nuevoId()],
+  );
+  return id;
 }
 
 export const FABRICAS: Readonly<Record<string, FabricaDeFilas>> = {
@@ -128,6 +190,61 @@ export const FABRICAS: Readonly<Record<string, FabricaDeFilas>> = {
         [empresaId, id, envioId],
       );
       return id;
+    },
+  },
+  'conta.datos_fiscales': {
+    columnaEmpresa: 'empresa_id',
+    columnaId: 'empresa_id',
+    empresaInmutable: true,
+    delDueno: true,
+    async insertar(dueno, empresaId) {
+      await dueno.query('INSERT INTO conta.empresas (id, razon_social) VALUES ($1, $2)', [empresaId, `Empresa ${empresaId}`]);
+      return crearDatosFiscales(dueno, empresaId);
+    },
+  },
+  'conta.resoluciones_de_numeracion': {
+    columnaEmpresa: 'empresa_id',
+    columnaId: 'id',
+    empresaInmutable: true,
+    delDueno: true,
+    async insertar(dueno, empresaId) {
+      await dueno.query('INSERT INTO conta.empresas (id, razon_social) VALUES ($1, $2)', [empresaId, `Empresa ${empresaId}`]);
+      return crearResolucion(dueno, empresaId);
+    },
+  },
+  // Las ventas y sus hijas necesitan una resolución, que conta_api no puede crear: se insertan como dueño.
+  'conta.ventas': {
+    columnaEmpresa: 'empresa_id',
+    columnaId: 'id',
+    empresaInmutable: true,
+    delDueno: true,
+    async insertar(dueno, empresaId) {
+      await dueno.query('INSERT INTO conta.empresas (id, razon_social) VALUES ($1, $2)', [empresaId, `Empresa ${empresaId}`]);
+      return insertarVenta(dueno, empresaId, await crearResolucion(dueno, empresaId));
+    },
+  },
+  'conta.lineas_de_venta': {
+    columnaEmpresa: 'empresa_id',
+    columnaId: 'venta_id',
+    empresaInmutable: true,
+    delDueno: true,
+    async insertar(dueno, empresaId) {
+      await dueno.query('INSERT INTO conta.empresas (id, razon_social) VALUES ($1, $2)', [empresaId, `Empresa ${empresaId}`]);
+      // insertarVenta ya deja su línea (orden 1): toda venta tiene al menos una.
+      return insertarVenta(dueno, empresaId, await crearResolucion(dueno, empresaId));
+    },
+  },
+  'conta.emisiones_de_venta': {
+    columnaEmpresa: 'empresa_id',
+    columnaId: 'venta_id',
+    empresaInmutable: true,
+    delDueno: true,
+    async insertar(dueno, empresaId) {
+      await dueno.query('INSERT INTO conta.empresas (id, razon_social) VALUES ($1, $2)', [empresaId, `Empresa ${empresaId}`]);
+      const ventaId = await insertarVenta(dueno, empresaId, await crearResolucion(dueno, empresaId));
+      const envioId = await insertarEnvioDian(dueno, empresaId);
+      await dueno.query('INSERT INTO conta.emisiones_de_venta (empresa_id, venta_id, envio_id) VALUES ($1, $2, $3)', [empresaId, ventaId, envioId]);
+      return ventaId;
     },
   },
 };

@@ -9,6 +9,7 @@ import 'funcionalidades/empresas/datos/repositorio_de_empresas_http.dart';
 import 'funcionalidades/miembros/datos/repositorio_de_miembros_http.dart';
 import 'funcionalidades/productos/datos/repositorio_de_productos_http.dart';
 import 'funcionalidades/salud/datos/repositorio_salud_http.dart';
+import 'funcionalidades/ventas/datos/repositorio_de_ventas_http.dart';
 import 'funcionalidades/verificacion/datos/repositorio_de_verificacion_http.dart';
 import 'nucleo/configuracion.dart';
 
@@ -22,6 +23,7 @@ void main() {
       miembros: RepositorioDeMiembrosHttp(Configuracion.urlApi, token: token),
       clientes: RepositorioDeClientesHttp(Configuracion.urlApi, token: token),
       productos: RepositorioDeProductosHttp(Configuracion.urlApi, token: token),
+      ventas: RepositorioDeVentasHttp(Configuracion.urlApi, token: token),
       verificacion: RepositorioDeVerificacionHttp(Configuracion.urlApi, token: token),
       repositorioSalud: RepositorioSaludHttp(Configuracion.urlApi),
     ),

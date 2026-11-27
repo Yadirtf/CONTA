@@ -23,6 +23,11 @@ export class RepositorioClientesPostgres implements RepositorioClientes {
     return filas.map(clienteDeFila);
   }
 
+  async conId(id: string): Promise<Cliente | null> {
+    const [fila] = await this.ejecutor.select().from(clientes).where(eq(clientes.id, id)).limit(1);
+    return fila ? clienteDeFila(fila) : null;
+  }
+
   async conIdentificacion(identificacion: Identificacion): Promise<Cliente | null> {
     const [fila] = await this.ejecutor
       .select()

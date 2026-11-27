@@ -4,6 +4,9 @@
 # compila la API y la arranca en http://localhost:3999 con celulares de prueba de código fijo.
 # Nunca apunta a Render, Neon ni a ningún servicio de terceros: todo queda en esta máquina.
 #
+# Las variables DIAN_HAB_* del llamador pasan a la API (para facturar con una empresa local); la DIAN queda
+# bloqueada por sin-dian.cjs, así que ninguna factura sale de esta máquina.
+#
 # Uso: herramientas/ataque/levantar-entorno-local.sh            (levanta)
 #      herramientas/ataque/levantar-entorno-local.sh --detener  (apaga API y base)
 set -euo pipefail
@@ -35,8 +38,9 @@ sleep 2
 
 PSQL="psql -h localhost -p $PUERTO_PG -U postgres -v ON_ERROR_STOP=1 -qtA"
 if [ -z "$($PSQL -c "select 1 from pg_roles where rolname = 'conta_api'")" ]; then
-  # Claves solo locales y desechables: esta base no guarda nada real.
-  $PSQL -c "create role conta_app login password 'local-app' createrole"
+  # Claves solo locales y desechables: esta base no guarda nada real. conta_app lleva BYPASSRLS como en Neon:
+  # siembra lo que conta_api solo lee (datos fiscales y resoluciones, HU-06.01).
+  $PSQL -c "create role conta_app login password 'local-app' createrole bypassrls"
   $PSQL -c "create role conta_api login password 'local-api' nobypassrls"
   $PSQL -c "create database conta owner conta_app"
 fi
@@ -53,7 +57,7 @@ DATABASE_URL="postgres://conta_api:local-api@localhost:$PUERTO_PG/conta" \
   SECRETO_SEGUNDO_FACTOR="clave-local-desechable-del-segundo-factor-ataque" \
   TOKEN_TRABAJOS_INTERNOS="token-local-desechable-de-trabajos-internos" \
   PORT="$PUERTO_API" \
-  nohup node dist/main.js > "$DATOS/api.log" 2>&1 &
+  nohup node -r "$RAIZ/herramientas/ataque/sin-dian.cjs" dist/main.js > "$DATOS/api.log" 2>&1 &
 echo $! > "$DATOS/api.pid"
 
 for _ in $(seq 1 30); do

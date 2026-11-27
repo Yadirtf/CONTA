@@ -23,7 +23,8 @@
     "contrato": "node scripts/generar-contrato.mjs",
     "tipos": "tsc --noEmit -p tsconfig.json",
     "dependencias": "depcruise src --config .dependency-cruiser.cjs --output-type err-long",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "facturacion:configurar": "node scripts/configurar-facturacion.mjs"
   },
   "dependencies": {
     "@nestjs/common": "12.6.0",

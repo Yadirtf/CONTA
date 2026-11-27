@@ -51,7 +51,8 @@ export class GeneradorUblDian implements GeneradorDeDocumentoElectronico {
           participanteUbl('cac:AccountingSupplierParty', factura.emisor, factura.numero.prefijo),
           participanteUbl('cac:AccountingCustomerParty', factura.adquirente),
           formaDePagoUbl(factura),
-          totalDeIva(factura.totalIva, factura.subtotalesIva),
+          // Si todo lo vendido está excluido del IVA, la factura no lleva TaxTotal de IVA.
+          factura.subtotalesIva.length > 0 && totalDeIva(factura.totalIva, factura.subtotalesIva),
           totalesUbl(factura),
           ...factura.lineas.map(lineaUbl),
         ],

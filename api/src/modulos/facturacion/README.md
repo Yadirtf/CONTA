@@ -51,6 +51,32 @@ Decisión en [ADR-0008](../../../../Docs/decisiones/0008-envio-dian-con-cola-en-
 
 **Lo que nunca cambia:** `conta_api` no puede borrar envíos ni intentos. Sobre `envios_dian` solo puede actualizar las columnas de estado, así que el XML firmado, el CUFE y el número quedan fijos. Los intentos solo se insertan.
 
+## Ventas con factura (HU-06.01)
+
+La venta de mostrador en 3 toques. La app manda solo ids, cantidades en texto y el medio de pago; el precio y el IVA salen del catálogo (`ObtenerParaVender`, la API pública de `catalogo`).
+
+1. `RegistrarVenta` revisa el permiso, calcula la huella del pedido y, si el id ya existe, devuelve esa venta (mismo pedido) o rechaza (otro pedido, `venta.id-en-uso`).
+2. Antes de gastar un número exige la configuración DIAN y lee el catálogo.
+3. En **una transacción corta** reserva el consecutivo (`UPDATE … RETURNING`, que además pone en fila las ventas de la empresa), revisa los topes y guarda venta, líneas y emisión pendiente. Si algo falla, se deshace todo, número incluido: no quedan huecos ni repetidos.
+4. Fuera de la transacción, `EmitirVenta` arma la factura (siempre la misma para la misma venta, así que el CUFE no cambia), la firma y la entrega a `SolicitarEnvioDian`. Si falla, `CompletarEmisionesPendientes` la retoma desde `conta_sistema.cola_emision_ventas` con el despertador o el endpoint interno.
+
+| Capa | Archivo | Responsabilidad |
+| --- | --- | --- |
+| `dominio/ventas/` | `pedido-de-venta.ts` | Forma del pedido: UUID en minúsculas, 1 a 100 productos sin repetir, medio de pago conocido; texto canónico para la huella. |
+| | `linea-de-venta.ts` | Cantidad en texto con hasta 6 decimales; total = precio con IVA × cantidad, separado en base e IVA exactos. |
+| | `venta.ts` | La venta inmutable y su `aFactura`, con `LineaDeFactura.desdeDesglose` (sin recalcular el IVA) y forma de pago de contado. |
+| | `medio-de-pago.ts`, `estado-de-la-venta.ts`, `limites-de-ventas.ts`, `articulo-del-catalogo.ts` | Códigos DIAN de pago (10, 47, 48, 49), estado con palabras de la app, topes y lo que la venta toma del catálogo. |
+| `aplicacion/comandos/` | `registrar-venta.ts`, `emitir-venta.ts`, `completar-emisiones-pendientes.ts` | Los pasos de arriba. |
+| `aplicacion/consultas/` | `consultar-venta.ts` | La venta con su estado y, si la DIAN la rechazó, los motivos. |
+| `aplicacion/ventas/` | `errores-de-venta.ts`, `huella-del-pedido.ts`, `lineas-del-pedido.ts` | Códigos estables, SHA-256 del pedido y unión del pedido con el catálogo. |
+| `aplicacion/puertos/` | `repositorio-de-ventas.ts`, `numeracion-de-la-empresa.ts`, `cola-de-emisiones.ts`, `catalogo-de-venta.ts`, `proveedor-de-configuracion-dian.ts` | Puertos. |
+| `infraestructura/persistencia/ventas/` | tablas, repositorio, numeración y colas | `conta.ventas`, `lineas_de_venta` y `emisiones_de_venta` solo se insertan; `datos_fiscales` y `resoluciones_de_numeracion` solo se leen, salvo `siguiente`, que un trigger impide bajar. |
+| `infraestructura/catalogo/` | `catalogo-de-venta-con-catalogo.ts` | Traduce productos y compradores del catálogo; sin comprador, consumidor final. |
+| `infraestructura/acceso-dian/` | `configuracion-dian-desde-entorno.ts` | Software, PIN y NIT de una sola empresa desde `DIAN_HAB_*`, hasta EP-07. |
+| `presentacion/http/ventas/` | `ventas.controller.ts`, `lectura-de-venta.ts`, `respuesta-venta.ts`, `traductor-de-errores-de-ventas.ts` | `POST /ventas` (201 nueva, 200 repetida) y `GET /ventas/:id`. Un campo que no se espera es 400. |
+
+Para dejar una empresa lista: `npm run facturacion:configurar` ([entorno de pruebas, 4.6](../../../../Docs/despliegue/entorno-de-pruebas.md)).
+
 ## Reglas del anexo que se aplican
 
 - **CUFE** (11.2): `SHA-384(NumFac + FecFac + HorFac + ValFac + 01 + ValImp1 + 04 + ValImp2 + 03 + ValImp3 + ValTot + NitFE + NumAdq + ClTec + TipoAmbiente)`, con los mismos textos que quedan en el XML. La prueba reproduce el ejemplo oficial de la sección 11.2.1.
@@ -83,12 +109,16 @@ El XML se escribe sin indentación ni espacios y con el orden del esquema, siemp
 - `infraestructura/dian-directa/*/*.spec.ts`: escritor de XML y CUFE.
 - `test/unitarias/facturacion/envio/`, `servicio-web/`, `cola/` y `presentacion/`: máquina de estados, casos de uso con dobles en memoria, sobre firmado verificado con `xmlsec1`, ZIP, nombres, lectura de respuestas grabadas, cliente HTTP con transporte falso, despertador y guarda.
 - `test/integracion/envio-dian/`: contra PostgreSQL con `conta_api`. Cubre aceptado y rechazado, idempotencia, dos procesadores a la vez (una sola llamada a la DIAN), reservas, intentos, que no se puede editar ni borrar, y que no se puede encolar un trabajo de otra empresa.
+- `test/unitarias/facturacion/ventas/` y `linea-desde-desglose.spec.ts`: pedido, líneas, medios de pago, estado y las reglas de `RegistrarVenta` con dobles en memoria (topes, sin configuración, otro NIT, rango agotado, reintentos).
+- `test/integracion/ventas/`: contra PostgreSQL con la firma real. Cubre el primer número de la resolución, reintentos sin gastar números, 12 ventas a la vez con números seguidos, el mismo id 5 veces a la vez (una sola venta), la reparación tras una firma fallida, el rango agotado, el producto de otra empresa y que `conta_api` no edita ni borra ventas ni baja el consecutivo.
+- `test/e2e/ventas.e2e-spec.ts`: la API completa con el cajero, campos de más, otra empresa y una empresa sin habilitar.
 - `test/habilitacion/`: envío **real** al set de pruebas. Solo corre en el workflow manual «Habilitación DIAN» con el entorno `SECRETOS`.
 
 ## Qué falta, y en qué historia
 
 - Custodia del certificado cifrada con KMS, NIT del certificado frente al del emisor, y auditoría de cada uso: HU-07.02.
 - Adaptador durable de colas definitivo (reemplaza la tabla y el despertador): HU-06.04.
-- Envío en producción (`SendBillAsync`) y numeración real: HU-06.01 y HU-06.07.
-- Persistencia, endpoint y numeración automática: HU-06.01 y HU-06.07.
+- Envío en producción (`SendBillAsync`): HU-06.04 con la habilitación (EP-07). Hoy el envío va al set de pruebas.
+- Alertas de rango por agotarse: HU-06.07. PDF con QR por WhatsApp y correo: HU-06.08.
+- Configuración DIAN y datos fiscales por empresa desde la consola, en lugar del entorno y el comando: EP-07.
 - INC, ICA, descuentos, cargos, retenciones, otras monedas y notas crédito y débito: EP-06.

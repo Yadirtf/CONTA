@@ -46,6 +46,7 @@ export class CatalogoEnMemoria implements UnidadDeTrabajo<RepositoriosDeCatalogo
         return Promise.resolve();
       },
       conIdentificacion: (identificacion) => Promise.resolve(conIdentificacion(identificacion)),
+      conId: (id) => Promise.resolve(deLaEmpresa().find((c) => c.id === id) ?? null),
       contarCreadosDesde: (fecha) => Promise.resolve(deLaEmpresa().filter((c) => c.datos.creadoEn >= fecha).length),
       agregarSiNoExiste: (cliente) => {
         this.antesDeInsertar?.();

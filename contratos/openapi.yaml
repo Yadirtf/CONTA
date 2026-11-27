@@ -707,6 +707,82 @@ paths:
         guardado (200).
       tags:
         - productos
+  /ventas:
+    post:
+      operationId: VentasController_crear
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NuevaVenta"
+      responses:
+        "200":
+          description: "Ya existía con ese id y ese pedido: la guardada, sin cambios."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaVenta"
+        "201":
+          description: Guardada con su número; la factura va a la DIAN.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaVenta"
+        "403":
+          description: "El rol no tiene el permiso (permiso.denegado: «No tienes permiso»)."
+        "409":
+          description: El id es de otra venta (venta.id-en-uso), el negocio no está
+            habilitado (facturacion.no-habilitada) o no hay números
+            (facturacion.sin-numeracion).
+        "422":
+          description: Un producto o el comprador no son del negocio.
+        "429":
+          description: Tope de ventas del día de la empresa o de la persona.
+      security:
+        - bearer: []
+      summary: Registra una venta y emite su factura. Repetir el mismo id con lo mismo
+        devuelve la guardada (200).
+      tags:
+        - ventas
+  /ventas/{id}:
+    get:
+      operationId: VentasController_obtener
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+        - name: id
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RespuestaVenta"
+        "403":
+          description: "El rol no tiene el permiso (permiso.denegado: «No tienes permiso»)."
+        "404":
+          description: No es una venta de este negocio (venta.no-encontrada).
+      security:
+        - bearer: []
+      summary: Una venta con su estado ante la DIAN, en palabras del modo simple.
+      tags:
+        - ventas
 info:
   title: CONTA API
   description: "API única de CONTA: facturación electrónica DIAN, contabilidad y
@@ -1406,3 +1482,97 @@ components:
         - nombre
         - precio
         - tipoDeIva
+    LineaPedida:
+      type: object
+      properties:
+        productoId:
+          type: string
+          format: uuid
+          description: "Producto del catálogo de la empresa: el precio y el IVA salen de
+            ahí."
+        cantidad:
+          type: string
+          example: "2"
+          description: Mayor que cero, hasta 1.000.000, con punto decimal y hasta 6
+            decimales.
+      required:
+        - productoId
+        - cantidad
+    NuevaVenta:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: "Lo elige la app: repetir la petición con el mismo id no crea dos
+            ventas."
+        lineas:
+          description: De 1 a 100 productos distintos.
+          type: array
+          items:
+            $ref: "#/components/schemas/LineaPedida"
+        compradorId:
+          type: object
+          format: uuid
+          nullable: true
+          description: "Comprador del catálogo. Si no viene: consumidor final."
+        medioDePago:
+          type: string
+          enum:
+            - efectivo
+            - tarjeta-debito
+            - tarjeta-credito
+            - transferencia
+          description: Nequi y Daviplata van como transferencia.
+      required:
+        - id
+        - lineas
+        - medioDePago
+    RespuestaVenta:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        numero:
+          type: string
+          example: SETP990000123
+          description: "Número de la factura: prefijo y consecutivo de la resolución."
+        emitidaEn:
+          type: string
+          example: 2026-11-27T15:04:05.000Z
+        comprador:
+          type: string
+          example: Consumidor final
+        total:
+          type: string
+          example: "7500.00"
+          description: Lo que pagó el comprador, con IVA.
+        iva:
+          type: string
+          example: "1197.48"
+        estado:
+          type: string
+          enum:
+            - pendiente
+            - aceptada
+            - rechazada
+          description: pendiente (guardada, va a la DIAN), aceptada o rechazada.
+        mensaje:
+          type: string
+          example: Guardada. Se está enviando a la DIAN.
+        motivos:
+          description: Por qué la DIAN la rechazó; vacío en los demás estados.
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - numero
+        - emitidaEn
+        - comprador
+        - total
+        - iva
+        - estado
+        - mensaje
+        - motivos

@@ -28,6 +28,8 @@ export interface FormaDePago {
 export class Factura {
   readonly totalBruto: Dinero;
   readonly totalIva: Dinero;
+  /** Suma de las bases de las tarifas de IVA (incluida la de 0 %): sin lo excluido. */
+  readonly baseGravable: Dinero;
   readonly total: Dinero;
   readonly subtotalesIva: readonly SubtotalIva[];
 
@@ -48,6 +50,7 @@ export class Factura {
       if (deLaTarifa.length === 0) return [];
       return [{ tarifa, base: Dinero.total(deLaTarifa.map((l) => l.valor)), valor: Dinero.total(deLaTarifa.map((l) => l.iva)) }];
     });
+    this.baseGravable = Dinero.total(this.subtotalesIva.map((s) => s.base));
   }
 
   static emitir(datos: {

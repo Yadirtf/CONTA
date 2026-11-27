@@ -1,4 +1,4 @@
-import { asc, count, eq, gte, like, or, type SQL, sql } from 'drizzle-orm';
+import { asc, count, eq, gte, inArray, like, or, type SQL, sql } from 'drizzle-orm';
 import type { Ejecutor } from '../../../../compartido/infraestructura/persistencia/base-de-datos.js';
 import type { RepositorioProductos } from '../../aplicacion/puertos/repositorio-productos.js';
 import type { BusquedaDeProductos, Producto } from '../../dominio/productos/index.js';
@@ -14,6 +14,12 @@ export class RepositorioProductosPostgres implements RepositorioProductos {
   async conId(id: string): Promise<Producto | null> {
     const [fila] = await this.ejecutor.select().from(productos).where(eq(productos.id, id)).limit(1);
     return fila ? productoDeFila(fila) : null;
+  }
+
+  async conIds(ids: readonly string[]): Promise<Producto[]> {
+    if (ids.length === 0) return [];
+    const filas = await this.ejecutor.select().from(productos).where(inArray(productos.id, [...ids]));
+    return filas.map(productoDeFila);
   }
 
   async buscar(busqueda: BusquedaDeProductos, limite: number): Promise<Producto[]> {

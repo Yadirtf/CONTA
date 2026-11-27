@@ -12,11 +12,14 @@ export function formaDePagoUbl({ formaDePago }: Factura): NodoXml {
   ]);
 }
 
-/** cac:LegalMonetaryTotal. Sin descuentos ni cargos globales por ahora. */
+/**
+ * cac:LegalMonetaryTotal. Sin descuentos ni cargos globales por ahora. TaxExclusiveAmount es la suma de las bases
+ * gravables (FAU04): lo excluido del IVA entra en LineExtensionAmount, pero no ahí.
+ */
 export function totalesUbl(factura: Factura): NodoXml {
   return grupo('cac:LegalMonetaryTotal', [
     el('cbc:LineExtensionAmount', monto(factura.totalBruto), PESOS),
-    el('cbc:TaxExclusiveAmount', monto(factura.totalBruto), PESOS),
+    el('cbc:TaxExclusiveAmount', monto(factura.baseGravable), PESOS),
     el('cbc:TaxInclusiveAmount', monto(factura.total), PESOS),
     el('cbc:AllowanceTotalAmount', '0.00', PESOS),
     el('cbc:ChargeTotalAmount', '0.00', PESOS),
