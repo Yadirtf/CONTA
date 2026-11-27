@@ -86,6 +86,18 @@ class PantallaCobrar extends StatelessWidget {
                   ],
                 ),
               ),
+              // HU-06.02: con comprador ya es factura a su nombre; sin él, la API decide si cabe el tiquete POS.
+              if (v.comprador == null)
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('El cliente pide factura electrónica'),
+                  subtitle: Text(
+                    v.pideFactura ? 'Sale factura electrónica' : 'Si no, sale tiquete POS cuando aplica',
+                    style: TextStyle(color: paleta.textoSuave),
+                  ),
+                  value: v.pideFactura,
+                  onChanged: v.enviando ? null : v.pedirFactura,
+                ),
               const SizedBox(height: EspacioConta.s4),
               if (v.aviso != null) ...[FranjaDeAviso(v.aviso!), const SizedBox(height: EspacioConta.s4)],
               SizedBox(

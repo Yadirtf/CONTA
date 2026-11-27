@@ -1,5 +1,5 @@
 import { DecimalExacto, Dinero, esTipoDeIva, tratamientoDeIva } from '../../../../../compartido/dominio/index.js';
-import { medioDePago, NumeroDeFactura, Venta } from '../../../dominio/index.js';
+import { claseDeDocumento, medioDePago, NumeroDeFactura, Venta } from '../../../dominio/index.js';
 import { compradorDeColumna, compradorEnColumna } from './comprador-en-columna.js';
 import type { FilaDeLinea, FilaDeVenta } from './tablas-ventas.js';
 
@@ -16,6 +16,7 @@ export function filasDeVenta(venta: Venta, resolucionId: string): { venta: FilaN
       resolucionId,
       prefijo: datos.numero.prefijo,
       consecutivo: datos.numero.consecutivo,
+      clase: datos.clase,
       emitidaEn: datos.emitidaEn,
       medioDePago: datos.medioDePago,
       comprador: compradorEnColumna(datos.comprador),
@@ -48,6 +49,7 @@ export function ventaDeFilas(fila: FilaDeVenta, lineas: readonly FilaDeLinea[]):
     id: fila.id,
     huella: fila.huella,
     numero: NumeroDeFactura.de(fila.prefijo, fila.consecutivo),
+    clase: claseDeDocumento(fila.clase),
     emitidaEn: fila.emitidaEn,
     comprador: compradorDeColumna(fila.comprador),
     medioDePago: medioDePago(fila.medioDePago),

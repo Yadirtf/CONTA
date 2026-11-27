@@ -5,7 +5,7 @@ import { dibujarQr } from './qr-vectorial.js';
 const LADO_DEL_QR = 110;
 const ALTO_DEL_PIE = 260;
 
-/** Totales, forma de pago, resolución, CUFE y QR: lo que la DIAN pide ver. Si no cabe, va en otra hoja. */
+/** Totales, forma de pago, resolución, CUFE o CUDE y QR: lo que la DIAN pide ver. Si no cabe, va en otra hoja. */
 export function dibujarPieFiscal(doc: PDFKit.PDFDocument, c: ComprobanteDeVenta): void {
   if (doc.y + ALTO_DEL_PIE > HOJA.alto - HOJA.margen) {
     doc.addPage();
@@ -26,13 +26,13 @@ export function dibujarPieFiscal(doc: PDFKit.PDFDocument, c: ComprobanteDeVenta)
   dibujarQr(doc, c.codigoQr, HOJA.margen, arriba, LADO_DEL_QR);
   const x = HOJA.margen + LADO_DEL_QR + 16;
   const ancho = ANCHO_UTIL - LADO_DEL_QR - 16;
-  doc.font(FUENTE_NEGRILLA).fontSize(8).fillColor(TEXTO).text('CUFE', x, arriba, { width: ancho });
+  doc.font(FUENTE_NEGRILLA).fontSize(8).fillColor(TEXTO).text(c.etiquetaDelCodigo, x, arriba, { width: ancho });
   doc.font(FUENTE).fontSize(7).text(c.cufe, x, doc.y, { width: ancho });
   doc.moveDown(0.5);
   doc.fillColor(TEXTO_SUAVE).fontSize(8).text(c.resolucion, x, doc.y, { width: ancho });
   doc.moveDown(0.5);
-  doc.text('Escanea el código para consultar esta factura en la DIAN.', x, doc.y, { width: ancho });
-  doc.text('Representación gráfica de la factura electrónica. Generada con CONTA.', x, doc.y, { width: ancho });
+  doc.text('Escanea el código para consultar este documento en la DIAN.', x, doc.y, { width: ancho });
+  doc.text(`Representación gráfica: ${c.nombreCorto.toLowerCase()}. Generada con CONTA.`, x, doc.y, { width: ancho });
   doc.x = HOJA.margen;
   doc.y = Math.max(doc.y, arriba + LADO_DEL_QR) + 8;
 }

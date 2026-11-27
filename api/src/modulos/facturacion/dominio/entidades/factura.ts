@@ -1,4 +1,7 @@
 import { Dinero, ErrorDominio } from '../../../../compartido/dominio/index.js';
+import type { ClaseDeDocumento } from '../documentos/clase-de-documento.js';
+import type { PuntoDeVenta } from '../documentos/punto-de-venta.js';
+import { cabeEnPos } from '../documentos/tope-del-pos.js';
 import type { MomentoDeEmision } from '../objetos-valor/momento-de-emision.js';
 import type { NumeroDeFactura } from '../objetos-valor/numero-de-factura.js';
 import type { Participante } from '../objetos-valor/participante.js';
@@ -22,8 +25,9 @@ export interface FormaDePago {
 }
 
 /**
- * Factura electrónica de venta nacional (InvoiceTypeCode 01, operación estándar 10), en pesos.
- * Sus totales salen siempre de las líneas: nunca se reciben de afuera.
+ * Documento electrónico de una venta nacional en pesos: la factura electrónica de venta (InvoiceTypeCode 01) o el
+ * tiquete POS electrónico (documento equivalente, InvoiceTypeCode 20), según la clase de su resolución (HU-06.02).
+ * Los dos comparten estructura UBL; sus totales salen siempre de las líneas: nunca se reciben de afuera.
  */
 export class Factura {
   readonly totalBruto: Dinero;
@@ -41,6 +45,8 @@ export class Factura {
     readonly adquirente: Participante,
     readonly lineas: readonly LineaDeFactura[],
     readonly formaDePago: FormaDePago,
+    /** La caja de la venta: solo el tiquete POS la lleva. */
+    readonly puntoDeVenta: PuntoDeVenta | null,
   ) {
     this.totalBruto = Dinero.total(lineas.map((l) => l.valor));
     this.totalIva = Dinero.total(lineas.map((l) => l.iva));
@@ -53,6 +59,11 @@ export class Factura {
     this.baseGravable = Dinero.total(this.subtotalesIva.map((s) => s.base));
   }
 
+  /** La clase la fija la resolución: un número POS solo puede ser de un tiquete POS. */
+  get clase(): ClaseDeDocumento {
+    return this.resolucion.clase;
+  }
+
   static emitir(datos: {
     numero: NumeroDeFactura;
     emision: MomentoDeEmision;
@@ -61,8 +72,10 @@ export class Factura {
     adquirente: Participante;
     lineas: readonly LineaDeFactura[];
     formaDePago: FormaDePago;
+    puntoDeVenta?: PuntoDeVenta | null;
   }): Factura {
     const { numero, emision, resolucion, emisor, adquirente, lineas, formaDePago } = datos;
+    const puntoDeVenta = resolucion.clase === 'pos' ? (datos.puntoDeVenta ?? null) : null;
     resolucion.exigirQueAutorice(numero, emision.fecha);
     if (!emisor.identificacion.esNit()) {
       throw new ErrorDominio('factura.emisor-sin-nit', 'El facturador electrónico se identifica con NIT');
@@ -75,6 +88,18 @@ export class Factura {
     if (formaDePago.metodo === 'credito' && (formaDePago.vence === null || formaDePago.vence < emision.fecha)) {
       throw new ErrorDominio('factura.vencimiento-invalido', 'A crédito, el vencimiento es igual o posterior a la emisión');
     }
-    return new Factura(numero, emision, resolucion, emisor, adquirente, [...lineas], formaDePago);
+    const documento = new Factura(numero, emision, resolucion, emisor, adquirente, [...lineas], formaDePago, puntoDeVenta);
+    if (documento.clase === 'pos') exigirTiquetePosValido(documento);
+    return documento;
+  }
+}
+
+/** El tiquete POS lleva su caja y no pasa de 5 UVT sin impuestos (ET 616-1, parágrafo 2). */
+function exigirTiquetePosValido(documento: Factura): void {
+  if (!documento.puntoDeVenta) {
+    throw new ErrorDominio('pos.punto-de-venta-incompleto', 'El tiquete POS necesita los datos de la caja');
+  }
+  if (!cabeEnPos(documento.totalBruto, documento.emision.fecha)) {
+    throw new ErrorDominio('pos.tope-excedido', 'El tiquete POS no puede pasar de 5 UVT sin impuestos: emite factura');
   }
 }

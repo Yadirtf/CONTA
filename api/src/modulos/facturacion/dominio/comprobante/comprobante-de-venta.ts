@@ -1,4 +1,5 @@
 import { type Dinero, ErrorDominio } from '../../../../compartido/dominio/index.js';
+import { codigoUnicoDe, NOMBRE_CORTO_DEL_DOCUMENTO, NOMBRE_DEL_DOCUMENTO } from '../documentos/clase-de-documento.js';
 import type { ResolucionDeNumeracion } from '../entidades/resolucion-de-numeracion.js';
 import { MomentoDeEmision } from '../objetos-valor/momento-de-emision.js';
 import type { Participante } from '../objetos-valor/participante.js';
@@ -28,7 +29,12 @@ export interface ParteDelComprobante {
  * texto. La arma el dominio para que el PDF (infraestructura) solo dibuje y nunca decida un valor fiscal.
  */
 export interface ComprobanteDeVenta {
+  /** El nombre del documento que exige la norma (factura o tiquete POS, HU-06.02). */
   readonly titulo: string;
+  /** El mismo, corto, para el asunto del correo: «Factura electrónica» o «Tiquete POS electrónico». */
+  readonly nombreCorto: string;
+  /** «CUFE» en la factura, «CUDE» en el tiquete POS. */
+  readonly etiquetaDelCodigo: 'CUFE' | 'CUDE';
   readonly numero: string;
   /** «2026-11-27 10:04:05 (hora de Colombia)». */
   readonly emitida: string;
@@ -61,13 +67,18 @@ const MEDIOS: Readonly<Record<MedioDePago, string>> = {
 };
 
 export function comprobanteDeVenta({ venta, emisor, resolucion, cufe, codigoQr }: DatosDelComprobante): ComprobanteDeVenta {
-  if (!/^[0-9a-f]{96}$/.test(cufe)) throw new ErrorDominio('comprobante.cufe-invalido', 'El CUFE no es válido');
-  if (!codigoQr.includes(cufe)) throw new ErrorDominio('comprobante.qr-invalido', 'El QR no corresponde a la factura');
+  if (!/^[0-9a-f]{96}$/.test(cufe)) throw new ErrorDominio('comprobante.cufe-invalido', 'El código único no es válido');
+  if (!codigoQr.includes(cufe)) throw new ErrorDominio('comprobante.qr-invalido', 'El QR no corresponde al documento');
+  if (resolucion.clase !== venta.clase) {
+    throw new ErrorDominio('comprobante.resolucion-de-otra-clase', 'La resolución no es de la clase del documento');
+  }
   const { datos } = venta;
   const numero = datos.numero.aTexto();
   const momento = MomentoDeEmision.desde(datos.emitidaEn);
   return {
-    titulo: 'Factura electrónica de venta',
+    titulo: NOMBRE_DEL_DOCUMENTO[venta.clase],
+    nombreCorto: NOMBRE_CORTO_DEL_DOCUMENTO[venta.clase],
+    etiquetaDelCodigo: codigoUnicoDe(venta.clase) === 'cude' ? 'CUDE' : 'CUFE',
     numero,
     emitida: `${momento.fecha} ${momento.hora.slice(0, 8)} (hora de Colombia)`,
     emisor: parteDe(emisor, true),
@@ -86,7 +97,7 @@ export function comprobanteDeVenta({ venta, emisor, resolucion, cufe, codigoQr }
       `Autoriza del ${resolucion.prefijo}${resolucion.desde} al ${resolucion.prefijo}${resolucion.hasta}.`,
     cufe,
     codigoQr,
-    nombreDeArchivo: `factura-${numero}.pdf`,
+    nombreDeArchivo: `${venta.clase === 'pos' ? 'tiquete-pos' : 'factura'}-${numero}.pdf`,
   };
 }
 

@@ -1,6 +1,6 @@
 import type { ContextoDeMiembro, UnidadDeTrabajo } from '../../../../compartido/aplicacion/index.js';
 import { exigirPermiso, Permiso } from '../../../../compartido/dominio/index.js';
-import { estadoDeLaVenta, type EstadoDeLaVenta } from '../../dominio/index.js';
+import { type ClaseDeDocumento, estadoDeLaVenta, type EstadoDeLaVenta } from '../../dominio/index.js';
 import type { RepositoriosDeVenta } from '../puertos/repositorios-de-venta.js';
 
 /** Cuántas ventas muestra «Mis ventas»: las del mostrador reciente, no un informe. */
@@ -9,6 +9,7 @@ export const VENTAS_RECIENTES = 50;
 export interface VentaReciente {
   readonly id: string;
   readonly numero: string;
+  readonly clase: ClaseDeDocumento;
   readonly emitidaEn: Date;
   readonly comprador: string;
   readonly total: string;

@@ -29,7 +29,7 @@ class FilaDeVenta extends StatelessWidget {
         contentPadding: EdgeInsets.zero,
         title: Text('${venta.numero} · ${pesos(venta.total)}'),
         subtitle: Text(
-          [venta.comprador, _estado(venta.estado)].join(' · ') + (mensaje == null ? '' : '\n$mensaje'),
+          [venta.documento.nombre, venta.comprador, _estado(venta.estado)].join(' · ') + (mensaje == null ? '' : '\n$mensaje'),
           style: TextStyle(color: context.paleta.textoSuave),
         ),
         isThreeLine: mensaje != null,

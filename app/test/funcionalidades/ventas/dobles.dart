@@ -13,6 +13,9 @@ class RepositorioDeVentasFalso implements RepositorioDeVentas {
   /// Respuestas de consultar, en orden; la última se repite.
   List<EstadoDeLaVenta> estados = [EstadoDeLaVenta.pendiente];
 
+  /// HU-06.02: con qué sale una venta sin factura pedida (la API diría tiquete POS si el negocio lo tiene).
+  DocumentoDeLaVenta documentoSinFactura = DocumentoDeLaVenta.factura;
+
   /// Si no es null, el próximo registro responde este rechazo.
   Rechazo<VentaEmitida>? rechazoAlRegistrar;
 
@@ -33,10 +36,12 @@ class RepositorioDeVentasFalso implements RepositorioDeVentas {
       rechazoAlRegistrar = null;
       return rechazo;
     }
+    final documento = pedido.conFactura ? DocumentoDeLaVenta.factura : documentoSinFactura;
     return Exito(
       _porId[pedido.id] ??= VentaEmitida(
         id: pedido.id,
-        numero: 'SETP${_consecutivo++}',
+        numero: '${documento == DocumentoDeLaVenta.pos ? 'EPOS' : 'SETP'}${_consecutivo++}',
+        documento: documento,
         comprador: pedido.comprador?.nombre ?? 'Consumidor final',
         total: pedido.carrito.total,
         iva: '0.00',

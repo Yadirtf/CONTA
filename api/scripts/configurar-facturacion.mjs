@@ -12,6 +12,8 @@
 //   "resolucion": { "id": "uuid", "numero": "18760000001", "prefijo": "SETP", "desde": 990000000, "hasta": 995000000,
 //                   "vigenteDesde": "2019-01-19", "vigenteHasta": "2030-01-19", "siguiente": 990000001 }
 // }
+// HU-06.02: en vez de "resolucion" puede ir "resoluciones": [ ... ], cada una con "clase": "factura" (por omisión)
+// o "pos" para el tiquete POS electrónico, que la DIAN autoriza con su propia resolución y prefijo.
 // Repetirlo actualiza los datos fiscales. Una resolución ya guardada no se cambia nunca (sus números pueden estar
 // en facturas): para otro rango se agrega una resolución nueva con otro id.
 import { readFileSync } from 'node:fs';
@@ -25,7 +27,14 @@ if (!archivo || !url) {
 }
 
 const d = JSON.parse(readFileSync(archivo, 'utf8'));
-const r = d.resolucion;
+const resoluciones = d.resoluciones ?? [d.resolucion];
+const CLASES = ['factura', 'pos'];
+for (const r of resoluciones) {
+  if (!CLASES.includes(r.clase ?? 'factura')) {
+    console.error(`Clase de resolución inválida: usa ${CLASES.join(' o ')}.`);
+    process.exit(1);
+  }
+}
 const cliente = new pg.Client({ connectionString: url });
 await cliente.connect();
 try {
@@ -41,13 +50,17 @@ try {
     [d.empresaId, d.nit, d.razonSocial, d.tipoDePersona, d.responsabilidadesFiscales, d.responsableDeIva,
       d.direccion.codigoMunicipio, d.direccion.ciudad, d.direccion.departamento, d.direccion.linea, d.correo ?? null],
   );
-  const { rowCount } = await cliente.query(
-    `insert into conta.resoluciones_de_numeracion (empresa_id, id, numero, prefijo, desde, hasta, vigente_desde, vigente_hasta, siguiente)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9) on conflict do nothing`,
-    [d.empresaId, r.id, r.numero, r.prefijo, r.desde, r.hasta, r.vigenteDesde, r.vigenteHasta, r.siguiente ?? r.desde],
-  );
+  const resultados = [];
+  for (const r of resoluciones) {
+    const { rowCount } = await cliente.query(
+      `insert into conta.resoluciones_de_numeracion (empresa_id, id, numero, prefijo, desde, hasta, vigente_desde, vigente_hasta, siguiente, clase)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) on conflict do nothing`,
+      [d.empresaId, r.id, r.numero, r.prefijo, r.desde, r.hasta, r.vigenteDesde, r.vigenteHasta, r.siguiente ?? r.desde, r.clase ?? 'factura'],
+    );
+    resultados.push(`${r.prefijo} (${r.clase ?? 'factura'}) ${rowCount === 1 ? 'agregada' : 'ya existía (sin cambios)'}`);
+  }
   await cliente.query('commit');
-  console.log(`Datos fiscales guardados. Resolución ${rowCount === 1 ? 'agregada' : 'ya existía (sin cambios)'}.`);
+  console.log(`Datos fiscales guardados. Resoluciones: ${resultados.join('; ')}.`);
 } catch (error) {
   await cliente.query('rollback');
   // Solo el mensaje de PostgreSQL: la cadena de conexión nunca se imprime.

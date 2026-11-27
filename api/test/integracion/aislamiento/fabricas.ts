@@ -70,12 +70,19 @@ export async function crearDatosFiscales(dueno: pg.Client, empresaId: string): P
 }
 
 /** Resolución de numeración de la empresa (HU-06.01). Con la conexión del dueño. */
-export async function crearResolucion(dueno: pg.Client, empresaId: string, desde = 990000000, hasta = 995000000): Promise<string> {
+/** Resolución de factura (SETP) por omisión; HU-06.02: `{ prefijo: 'EPOS', clase: 'pos' }` para el tiquete POS. */
+export async function crearResolucion(
+  dueno: pg.Client,
+  empresaId: string,
+  desde = 990000000,
+  hasta = 995000000,
+  { prefijo = 'SETP', clase = 'factura' }: { prefijo?: string; clase?: 'factura' | 'pos' } = {},
+): Promise<string> {
   const id = nuevoId();
   await dueno.query(
-    `INSERT INTO conta.resoluciones_de_numeracion (empresa_id, id, numero, prefijo, desde, hasta, vigente_desde, vigente_hasta, siguiente)
-     VALUES ($1, $2, '18760000001', 'SETP', $3, $4, '2019-01-19', '2030-01-19', $3)`,
-    [empresaId, id, desde, hasta],
+    `INSERT INTO conta.resoluciones_de_numeracion (empresa_id, id, numero, prefijo, desde, hasta, vigente_desde, vigente_hasta, siguiente, clase)
+     VALUES ($1, $2, '18760000001', $5, $3, $4, '2019-01-19', '2030-01-19', $3, $6)`,
+    [empresaId, id, desde, hasta, prefijo, clase],
   );
   return id;
 }

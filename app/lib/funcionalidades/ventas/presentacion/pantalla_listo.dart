@@ -8,7 +8,7 @@ import 'cola_de_comprobantes.dart';
 import 'controlador_de_estado.dart';
 import 'pasos_de_la_factura.dart';
 
-/// «Listo» (HU-06.01): el número de la factura, el total y en qué va ante la DIAN. La venta ya está guardada:
+/// «Listo» (HU-06.01): el documento (factura o tiquete POS, HU-06.02) con su número, el total y en qué va ante la DIAN. La venta ya está guardada:
 /// salir de aquí no la deshace y la factura sigue su camino.
 class PantallaListo extends StatefulWidget {
   const PantallaListo({
@@ -61,7 +61,7 @@ class _PantallaListoState extends State<PantallaListo> {
             padding: const EdgeInsets.all(EspacioConta.s4),
             children: [
               Text(
-                'Factura ${v.numero}',
+                '${v.documento.nombre} ${v.numero}',
                 style: const TextStyle(fontSize: TextoConta.titulo, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: EspacioConta.s2),

@@ -1,4 +1,5 @@
 import { ErrorDominio } from '../../../../compartido/dominio/index.js';
+import { preferenciaDeDocumento, type PreferenciaDeDocumento } from '../documentos/eleccion-del-documento.js';
 import { MAXIMO_DE_LINEAS } from './limites-de-ventas.js';
 import { medioDePago, type MedioDePago } from './medio-de-pago.js';
 
@@ -12,6 +13,8 @@ export interface PedidoDeVenta {
   /** Un comprador del catálogo; null es consumidor final. */
   readonly compradorId: string | null;
   readonly medioDePago: MedioDePago;
+  /** `automatico` (tiquete POS si se puede) o `factura` (el comprador la pidió). HU-06.02. */
+  readonly documento: PreferenciaDeDocumento;
 }
 
 /** Valida la forma del pedido. Un producto repetido se rechaza: la cantidad va en una sola línea. */
@@ -20,6 +23,8 @@ export function pedidoDeVenta(datos: {
   lineas: readonly { productoId: string; cantidad: string }[];
   compradorId: string | null;
   medioDePago: unknown;
+  /** Si no viene: automatico. */
+  documento?: unknown;
 }): PedidoDeVenta {
   if (!UUID.test(datos.id)) throw new ErrorDominio('venta.id-invalido', 'El id de la venta es un UUID en minúsculas');
   if (datos.lineas.length === 0 || datos.lineas.length > MAXIMO_DE_LINEAS) {
@@ -39,6 +44,7 @@ export function pedidoDeVenta(datos: {
     lineas: datos.lineas.map((l) => ({ productoId: l.productoId, cantidad: l.cantidad })),
     compradorId: datos.compradorId,
     medioDePago: medioDePago(datos.medioDePago),
+    documento: preferenciaDeDocumento(datos.documento ?? 'automatico'),
   };
 }
 
@@ -47,5 +53,8 @@ export function pedidoDeVenta(datos: {
  * mismo id con otro contenido no pase por un reintento.
  */
 export function textoCanonicoDe(pedido: PedidoDeVenta): string {
-  return JSON.stringify([pedido.id, pedido.compradorId, pedido.medioDePago, pedido.lineas.map((l) => [l.productoId, l.cantidad])]);
+  const base = [pedido.id, pedido.compradorId, pedido.medioDePago, pedido.lineas.map((l) => [l.productoId, l.cantidad])];
+  // `automatico` no entra: así un pedido de antes del POS (HU-06.02) conserva su huella y su reintento sigue siendo
+  // el mismo pedido. `factura` sí entra: pedir factura es otro pedido.
+  return JSON.stringify(pedido.documento === 'factura' ? [...base, 'factura'] : base);
 }

@@ -6,10 +6,15 @@ import { AGENCIA_DIAN, NIT_DIAN, URL_DE_CONSULTA } from './constantes-dian.js';
 import { codigoDeSeguridadDelSoftware } from './cufe.js';
 
 /**
- * ext:UBLExtensions con la extensión de la DIAN (sts:DianExtensions, anexo 6.1).
- * La firma va en una segunda UBLExtension que agrega el firmador (HU-02.02).
+ * ext:UBLExtensions con la extensión de la DIAN (sts:DianExtensions, anexo 6.1) y, en el tiquete POS, sus tres
+ * extensiones propias (`adicionales`). La firma va en una última UBLExtension que agrega el firmador (HU-02.02).
  */
-export function extensionesDian(factura: Factura, configuracion: ConfiguracionDian, cufe: string): NodoXml {
+export function extensionesDian(
+  factura: Factura,
+  configuracion: ConfiguracionDian,
+  cufe: string,
+  adicionales: readonly NodoXml[] = [],
+): NodoXml {
   return grupo('ext:UBLExtensions', [
     grupo('ext:UBLExtension', [
       grupo('ext:ExtensionContent', [
@@ -35,10 +40,11 @@ export function extensionesDian(factura: Factura, configuracion: ConfiguracionDi
         ]),
       ]),
     ]),
+    ...adicionales,
   ]);
 }
 
-/** Resolución de numeración que autoriza el documento (sts:InvoiceControl). */
+/** Resolución de numeración que autoriza el documento (sts:InvoiceControl): la factura y el POS la llevan (DEAB04). */
 function controlDeNumeracion({ resolucion }: Factura): NodoXml {
   return grupo('sts:InvoiceControl', [
     el('sts:InvoiceAuthorization', resolucion.numero),

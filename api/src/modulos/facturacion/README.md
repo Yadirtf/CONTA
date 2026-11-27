@@ -96,6 +96,21 @@ El PDF de la factura con su QR y el correo al comprador ([ADR-0015](../../../../
 | `infraestructura/persistencia/correos/` | tablas, repositorio, pendientes y avisos | `correos_de_factura` (nace pendiente; solo toma un intento o cierra el que está en curso), `intentos_correo_de_factura` y `respuestas_de_aceptacion`, todas con RLS. |
 | `presentacion/http/ventas/` | `comprobante.controller.ts`, `limite-de-comprobantes.ts`, `respuesta-venta-reciente.ts` | El PDF con `no-store`, `nosniff` y `attachment`; un id que no es UUID es 404. |
 
+## Tiquete POS electrónico (HU-06.02)
+
+El documento equivalente electrónico tiquete POS (anexo DEE v1.0) sale por la misma tubería de la factura ([ADR-0016](../../../../Docs/decisiones/0016-tiquete-pos-en-la-misma-tuberia.md)). La clase (`factura` o `pos`) la fija la resolución de numeración.
+
+1. `RegistrarVenta` pide la configuración POS solo si el pedido es `documento: automatico` y va a consumidor final; exige el mismo NIT que la factura. Dentro de la transacción corta busca la resolución POS vigente y decide con `claseParaLaVenta`: POS si cabe en 5 UVT sin impuestos; si no, factura. Después reserva el número de la resolución elegida.
+2. `EmitirVenta` usa la configuración y el acceso de la clase de la venta. El generador toma el perfil (`InvoiceTypeCode` 20, `ProfileID` del POS, CUDE-SHA384 con el PIN) y agrega `FabricanteSoftware`, `BeneficiosComprador` y `PuntoVenta`. El firmador rechaza extensiones que no correspondan al tipo de documento.
+3. `ProcesarEnvioDian` manda con el `TestSetId` de la clase del envío. El PDF y el correo usan el nombre del documento y la etiqueta CUDE.
+
+| Capa | Archivo | Responsabilidad |
+| --- | --- | --- |
+| `dominio/documentos/` | `clase-de-documento.ts`, `valor-de-la-uvt.ts`, `tope-del-pos.ts`, `eleccion-del-documento.ts`, `punto-de-venta.ts` | Las clases y sus nombres, la UVT por año, el tope de 5 UVT, qué documento sale y los datos de la caja. |
+| `infraestructura/acceso-dian/` | `variables-por-clase.ts` | Qué variables `DIAN_HAB_*` usa cada clase; el POS además necesita `DIAN_HAB_POS_*` y el fabricante. |
+| `infraestructura/dian-directa/ubl/` | `perfil-ubl.ts`, `codigo-unico.ts`, `extensiones-pos.ts` | Perfil UBL por clase, CUFE o CUDE, y las extensiones del POS. |
+| `migraciones/0011_tiquete_pos.sql` | | `clase` en resoluciones, ventas, envíos y emisiones; llaves foráneas de clase; tope repetido en un trigger; la clase del envío amarrada a su XML. |
+
 ## Reglas del anexo que se aplican
 
 - **CUFE** (11.2): `SHA-384(NumFac + FecFac + HorFac + ValFac + 01 + ValImp1 + 04 + ValImp2 + 03 + ValImp3 + ValTot + NitFE + NumAdq + ClTec + TipoAmbiente)`, con los mismos textos que quedan en el XML. La prueba reproduce el ejemplo oficial de la sección 11.2.1.
@@ -140,6 +155,7 @@ El XML se escribe sin indentación ni espacios y con el orden del esquema, siemp
 - AttachedDocument con el `ApplicationResponse` guardado, como adjunto del correo, antes de clientes reales: historia aparte (ADR-0015).
 - Adaptador durable de colas definitivo (reemplaza la tabla y el despertador): HU-06.04.
 - Envío en producción (`SendBillAsync`): HU-06.04 con la habilitación (EP-07). Hoy el envío va al set de pruebas.
-- Alertas de rango por agotarse: HU-06.07. PDF con QR por WhatsApp y correo: HU-06.08.
+- Alertas de rango por agotarse: HU-06.07.
+- Preferencia del negocio «siempre factura» y software POS por empresa desde la pantalla de configuración DIAN: EP-07.
 - Configuración DIAN y datos fiscales por empresa desde la consola, en lugar del entorno y el comando: EP-07.
 - INC, ICA, descuentos, cargos, retenciones, otras monedas y notas crédito y débito: EP-06.

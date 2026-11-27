@@ -12,6 +12,7 @@ export '../../../nucleo/respuesta.dart';
 export 'carrito.dart';
 export 'centavos.dart';
 export 'comprobante.dart';
+export 'documento_de_la_venta.dart';
 export 'medio_de_pago.dart';
 export 'venta.dart';
 

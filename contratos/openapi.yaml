@@ -1554,6 +1554,12 @@ components:
         numero:
           type: string
           example: SETP990000123
+        documento:
+          type: string
+          enum: &a5
+            - factura
+            - pos
+          description: factura (factura electrónica) o pos (tiquete POS electrónico).
         emitidaEn:
           type: string
           example: 2026-11-27T15:04:05.000Z
@@ -1574,6 +1580,7 @@ components:
       required:
         - id
         - numero
+        - documento
         - emitidaEn
         - comprador
         - total
@@ -1620,6 +1627,15 @@ components:
             - tarjeta-credito
             - transferencia
           description: Nequi y Daviplata van como transferencia.
+        documento:
+          type: string
+          enum:
+            - automatico
+            - factura
+          default: automatico
+          description: "automatico: tiquete POS electrónico si es a consumidor final, el
+            negocio lo tiene habilitado y no pasa de 5 UVT sin impuestos; si no,
+            factura. factura: el comprador pidió factura electrónica."
       required:
         - id
         - lineas
@@ -1633,7 +1649,15 @@ components:
         numero:
           type: string
           example: SETP990000123
-          description: "Número de la factura: prefijo y consecutivo de la resolución."
+          description: "Número del documento: prefijo y consecutivo de la resolución."
+        documento:
+          type: string
+          enum: *a5
+          description: factura (factura electrónica) o pos (tiquete POS electrónico).
+        nombreDelDocumento:
+          type: string
+          example: Tiquete POS electrónico
+          description: El nombre del documento para mostrar.
         emitidaEn:
           type: string
           example: 2026-11-27T15:04:05.000Z
@@ -1665,6 +1689,8 @@ components:
       required:
         - id
         - numero
+        - documento
+        - nombreDelDocumento
         - emitidaEn
         - comprador
         - total

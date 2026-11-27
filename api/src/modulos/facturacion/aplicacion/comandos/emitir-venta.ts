@@ -9,7 +9,8 @@ import type { GenerarXmlFactura } from './generar-xml-factura.js';
 import type { SolicitarEnvioDian } from './solicitar-envio-dian.js';
 
 /**
- * HU-06.01: arma la factura de una venta ya guardada, la firma y la deja en la cola de la DIAN. Se puede repetir
+ * HU-06.01 y HU-06.02: arma el documento de una venta ya guardada (factura o tiquete POS, con el software de su
+ * clase), lo firma y lo deja en la cola de la DIAN. Se puede repetir
  * sin daño: la factura sale igual de la venta (mismo CUFE), la solicitud de envío es idempotente por CUFE y el
  * enlace venta → envío se guarda una sola vez. Lo llaman RegistrarVenta y el reparador de emisiones.
  * Cada falla queda en la cola de emisión con su código y su intento, y el siguiente se espacia cada vez más.
@@ -56,8 +57,8 @@ export class EmitirVenta {
     if (!leido) return;
 
     const [{ configuracion, nitDelFacturador }, acceso] = await Promise.all([
-      this.configuracionDian.para(contexto),
-      this.accesoDian.para(contexto),
+      this.configuracionDian.para(contexto, leido.clase),
+      this.accesoDian.para(contexto, leido.clase),
     ]);
     if (leido.emisor.identificacion.numero !== nitDelFacturador) throw facturacionNoHabilitada();
     const documento = this.firmar.ejecutar(this.generar.ejecutar(leido, configuracion), acceso.certificado);
@@ -65,10 +66,11 @@ export class EmitirVenta {
       documento,
       numero: leido.numero.aTexto(),
       nitEmisor: nitDelFacturador,
+      clase: leido.clase,
     });
 
     await this.unidadDeTrabajo.ejecutar(contexto, async ({ ventas, emisiones }) => {
-      await ventas.registrarEmision(ventaId, envioId);
+      await ventas.registrarEmision(ventaId, envioId, leido.clase);
       await emisiones.completar(ventaId);
     });
   }

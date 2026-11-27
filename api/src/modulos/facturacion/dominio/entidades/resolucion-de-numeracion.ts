@@ -1,8 +1,10 @@
 import { ErrorDominio } from '../../../../compartido/dominio/index.js';
+import type { ClaseDeDocumento } from '../documentos/clase-de-documento.js';
 import type { NumeroDeFactura } from '../objetos-valor/numero-de-factura.js';
 
 /**
- * Resolución de numeración que la DIAN autorizó al facturador (sts:InvoiceControl).
+ * Resolución de numeración que la DIAN autorizó al facturador (sts:InvoiceControl). La DIAN autoriza cada rango para
+ * una clase de documento: los números de una resolución POS solo sirven para tiquetes POS (HU-06.02).
  * La clave técnica del rango no vive aquí: es reservada y solo la conoce la infraestructura que calcula el CUFE.
  */
 export class ResolucionDeNumeracion {
@@ -15,6 +17,7 @@ export class ResolucionDeNumeracion {
     readonly vigenteDesde: string,
     /** AAAA-MM-DD */
     readonly vigenteHasta: string,
+    readonly clase: ClaseDeDocumento,
   ) {}
 
   static crear(datos: {
@@ -24,8 +27,10 @@ export class ResolucionDeNumeracion {
     hasta: number;
     vigenteDesde: string;
     vigenteHasta: string;
+    /** Por omisión, factura: así eran todas las resoluciones antes del POS. */
+    clase?: ClaseDeDocumento;
   }): ResolucionDeNumeracion {
-    const { numero, prefijo, desde, hasta, vigenteDesde, vigenteHasta } = datos;
+    const { numero, prefijo, desde, hasta, vigenteDesde, vigenteHasta, clase = 'factura' } = datos;
     if (!/^\d{1,14}$/.test(numero)) {
       throw new ErrorDominio('resolucion.numero-invalido', 'El número de la resolución tiene hasta 14 dígitos');
     }
@@ -35,7 +40,7 @@ export class ResolucionDeNumeracion {
     if (!esFecha(vigenteDesde) || !esFecha(vigenteHasta) || vigenteHasta < vigenteDesde) {
       throw new ErrorDominio('resolucion.vigencia-invalida', 'La vigencia va de una fecha AAAA-MM-DD a otra igual o posterior');
     }
-    return new ResolucionDeNumeracion(numero, prefijo, desde, hasta, vigenteDesde, vigenteHasta);
+    return new ResolucionDeNumeracion(numero, prefijo, desde, hasta, vigenteDesde, vigenteHasta, clase);
   }
 
   /** Reglas FAB07, FAB08, FAB10 a FAB12 del anexo técnico: mismo prefijo, número dentro del rango y fecha vigente. */

@@ -1,4 +1,4 @@
-import type { Participante, ResolucionDeNumeracion } from '../../dominio/index.js';
+import type { ClaseDeDocumento, Participante, ResolucionDeNumeracion } from '../../dominio/index.js';
 
 export interface ResolucionVigente {
   readonly id: string;
@@ -9,8 +9,8 @@ export interface ResolucionVigente {
 export interface NumeracionDeLaEmpresa {
   /** El facturador como va en la factura; null si la empresa todavía no tiene datos fiscales. */
   emisor(): Promise<Participante | null>;
-  /** La resolución vigente en `fecha` (AAAA-MM-DD) que aún tiene números; null si no hay. */
-  resolucionVigente(fecha: string): Promise<ResolucionVigente | null>;
+  /** La resolución de esa clase vigente en `fecha` (AAAA-MM-DD) que aún tiene números; null si no hay. */
+  resolucionVigente(fecha: string, clase: ClaseDeDocumento): Promise<ResolucionVigente | null>;
   resolucion(id: string): Promise<ResolucionDeNumeracion | null>;
   /**
    * Toma el siguiente consecutivo de la resolución, o null si se agotó. Queda bloqueada hasta el final de la

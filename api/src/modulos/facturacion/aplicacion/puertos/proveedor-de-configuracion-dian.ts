@@ -1,4 +1,5 @@
 import type { ContextoEmpresa } from '../../../../compartido/aplicacion/index.js';
+import type { ClaseDeDocumento } from '../../dominio/index.js';
 import type { ConfiguracionDian } from './generador-de-documento-electronico.js';
 
 /** El software y el ambiente con que factura una empresa, y el NIT del facturador al que pertenecen. */
@@ -9,11 +10,13 @@ export interface ConfiguracionDeLaEmpresa {
 }
 
 /**
- * Entrega la configuración DIAN de una empresa o lanza AccesoDianNoConfigurado. Hoy sale del entorno para una
+ * Entrega la configuración DIAN de una empresa para una clase de documento, o lanza AccesoDianNoConfigurado. La DIAN
+ * registra un software (id y PIN) por cada modo de operación: uno para la factura y otro para el documento
+ * equivalente POS (HU-06.02). Hoy sale del entorno para una
  * sola empresa (habilitación); el asistente de habilitación (EP-07) la guardará por empresa detrás de este puerto.
  */
 export interface ProveedorDeConfiguracionDian {
-  para(contexto: ContextoEmpresa): Promise<ConfiguracionDeLaEmpresa>;
+  para(contexto: ContextoEmpresa, clase: ClaseDeDocumento): Promise<ConfiguracionDeLaEmpresa>;
 }
 
 export const PROVEEDOR_DE_CONFIGURACION_DIAN = Symbol('ProveedorDeConfiguracionDian');

@@ -1,4 +1,7 @@
 import { Dinero, ErrorDominio } from '../../../../compartido/dominio/index.js';
+import type { ClaseDeDocumento } from '../documentos/clase-de-documento.js';
+import { puntoDeVenta, type PuntoDeVenta } from '../documentos/punto-de-venta.js';
+import { cabeEnPos } from '../documentos/tope-del-pos.js';
 import { Factura } from '../entidades/factura.js';
 import { LineaDeFactura } from '../entidades/linea-de-factura.js';
 import type { ResolucionDeNumeracion } from '../entidades/resolucion-de-numeracion.js';
@@ -14,6 +17,8 @@ export interface DatosDeVenta {
   /** SHA-256 del pedido (pedido-de-venta.ts): el mismo id con otro pedido no es un reintento. */
   readonly huella: string;
   readonly numero: NumeroDeFactura;
+  /** Factura o tiquete POS (HU-06.02): la clase de la resolución que dio el número. */
+  readonly clase: ClaseDeDocumento;
   readonly emitidaEn: Date;
   /** El adquirente como queda en la factura: consumidor final o un comprador del catálogo. */
   readonly comprador: Participante;
@@ -44,6 +49,9 @@ export class Venta {
     if (venta.total.monto.comparar(TOTAL_MAXIMO) > 0) {
       throw new ErrorDominio('venta.total-excedido', 'Una venta no puede pasar de $1.000.000.000');
     }
+    if (datos.clase === 'pos' && !cabeEnPos(venta.base, MomentoDeEmision.desde(datos.emitidaEn).fecha)) {
+      throw new ErrorDominio('pos.tope-excedido', 'El tiquete POS no puede pasar de 5 UVT sin impuestos: emite factura');
+    }
     return venta;
   }
 
@@ -56,8 +64,18 @@ export class Venta {
     return this.datos.id;
   }
 
-  /** La factura electrónica de contado de esta venta. Las líneas van tal como se cobraron, sin recalcular. */
+  get clase(): ClaseDeDocumento {
+    return this.datos.clase;
+  }
+
+  /**
+   * El documento electrónico de contado de esta venta: factura o tiquete POS, según su clase. Las líneas van tal
+   * como se cobraron, sin recalcular. La resolución tiene que ser de la misma clase que la venta.
+   */
   aFactura(emisor: Participante, resolucion: ResolucionDeNumeracion): Factura {
+    if (resolucion.clase !== this.datos.clase) {
+      throw new ErrorDominio('venta.resolucion-de-otra-clase', 'La resolución no es de la clase de documento de la venta');
+    }
     return Factura.emitir({
       numero: this.datos.numero,
       emision: MomentoDeEmision.desde(this.datos.emitidaEn),
@@ -75,6 +93,25 @@ export class Venta {
         }),
       ),
       formaDePago: { metodo: 'contado', medio: codigoDianDe(this.datos.medioDePago), vence: null },
+      puntoDeVenta: this.datos.clase === 'pos' ? this.cajaDelTiquete(emisor) : null,
+    });
+  }
+
+  /**
+   * La caja del tiquete POS. En CONTA la caja es el celular con la app: sale siempre igual de la venta guardada.
+   * El cajero va como un código de la persona (no su celular ni su nombre, que CONTA no guarda).
+   */
+  private cajaDelTiquete(emisor: Participante): PuntoDeVenta {
+    const direccion = emisor.direccion;
+    return puntoDeVenta({
+      placa: CAJA_DE_LA_APP,
+      ubicacion: direccion ? `${direccion.linea}, ${direccion.ciudad}` : emisor.razonSocial,
+      cajero: `Usuario ${this.datos.creadaPor.slice(0, 8)}`,
+      tipo: TIPO_DE_CAJA,
+      codigoDeVenta: this.datos.numero.aTexto(),
     });
   }
 }
+
+const CAJA_DE_LA_APP = 'CONTA-APP';
+const TIPO_DE_CAJA = 'Celular con la app CONTA';

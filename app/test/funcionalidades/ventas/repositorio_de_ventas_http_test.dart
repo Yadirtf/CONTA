@@ -47,8 +47,43 @@ void main() {
       ],
       'compradorId': 'c1',
       'medioDePago': 'tarjeta-debito',
+      'documento': 'factura',
     });
     expect((respuesta as Exito<VentaEmitida>).valor.estado, EstadoDeLaVenta.pendiente);
+  });
+
+  test('HU-06.02: sin comprador la API elige el documento, salvo que el cliente pida factura', () async {
+    final cuerpos = <Object?>[];
+    final repositorio = RepositorioDeVentasHttp(
+      'https://api.ejemplo',
+      token: () => 't',
+      cliente: MockClient((pedido) async {
+        cuerpos.add(jsonDecode(pedido.body));
+        return http.Response(jsonEncode({..._venta, 'documento': 'pos', 'numero': 'EPOS1'}), 201);
+      }),
+    );
+    final carrito = const Carrito().agregar(gaseosa);
+    final respuesta = await repositorio.registrar(
+      'e1',
+      PedidoDeVenta(id: 'v1', carrito: carrito, medioDePago: MedioDePago.efectivo),
+    );
+    await repositorio.registrar(
+      'e1',
+      PedidoDeVenta(id: 'v2', carrito: carrito, medioDePago: MedioDePago.efectivo, pideFactura: true),
+    );
+    expect([for (final c in cuerpos) (c as Map)['documento']], ['automatico', 'factura']);
+    expect((respuesta as Exito<VentaEmitida>).valor.documento, DocumentoDeLaVenta.pos);
+  });
+
+  test('HU-06.02: un documento desconocido no se muestra; sin documento (API anterior) es factura', () async {
+    RepositorioDeVentasHttp con(Map<String, Object?> venta) => RepositorioDeVentasHttp(
+      'https://api.ejemplo',
+      token: () => 't',
+      cliente: MockClient((_) async => http.Response(jsonEncode(venta), 200)),
+    );
+    expect(await con({..._venta, 'documento': 'nota'}).consultar('e1', 'v1'), isA<Rechazo<VentaEmitida>>());
+    final anterior = await con(_venta).consultar('e1', 'v1');
+    expect((anterior as Exito<VentaEmitida>).valor.documento, DocumentoDeLaVenta.factura);
   });
 
   test('un estado desconocido no se muestra como si fuera real', () async {

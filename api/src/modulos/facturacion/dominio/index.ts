@@ -12,6 +12,7 @@ export { EnvioDian, type DatosDelEnvio } from './envio-dian/envio-dian.js';
 export { ESTADOS_DEL_ENVIO, esEstadoFinal, type EstadoDelEnvio } from './envio-dian/estado-del-envio.js';
 export { esperaDeConsulta, esperaTrasFalla, MAXIMO_DE_INTENTOS } from './envio-dian/politica-de-reintentos.js';
 export { RespuestaDeLaDian, type ResultadoDeValidacion } from './envio-dian/respuesta-de-la-dian.js';
+export * from './documentos/index.js';
 export * from './ventas/index.js';
 export * from './comprobante/index.js';
 export * from './correo/index.js';
