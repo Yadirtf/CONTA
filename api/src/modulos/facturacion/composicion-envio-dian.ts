@@ -4,6 +4,7 @@ import { RELOJ, type Reloj, type UnidadDeTrabajo } from '../../compartido/aplica
 import { BaseDeDatos } from '../../compartido/infraestructura/persistencia/base-de-datos.js';
 import { UnidadDeTrabajoPostgres } from '../../compartido/infraestructura/persistencia/unidad-de-trabajo-postgres.js';
 import { CompletarEmisionesPendientes, LOTE_DE_EMISIONES } from './aplicacion/comandos/completar-emisiones-pendientes.js';
+import { EnviarCorreosPendientes, LOTE_DE_CORREOS } from './aplicacion/comandos/enviar-correos-pendientes.js';
 import { ProcesarEnvioDian } from './aplicacion/comandos/procesar-envio-dian.js';
 import { LOTE_POR_DEFECTO, ProcesarTrabajosVencidos } from './aplicacion/comandos/procesar-trabajos-vencidos.js';
 import { SolicitarEnvioDian } from './aplicacion/comandos/solicitar-envio-dian.js';
@@ -19,6 +20,7 @@ import { SERVICIO_WEB_DIAN, type ServicioWebDian } from './aplicacion/puertos/se
 import { AccesoDianDesdeEntorno } from './infraestructura/acceso-dian/acceso-dian-desde-entorno.js';
 import { DespertadorEnProceso } from './infraestructura/cola/despertador-en-proceso.js';
 import { ServicioWebDianDirecto } from './infraestructura/dian-directa/servicio-web/servicio-web-dian-directo.js';
+import { avisosDeAceptacionPostgres } from './infraestructura/persistencia/correos/avisos-de-aceptacion-postgres.js';
 import { ColaDeTrabajosPostgres } from './infraestructura/persistencia/cola-de-trabajos-postgres.js';
 import { RegistroDeIntentosPostgres } from './infraestructura/persistencia/registro-de-intentos-postgres.js';
 import { RepositorioDeEnviosPostgres } from './infraestructura/persistencia/repositorio-de-envios-postgres.js';
@@ -38,6 +40,7 @@ export const PROVEEDORES_DE_ENVIO_DIAN: Provider[] = [
         envios: new RepositorioDeEnviosPostgres(ejecutor),
         intentos: new RegistroDeIntentosPostgres(ejecutor),
         cola: new ColaDeTrabajosPostgres(ejecutor),
+        avisos: avisosDeAceptacionPostgres(ejecutor),
       })),
     inject: [BaseDeDatos],
   },
@@ -56,7 +59,11 @@ export const PROVEEDORES_DE_ENVIO_DIAN: Provider[] = [
         // Primero termina las ventas sin firmar (HU-06.01), que dejan envíos nuevos en la cola; después los envíos.
         const emisiones = await modulo.get(CompletarEmisionesPendientes).ejecutar();
         const { tomados } = await modulo.get(ProcesarTrabajosVencidos).ejecutar();
-        return { lleno: tomados >= LOTE_POR_DEFECTO || emisiones.tomados >= LOTE_DE_EMISIONES };
+        // Al final los correos de las facturas que la DIAN aceptó (HU-06.08).
+        const correos = await modulo.get(EnviarCorreosPendientes).ejecutar();
+        return {
+          lleno: tomados >= LOTE_POR_DEFECTO || emisiones.tomados >= LOTE_DE_EMISIONES || correos.tomados >= LOTE_DE_CORREOS,
+        };
       }),
     inject: [ModuleRef],
   },

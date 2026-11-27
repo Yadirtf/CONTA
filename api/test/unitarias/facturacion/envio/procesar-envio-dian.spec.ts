@@ -20,6 +20,7 @@ function memoria() {
   const envio = EnvioDian.solicitar('e1', 'a'.repeat(96), 'SETP1', T0);
   const intentos: IntentoDeEnvio[] = [];
   const cola: { encolados: Date[]; completados: number } = { encolados: [], completados: 0 };
+  const avisados: string[] = [];
   const repositorios: RepositoriosDeEnvio = {
     envios: {
       buscar: () => Promise.resolve(EnvioDian.reconstituir(envio.instantanea())),
@@ -37,9 +38,15 @@ function memoria() {
       encolar: (_t, cuando) => Promise.resolve(void cola.encolados.push(cuando)),
       completar: () => Promise.resolve(void (cola.completados += 1)),
     },
+    avisos: {
+      documentoAceptado: (id) => {
+        avisados.push(id);
+        return Promise.resolve(false);
+      },
+    },
   };
   const uow: UnidadDeTrabajo<RepositoriosDeEnvio> = { ejecutar: (_c, trabajo) => trabajo(repositorios) };
-  return { envio, intentos, cola, uow };
+  return { envio, intentos, cola, uow, avisados };
 }
 
 const accesoValido = { para: () => Promise.resolve({ certificado: CertificadoDeFirma.de(new Uint8Array([1]), 'clave-secreta'), testSetId: TEST_SET_ID }) };

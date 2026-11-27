@@ -21,6 +21,7 @@ import {
 import type { RepositoriosDeVenta } from './aplicacion/puertos/repositorios-de-venta.js';
 import { ConfiguracionDianDesdeEntorno } from './infraestructura/acceso-dian/configuracion-dian-desde-entorno.js';
 import { CatalogoDeVentaConCatalogo } from './infraestructura/catalogo/catalogo-de-venta-con-catalogo.js';
+import { RepositorioDeCorreosPostgres } from './infraestructura/persistencia/correos/repositorio-de-correos-postgres.js';
 import { ColaDeEmisionesPostgres } from './infraestructura/persistencia/ventas/cola-de-emisiones-postgres.js';
 import { EmisionesPendientesPostgres } from './infraestructura/persistencia/ventas/emisiones-pendientes-postgres.js';
 import { NumeracionPostgres } from './infraestructura/persistencia/ventas/numeracion-postgres.js';
@@ -29,8 +30,8 @@ import { RepositorioDeVentasPostgres } from './infraestructura/persistencia/vent
 // Composición de las ventas (HU-06.01): une los puertos con sus adaptadores. El catálogo entra por su API pública;
 // la configuración DIAN sale del entorno hasta EP-07.
 
-const UNIDAD_DE_TRABAJO_DE_VENTAS = Symbol('UnidadDeTrabajoDeVentas');
-type DeVentas = UnidadDeTrabajo<RepositoriosDeVenta>;
+export const UNIDAD_DE_TRABAJO_DE_VENTAS = Symbol('UnidadDeTrabajoDeVentas');
+export type DeVentas = UnidadDeTrabajo<RepositoriosDeVenta>;
 
 export const PROVEEDORES_DE_VENTAS: Provider[] = [
   {
@@ -40,6 +41,7 @@ export const PROVEEDORES_DE_VENTAS: Provider[] = [
         ventas: new RepositorioDeVentasPostgres(ejecutor),
         numeracion: new NumeracionPostgres(ejecutor),
         emisiones: new ColaDeEmisionesPostgres(ejecutor),
+        correos: new RepositorioDeCorreosPostgres(ejecutor),
       })),
     inject: [BaseDeDatos],
   },

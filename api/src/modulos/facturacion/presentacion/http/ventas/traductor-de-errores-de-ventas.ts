@@ -13,6 +13,8 @@ const ESTADOS: Readonly<Record<string, HttpStatus>> = {
   'facturacion.numeracion-en-conflicto': HttpStatus.CONFLICT,
   'venta.limite-diario': HttpStatus.TOO_MANY_REQUESTS,
   'venta.limite-por-persona': HttpStatus.TOO_MANY_REQUESTS,
+  'comprobante.en-camino': HttpStatus.CONFLICT,
+  'comprobante.rechazado': HttpStatus.CONFLICT,
 };
 
 interface RespuestaHttp {

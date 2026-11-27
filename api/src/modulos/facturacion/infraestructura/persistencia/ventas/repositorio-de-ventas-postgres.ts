@@ -1,9 +1,17 @@
-import { asc, count, eq, gte, sql } from 'drizzle-orm';
+import { asc, count, desc, eq, gte, sql } from 'drizzle-orm';
 import type { Ejecutor } from '../../../../../compartido/infraestructura/persistencia/base-de-datos.js';
-import type { EnvioDeLaVenta, RepositorioDeVentas, VentaGuardada } from '../../../aplicacion/puertos/repositorio-de-ventas.js';
-import type { Venta } from '../../../dominio/index.js';
+import type {
+  EnvioDeLaVenta,
+  FacturaDeLaVenta,
+  RepositorioDeVentas,
+  ResumenDeVenta,
+  VentaGuardada,
+} from '../../../aplicacion/puertos/repositorio-de-ventas.js';
+import { ESTADOS_DEL_ENVIO, type EstadoDelEnvio, type Venta } from '../../../dominio/index.js';
 import { numeracionEnConflicto } from '../../../aplicacion/ventas/errores-de-venta.js';
+import { codigoQrDelXml } from '../../dian-directa/ubl/codigo-qr-del-xml.js';
 import { RepositorioDeEnviosPostgres } from '../repositorio-de-envios-postgres.js';
+import { enviosDian } from '../tablas-envio-dian.js';
 import { emisionesDeVenta, lineasDeVenta, ventas } from './tablas-ventas.js';
 import { filasDeVenta, ventaDeFilas } from './venta-de-filas.js';
 
@@ -74,6 +82,57 @@ export class RepositorioDeVentasPostgres implements RepositorioDeVentas {
     const { estado, respuesta } = envio.instantanea();
     return { envioId: fila.envioId, estado, respuesta };
   }
+
+  async facturaDe(ventaId: string): Promise<FacturaDeLaVenta | null> {
+    const [fila] = await this.ejecutor
+      .select({ estado: enviosDian.estado, cufe: enviosDian.cufe, xmlFirmado: enviosDian.xmlFirmado })
+      .from(emisionesDeVenta)
+      .innerJoin(enviosDian, eq(enviosDian.id, emisionesDeVenta.envioId))
+      .where(eq(emisionesDeVenta.ventaId, ventaId))
+      .limit(1);
+    if (!fila) return null;
+    return { estado: estadoDelEnvioValido(fila.estado), cufe: fila.cufe, codigoQr: codigoQrDelXml(fila.xmlFirmado), xmlFirmado: fila.xmlFirmado };
+  }
+
+  async deEnvio(envioId: string): Promise<VentaGuardada | null> {
+    const [fila] = await this.ejecutor
+      .select({ ventaId: emisionesDeVenta.ventaId })
+      .from(emisionesDeVenta)
+      .where(eq(emisionesDeVenta.envioId, envioId))
+      .limit(1);
+    return fila ? this.conId(fila.ventaId) : null;
+  }
+
+  async recientes(limite: number): Promise<ResumenDeVenta[]> {
+    const filas = await this.ejecutor
+      .select({
+        id: ventas.id,
+        prefijo: ventas.prefijo,
+        consecutivo: ventas.consecutivo,
+        emitidaEn: ventas.emitidaEn,
+        comprador: sql<string>`${ventas.comprador} ->> 'razonSocial'`,
+        total: ventas.total,
+        estado: enviosDian.estado,
+      })
+      .from(ventas)
+      .leftJoin(emisionesDeVenta, eq(emisionesDeVenta.ventaId, ventas.id))
+      .leftJoin(enviosDian, eq(enviosDian.id, emisionesDeVenta.envioId))
+      .orderBy(desc(ventas.emitidaEn), desc(ventas.consecutivo))
+      .limit(limite);
+    return filas.map((f) => ({
+      id: f.id,
+      numero: `${f.prefijo}${f.consecutivo}`,
+      emitidaEn: f.emitidaEn,
+      comprador: f.comprador,
+      total: f.total,
+      estadoDelEnvio: f.estado === null ? null : estadoDelEnvioValido(f.estado),
+    }));
+  }
+}
+
+function estadoDelEnvioValido(estado: string): EstadoDelEnvio {
+  if (!(ESTADOS_DEL_ENVIO as readonly string[]).includes(estado)) throw new Error(`Estado de envío desconocido: ${estado}`);
+  return estado as EstadoDelEnvio;
 }
 
 const NUMERO_UNICO = 'ventas_empresa_id_prefijo_consecutivo_key';

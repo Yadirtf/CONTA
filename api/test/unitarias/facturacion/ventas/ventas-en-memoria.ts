@@ -1,7 +1,9 @@
 import type { ContextoEmpresa, UnidadDeTrabajo } from '../../../../src/compartido/aplicacion/index.js';
 import type { CatalogoDeVenta } from '../../../../src/modulos/facturacion/aplicacion/puertos/catalogo-de-venta.js';
+import type { IntentoDeCorreo } from '../../../../src/modulos/facturacion/aplicacion/puertos/repositorio-de-correos.js';
+import type { FacturaDeLaVenta } from '../../../../src/modulos/facturacion/aplicacion/puertos/repositorio-de-ventas.js';
 import type { RepositoriosDeVenta } from '../../../../src/modulos/facturacion/aplicacion/puertos/repositorios-de-venta.js';
-import { type ArticuloDelCatalogo, type Participante, ResolucionDeNumeracion, type Venta } from '../../../../src/modulos/facturacion/dominio/index.js';
+import { type ArticuloDelCatalogo, CorreoDeFactura, type Participante, ResolucionDeNumeracion, type Venta } from '../../../../src/modulos/facturacion/dominio/index.js';
 import { adquirenteDePrueba, emisorDePrueba } from '../datos-de-prueba.js';
 import { arroz, gaseosa } from './apoyo.js';
 
@@ -24,6 +26,10 @@ export class VentasEnMemoria implements UnidadDeTrabajo<RepositoriosDeVenta> {
   cupoDePersonaAgotado = false;
   readonly guardadas = new Map<string, Venta>();
   readonly encoladas: string[] = [];
+  /** HU-06.08: la factura enviada de cada venta, por id de venta. */
+  readonly facturas = new Map<string, FacturaDeLaVenta>();
+  readonly correos = new Map<string, CorreoDeFactura>();
+  readonly intentosDeCorreo: IntentoDeCorreo[] = [];
 
   ejecutar<T>(_contexto: ContextoEmpresa, trabajo: (r: RepositoriosDeVenta) => Promise<T>): Promise<T> {
     const antes = this.siguiente;
@@ -47,6 +53,38 @@ export class VentasEnMemoria implements UnidadDeTrabajo<RepositoriosDeVenta> {
         consumirCupoDePersona: () => Promise.resolve(!this.cupoDePersonaAgotado),
         registrarEmision: () => Promise.resolve(),
         envioDe: () => Promise.resolve(null),
+        facturaDe: (id) => Promise.resolve(this.facturas.get(id) ?? null),
+        deEnvio: (envioId) => {
+          const venta = this.guardadas.get(envioId.replace(/^envio-/, ''));
+          return Promise.resolve(venta ? { venta, resolucionId: 'r' } : null);
+        },
+        recientes: (limite) =>
+          Promise.resolve(
+            [...this.guardadas.values()].slice(-limite).reverse().map((v) => ({
+              id: v.id,
+              numero: v.datos.numero.aTexto(),
+              emitidaEn: v.datos.emitidaEn,
+              comprador: v.datos.comprador.razonSocial,
+              total: v.total.aTexto(),
+              estadoDelEnvio: this.facturas.get(v.id)?.estado ?? null,
+            })),
+          ),
+      },
+      correos: {
+        buscar: (id) => {
+          const c = this.correos.get(id);
+          return Promise.resolve(c ? CorreoDeFactura.reconstituir(c.instantanea()) : null);
+        },
+        solicitar: (correo) => {
+          if (!this.correos.has(correo.ventaId)) this.correos.set(correo.ventaId, correo);
+          return Promise.resolve();
+        },
+        actualizar: (correo, intentosLeidos) => {
+          if (this.correos.get(correo.ventaId)?.intentos !== intentosLeidos) return Promise.resolve(false);
+          this.correos.set(correo.ventaId, CorreoDeFactura.reconstituir(correo.instantanea()));
+          return Promise.resolve(true);
+        },
+        registrarIntento: (intento) => Promise.resolve(void this.intentosDeCorreo.push(intento)),
       },
       numeracion: {
         emisor: () => Promise.resolve(this.emisor),
