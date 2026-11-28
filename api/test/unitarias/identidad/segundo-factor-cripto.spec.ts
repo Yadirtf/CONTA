@@ -1,6 +1,6 @@
 import { IdUsuario } from '../../../src/modulos/identidad/dominio/index.js';
 import { aBase32 } from '../../../src/modulos/identidad/infraestructura/segundo-factor/base32.js';
-import { CifradorDeSecretos } from '../../../src/modulos/identidad/infraestructura/segundo-factor/cifrador-de-secretos.js';
+import { CifradorDeSecretos } from '../../../src/compartido/infraestructura/cifrado/cifrador-de-secretos.js';
 import { CodigosDeRecuperacionNode } from '../../../src/modulos/identidad/infraestructura/segundo-factor/codigos-de-recuperacion.js';
 import { SecretosDeSegundoFactorNode } from '../../../src/modulos/identidad/infraestructura/segundo-factor/secretos-de-segundo-factor-node.js';
 import { codigoDelPaso, pasoDe, pasoQueCoincide } from '../../../src/modulos/identidad/infraestructura/segundo-factor/totp.js';

@@ -17,7 +17,6 @@ import {
 import { PROVEEDOR_DE_ACCESO_DIAN, type ProveedorDeAccesoDian } from './aplicacion/puertos/proveedor-de-acceso-dian.js';
 import type { RepositoriosDeEnvio } from './aplicacion/puertos/repositorios-de-envio.js';
 import { SERVICIO_WEB_DIAN, type ServicioWebDian } from './aplicacion/puertos/servicio-web-dian.js';
-import { AccesoDianDesdeEntorno } from './infraestructura/acceso-dian/acceso-dian-desde-entorno.js';
 import { DespertadorEnProceso } from './infraestructura/cola/despertador-en-proceso.js';
 import { ServicioWebDianDirecto } from './infraestructura/dian-directa/servicio-web/servicio-web-dian-directo.js';
 import { avisosDeAceptacionPostgres } from './infraestructura/persistencia/correos/avisos-de-aceptacion-postgres.js';
@@ -45,7 +44,6 @@ export const PROVEEDORES_DE_ENVIO_DIAN: Provider[] = [
     inject: [BaseDeDatos],
   },
   { provide: SERVICIO_WEB_DIAN, useFactory: (reloj: Reloj) => new ServicioWebDianDirecto(reloj), inject: [RELOJ] },
-  { provide: PROVEEDOR_DE_ACCESO_DIAN, useFactory: () => new AccesoDianDesdeEntorno() },
   {
     provide: FUENTE_DE_TRABAJOS_VENCIDOS,
     useFactory: (baseDeDatos: BaseDeDatos) => new TrabajosVencidosPostgres(baseDeDatos),

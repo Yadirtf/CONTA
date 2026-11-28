@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'funcionalidades/acceso/dobles.dart';
 import 'funcionalidades/clientes/dobles.dart';
+import 'funcionalidades/configuracion_dian/dobles.dart';
 import 'funcionalidades/empresas/dobles.dart';
 import 'funcionalidades/miembros/dobles.dart';
 import 'funcionalidades/productos/dobles.dart';
@@ -30,6 +31,7 @@ void main() {
         ventas: RepositorioDeVentasFalso(),
         comprobantes: colaDePrueba(RepositorioDeVentasFalso(), CompartidorFalso()),
         verificacion: RepositorioDeVerificacionFalso(),
+        configuracionDian: RepositorioDeConfiguracionDianFalso(),
         repositorioSalud: _RepositorioFijo(),
       ),
     );
@@ -55,6 +57,7 @@ void main() {
         ventas: RepositorioDeVentasFalso(),
         comprobantes: colaDePrueba(RepositorioDeVentasFalso(), CompartidorFalso()),
         verificacion: RepositorioDeVerificacionFalso(),
+        configuracionDian: RepositorioDeConfiguracionDianFalso(),
         repositorioSalud: _RepositorioFijo(),
       ),
     );

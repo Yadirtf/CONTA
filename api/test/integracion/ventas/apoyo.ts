@@ -28,10 +28,16 @@ import { ColaDeEmisionesPostgres } from '../../../src/modulos/facturacion/infrae
 import { EmisionesPendientesPostgres } from '../../../src/modulos/facturacion/infraestructura/persistencia/ventas/emisiones-pendientes-postgres.js';
 import { NumeracionPostgres } from '../../../src/modulos/facturacion/infraestructura/persistencia/ventas/numeracion-postgres.js';
 import { RepositorioDeVentasPostgres } from '../../../src/modulos/facturacion/infraestructura/persistencia/ventas/repositorio-de-ventas-postgres.js';
+import { PreferenciasPostgres } from '../../../src/modulos/facturacion/infraestructura/persistencia/configuracion/preferencias-postgres.js';
+import { CustodiaAesGcm } from '../../../src/modulos/facturacion/infraestructura/custodia/custodia-aes-gcm.js';
+
 import { conexionDelDueno, nuevoId } from '../aislamiento/base-de-pruebas.js';
 import { crearDatosFiscales, crearResolucion, crearUsuario } from '../aislamiento/fabricas.js';
 import { RelojDePrueba, unidadDeTrabajoDeEnvios } from '../envio-dian/apoyo.js';
 import { CONTRASENA_DE_PRUEBA, juegoDeCertificados } from '../../recursos/firma/certificados-de-prueba.js';
+
+/** Custodia con una clave desechable, solo de pruebas (HU-07.04). */
+export const CUSTODIA_DE_PRUEBA = new CustodiaAesGcm('clave-desechable-de-pruebas-de-la-configuracion-dian');
 
 // Piezas reales para probar las ventas contra PostgreSQL: persistencia, catálogo, UBL y firma XAdES con un
 // certificado de prueba creado en memoria. Solo la configuración DIAN y el acceso son dobles.
@@ -105,9 +111,10 @@ export async function escenario(baseDeDatos: BaseDeDatos, rango = { desde: 99000
   const reloj = new RelojDePrueba(new Date());
   const uow = new UnidadDeTrabajoPostgres<RepositoriosDeVenta>(baseDeDatos, (e) => ({
     ventas: new RepositorioDeVentasPostgres(e),
-    numeracion: new NumeracionPostgres(e),
+    numeracion: new NumeracionPostgres(e, CUSTODIA_DE_PRUEBA),
     emisiones: new ColaDeEmisionesPostgres(e),
     correos: new RepositorioDeCorreosPostgres(e),
+    preferencias: new PreferenciasPostgres(e),
   }));
   const deCatalogo = new UnidadDeTrabajoPostgres<RepositoriosDeCatalogo>(baseDeDatos, (e) => ({ clientes: new RepositorioClientesPostgres(e), productos: new RepositorioProductosPostgres(e) }));
   const productos = await sembrarProductos(deCatalogo, miembro, reloj.ahora());

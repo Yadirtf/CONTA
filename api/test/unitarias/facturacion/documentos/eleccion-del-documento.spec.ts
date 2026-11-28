@@ -21,6 +21,7 @@ const circunstancias = (cambios: Partial<CircunstanciasDeLaVenta> = {}): Circuns
   base: Dinero.de('10000'),
   fecha: '2026-11-27',
   posDisponible: true,
+  siempreFactura: false,
   ...cambios,
 });
 
@@ -61,6 +62,8 @@ describe('Elección del documento', () => {
     expect(claseParaLaVenta(circunstancias({ preferencia: 'factura' }))).toBe('factura');
     expect(claseParaLaVenta(circunstancias({ conComprador: true }))).toBe('factura');
     expect(claseParaLaVenta(circunstancias({ posDisponible: false }))).toBe('factura');
+    // HU-07.04: el dueño pidió «siempre factura».
+    expect(claseParaLaVenta(circunstancias({ siempreFactura: true }))).toBe('factura');
     expect(claseParaLaVenta(circunstancias({ base: Dinero.de('261870.01') }))).toBe('factura');
     expect(claseParaLaVenta(circunstancias({ fecha: '2025-12-31' }))).toBe('factura');
   });

@@ -18,6 +18,11 @@ export const Permiso = {
   AnularDocumentos: 'anular-documentos',
   /** Invitar, cambiar el rol o el modo y retirar a las personas de la empresa. */
   GestionarMiembros: 'gestionar-miembros',
+  /**
+   * Cargar los datos que pide la DIAN para facturar: datos fiscales, resoluciones, software y su PIN (HU-07.04).
+   * Solo el dueño: quien cambia el PIN o la resolución decide a nombre de quién y con qué números se factura.
+   */
+  ConfigurarFacturacion: 'configurar-facturacion',
   /** Trabajar en modo contador. Solo habilita la interfaz técnica: no abre ningún otro permiso. */
   UsarModoContador: 'usar-modo-contador',
 } as const;

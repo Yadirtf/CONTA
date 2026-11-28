@@ -52,25 +52,29 @@ export class EmitirVenta {
       }
       const [emisor, resolucion] = await Promise.all([numeracion.emisor(), numeracion.resolucion(guardada.resolucionId)]);
       if (!emisor || !resolucion) throw facturacionNoHabilitada();
-      return guardada.venta.aFactura(emisor, resolucion);
+      const claveDelRango = resolucion.clase === 'factura' ? await numeracion.claveTecnica(guardada.resolucionId) : null;
+      return { factura: guardada.venta.aFactura(emisor, resolucion), claveDelRango };
     });
     if (!leido) return;
+    const { factura, claveDelRango } = leido;
 
-    const [{ configuracion, nitDelFacturador }, acceso] = await Promise.all([
-      this.configuracionDian.para(contexto, leido.clase),
-      this.accesoDian.para(contexto, leido.clase),
+    const [{ configuracion: delSoftware, nitDelFacturador }, acceso] = await Promise.all([
+      this.configuracionDian.para(contexto, factura.clase),
+      this.accesoDian.para(contexto, factura.clase),
     ]);
-    if (leido.emisor.identificacion.numero !== nitDelFacturador) throw facturacionNoHabilitada();
-    const documento = this.firmar.ejecutar(this.generar.ejecutar(leido, configuracion), acceso.certificado);
+    if (factura.emisor.identificacion.numero !== nitDelFacturador) throw facturacionNoHabilitada();
+    // La DIAN da una clave técnica por rango: la de la resolución de la venta manda sobre la del software (HU-07.04).
+    const configuracion = claveDelRango === null ? delSoftware : { ...delSoftware, claveTecnica: claveDelRango };
+    const documento = this.firmar.ejecutar(this.generar.ejecutar(factura, configuracion), acceso.certificado);
     const { envioId } = await this.solicitarEnvio.ejecutar(contexto, {
       documento,
-      numero: leido.numero.aTexto(),
+      numero: factura.numero.aTexto(),
       nitEmisor: nitDelFacturador,
-      clase: leido.clase,
+      clase: factura.clase,
     });
 
     await this.unidadDeTrabajo.ejecutar(contexto, async ({ ventas, emisiones }) => {
-      await ventas.registrarEmision(ventaId, envioId, leido.clase);
+      await ventas.registrarEmision(ventaId, envioId, factura.clase);
       await emisiones.completar(ventaId);
     });
   }

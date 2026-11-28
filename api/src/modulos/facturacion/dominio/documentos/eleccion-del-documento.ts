@@ -28,13 +28,17 @@ export interface CircunstanciasDeLaVenta {
   readonly fecha: string;
   /** La empresa tiene el POS habilitado y una resolución POS vigente con números. */
   readonly posDisponible: boolean;
+  /** El dueño pidió en la configuración DIAN que nunca salga tiquete POS (HU-07.04, ADR-0016). */
+  readonly siempreFactura: boolean;
 }
 
 /**
  * Qué documento sale. El tiquete POS solo si se dejó en automático, es a consumidor final, el negocio lo tiene
- * habilitado y la base cabe en 5 UVT; en cualquier otro caso, factura electrónica, que siempre es válida.
+ * habilitado, el dueño no pidió «siempre factura» y la base cabe en 5 UVT; en cualquier otro caso, factura
+ * electrónica, que siempre es válida.
  */
 export function claseParaLaVenta(c: CircunstanciasDeLaVenta): ClaseDeDocumento {
-  const pos = c.preferencia === 'automatico' && !c.conComprador && c.posDisponible && cabeEnPos(c.base, c.fecha);
+  const pos =
+    c.preferencia === 'automatico' && !c.conComprador && c.posDisponible && !c.siempreFactura && cabeEnPos(c.base, c.fecha);
   return pos ? 'pos' : 'factura';
 }

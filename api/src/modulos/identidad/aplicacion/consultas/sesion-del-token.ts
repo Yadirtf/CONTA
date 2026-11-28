@@ -1,5 +1,5 @@
 import type { Reloj } from '../../../../compartido/aplicacion/index.js';
-import { tieneSegundoFactorVigente } from '../../dominio/index.js';
+import { tieneSegundoFactorVigente, verificoHacePoco } from '../../dominio/index.js';
 import type { SesionVigente, UnidadDeTrabajoDeIdentidad } from '../puertos/repositorios-de-identidad.js';
 import type { HuellasDeAcceso } from '../puertos/secretos-de-acceso.js';
 
@@ -23,6 +23,8 @@ export class SesionDelToken {
     const huella = this.huellas.huellaDeToken(token);
     const ahora = this.reloj.ahora();
     const encontrada = await this.uow.ejecutar(({ sesiones }) => sesiones.buscarVigente(huella, ahora));
-    return encontrada && { ...encontrada, segundoFactorVigente: tieneSegundoFactorVigente(encontrada.sesion, ahora) };
+    if (!encontrada) return null;
+    const vigente = tieneSegundoFactorVigente(encontrada.sesion, ahora);
+    return { ...encontrada, segundoFactorVigente: vigente, segundoFactorReciente: vigente && verificoHacePoco(encontrada.sesion, ahora) };
   }
 }

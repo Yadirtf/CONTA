@@ -1,6 +1,6 @@
-// Deja lista una empresa para facturar (HU-06.01) mientras llega el asistente de habilitación (EP-07):
-// guarda sus datos fiscales y agrega su resolución de numeración. Corre como conta_app (dueño de las tablas),
-// nunca como conta_api, que solo puede leer estos datos.
+// RESPALDO para soporte. Desde HU-07.04 el dueño carga sus datos fiscales y sus resoluciones en la app
+// (/configuracion-dian). Este comando guarda los datos fiscales y agrega una resolución sin clave técnica.
+// Corre como conta_app (dueño de las tablas), nunca como conta_api.
 //
 // Uso: DATABASE_URL=postgres://conta_app:...  node scripts/configurar-facturacion.mjs <archivo.json>
 // El archivo vive fuera del repositorio (lleva el NIT y la dirección del facturador). Su forma:

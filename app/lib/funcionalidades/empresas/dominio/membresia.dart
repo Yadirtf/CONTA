@@ -37,6 +37,7 @@ abstract final class Permiso {
   static const verInformes = 'ver-informes';
   static const anularDocumentos = 'anular-documentos';
   static const gestionarMiembros = 'gestionar-miembros';
+  static const configurarFacturacion = 'configurar-facturacion';
 }
 
 /// Lo que la membresía le da a la persona en un negocio.

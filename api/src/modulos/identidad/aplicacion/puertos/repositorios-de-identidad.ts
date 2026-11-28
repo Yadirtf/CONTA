@@ -24,6 +24,8 @@ export interface SesionConUsuario {
 /** Sesión tal como la necesita quien atiende una petición: además dice si su segundo factor sigue vigente. */
 export interface SesionVigente extends SesionConUsuario {
   readonly segundoFactorVigente: boolean;
+  /** Verificó hace 10 minutos o menos: lo piden los cambios de secretos (HU-07.04). */
+  readonly segundoFactorReciente: boolean;
 }
 
 export interface RepositorioDeSesiones {

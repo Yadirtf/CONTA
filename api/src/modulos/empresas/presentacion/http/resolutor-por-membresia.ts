@@ -36,6 +36,8 @@ export class ResolutorPorMembresia implements ResolutorDeEmpresa {
     if (!contexto) return { rechazo: 'empresa-ajena' };
     // HU-04.04: con el rol y el modo recién leídos; un cambio a contador lo exige desde la petición siguiente.
     if (exigeSegundoFactor(contexto.rol, contexto.modo) && !sesion.segundoFactorVigente) return { rechazo: 'sin-segundo-factor' };
-    return { contexto };
+    // HU-07.04: reciente solo si además está vigente; los casos de uso de secretos lo piden.
+    const segundoFactor = !sesion.segundoFactorVigente ? 'sin-verificar' : sesion.segundoFactorReciente ? 'reciente' : 'vigente';
+    return { contexto: { ...contexto, segundoFactor } };
   }
 }

@@ -72,7 +72,7 @@ export class RegistrarVenta {
     const base = Dinero.total(lineas.map((l) => l.desglose.base));
 
     try {
-      await this.unidadDeTrabajo.ejecutar(contexto, async ({ ventas, numeracion, emisiones }) => {
+      await this.unidadDeTrabajo.ejecutar(contexto, async ({ ventas, numeracion, emisiones, preferencias }) => {
         const emisor = await numeracion.emisor();
         if (!emisor || emisor.identificacion.numero !== nitDelFacturador) throw facturacionNoHabilitada();
         const resolucionPos = posHabilitado ? await numeracion.resolucionVigente(fecha, 'pos') : null;
@@ -82,6 +82,7 @@ export class RegistrarVenta {
           base,
           fecha,
           posDisponible: resolucionPos !== null,
+          siempreFactura: resolucionPos !== null && (await preferencias.siempreFactura()),
         });
         const vigente: ResolucionVigente | null = clase === 'pos' ? resolucionPos : await numeracion.resolucionVigente(fecha, 'factura');
         if (!vigente) throw sinResolucionVigente();

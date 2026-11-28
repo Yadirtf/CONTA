@@ -8,13 +8,16 @@ import type {
 } from '../../aplicacion/puertos/proveedor-de-configuracion-dian.js';
 import type { ClaseDeDocumento } from '../../dominio/index.js';
 import { configuracionValida } from '../dian-directa/ubl/configuracion-exigida.js';
-import { NOMBRE_DEL_SOFTWARE, VARIABLES_DEL_FABRICANTE, VARIABLES_POR_CLASE } from './variables-por-clase.js';
-
-/** Clave técnica pública del rango de pruebas de habilitación (SETP 990000000-995000000). */
-const CLAVE_TECNICA_DE_HABILITACION = 'fc8eac422eba16e22ffd8c6f94b3f40a6e38162c';
+import {
+  CLAVE_TECNICA_DE_HABILITACION,
+  NOMBRE_DEL_SOFTWARE,
+  VARIABLES_DEL_FABRICANTE,
+  VARIABLES_POR_CLASE,
+} from './variables-por-clase.js';
 
 /**
- * Software de facturación de UNA empresa, tomado del entorno (solo habilitación), igual que AccesoDianDesdeEntorno:
+ * Software de facturación de UNA empresa, tomado del entorno (solo habilitación). Es el respaldo de las empresas que
+ * no guardaron su software en la configuración DIAN (HU-07.04). Igual que AccesoDianDesdeEntorno:
  * cualquier otra empresa recibe AccesoDianNoConfigurado. El PIN y la clave técnica son reservados y nunca salen de
  * aquí salvo hacia el cálculo del código único y del código de seguridad. Cada clase de documento tiene su software
  * (HU-06.02); si faltan las variables del POS, el POS no está habilitado y las ventas salen con factura.

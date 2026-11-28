@@ -55,6 +55,7 @@ DATABASE_URL="postgres://conta_api:local-api@localhost:$PUERTO_PG/conta" \
   CONTA_ENTORNO=pruebas \
   CELULARES_DE_PRUEBA="$CELULARES_CON_CODIGO" \
   SECRETO_SEGUNDO_FACTOR="clave-local-desechable-del-segundo-factor-ataque" \
+  SECRETO_CONFIGURACION_DIAN="clave-local-desechable-de-la-configuracion-dian-ataque" \
   TOKEN_TRABAJOS_INTERNOS="token-local-desechable-de-trabajos-internos" \
   PORT="$PUERTO_API" \
   nohup node -r "$RAIZ/herramientas/ataque/sin-dian.cjs" dist/main.js > "$DATOS/api.log" 2>&1 &

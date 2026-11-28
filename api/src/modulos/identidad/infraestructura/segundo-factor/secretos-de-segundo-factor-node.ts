@@ -6,7 +6,7 @@ import type {
 } from '../../aplicacion/puertos/secretos-de-segundo-factor.js';
 import { type IdUsuario, POLITICA_DE_SEGUNDO_FACTOR } from '../../dominio/index.js';
 import { aBase32 } from './base32.js';
-import { CifradorDeSecretos } from './cifrador-de-secretos.js';
+import { CifradorDeSecretos } from '../../../../compartido/infraestructura/cifrado/cifrador-de-secretos.js';
 import { CodigosDeRecuperacionNode } from './codigos-de-recuperacion.js';
 import { pasoQueCoincide } from './totp.js';
 

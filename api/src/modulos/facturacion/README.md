@@ -111,6 +111,30 @@ El documento equivalente electrónico tiquete POS (anexo DEE v1.0) sale por la m
 | `infraestructura/dian-directa/ubl/` | `perfil-ubl.ts`, `codigo-unico.ts`, `extensiones-pos.ts` | Perfil UBL por clase, CUFE o CUDE, y las extensiones del POS. |
 | `migraciones/0011_tiquete_pos.sql` | | `clase` en resoluciones, ventas, envíos y emisiones; llaves foráneas de clase; tope repetido en un trigger; la clase del envío amarrada a su XML. |
 
+## Configuración DIAN por empresa (HU-07.04)
+
+El dueño carga en la app sus datos del RUT, sus resoluciones de factura y POS, el software de cada clase y la preferencia «siempre factura». Decisión en [ADR-0017](../../../../Docs/decisiones/0017-configuracion-dian-por-empresa.md).
+
+- **Quién puede.** Solo el dueño (`configurar-facturacion`). Leer exige la verificación en dos pasos de la jornada; cambiar exige una de hace 10 minutos o menos (`acceso.segundo-factor-reciente-requerido`).
+- **Secretos.** El PIN y la clave técnica se cifran con AES-256-GCM (`SECRETO_CONFIGURACION_DIAN`), atados a su empresa y a su clase o resolución. Nunca vuelven: la respuesta muestra `•••X`. Sin la variable, la configuración responde 503.
+- **Resoluciones.** Solo se agregan, hasta 20 por clase. Con el mismo id, un pedido idéntico responde 200; uno con otro contenido es 409. La comparación usa una huella con clave (HMAC) que incluye la clave técnica y el primer número. La clave técnica va con su resolución de factura; sin ella se usa la pública de habilitación.
+- **Topes.** Una empresa puede hacer 30 cambios en 10 minutos (429 con `Retry-After`). Repetir la misma preferencia no escribe nada.
+- **Datos fiscales.** No acepta NIT genéricos (222222222222, 444444…) ni NIT fuera de 5 a 10 dígitos. El código DANE debe empezar con un departamento real, y R-99-PN no va junto con otras responsabilidades. La venta lee el emisor con `FOR SHARE`, así que el NIT no cambia mientras hay una venta en curso.
+- **Facturar.** Con una fila en `software_dian`, el software, el PIN, el TestSetId y el fabricante salen de la base. Si no hay fila, se usa el respaldo `DIAN_HAB_*`. El certificado sigue en el entorno hasta HU-07.02.
+
+| Capa | Archivo | Responsabilidad |
+| --- | --- | --- |
+| `dominio/configuracion/` | `datos-fiscales.ts`, `resolucion-nueva.ts`, `software-dian.ts`, `secretos-dian.ts`, `lo-que-falta.ts`, `seccion-de-configuracion.ts` | Validan lo que escribe el dueño y calculan qué falta para facturar. |
+| `aplicacion/configuracion/` | `guardar-datos-fiscales.ts`, `agregar-resolucion.ts`, `guardar-software.ts`, `guardar-preferencias.ts`, `obtener-configuracion-dian.ts`, `exigir-dueno-verificado.ts` | Un caso de uso por sección; cada cambio queda en la bitácora, sin valores. |
+| `aplicacion/puertos/` | `custodia-de-secretos.ts`, `repositorios-de-configuracion.ts`, `preferencias-de-facturacion.ts` | Puertos de la custodia y de las tablas. |
+| `infraestructura/custodia/` | `custodia-aes-gcm.ts` | Cifrado con la clave del entorno; sin ella, «no disponible». |
+| `infraestructura/persistencia/configuracion/` | `*-postgres.ts` | Tablas con `conta_api`: upsert de datos fiscales, inserción de resoluciones, software, preferencias y bitácora. |
+| `infraestructura/acceso-dian/` | `configuracion-dian-guardada.ts`, `acceso-dian-guardado.ts`, `software-de-la-empresa.ts` | La base primero y el entorno de respaldo. |
+| `presentacion/http/configuracion/` | `configuracion-dian.controller.ts`, `lectura-*.ts`, `respuesta-configuracion.ts` | `/configuracion-dian`: lectura estricta de los cuerpos y respuesta sin secretos. |
+| `migraciones/0012_configuracion_dian.sql` | | Tablas nuevas con RLS forzado, permisos por columna, NIT fijo con ventas y primer número dentro del rango. |
+
+El comando `npm run facturacion:configurar` queda como respaldo para soporte.
+
 ## Reglas del anexo que se aplican
 
 - **CUFE** (11.2): `SHA-384(NumFac + FecFac + HorFac + ValFac + 01 + ValImp1 + 04 + ValImp2 + 03 + ValImp3 + ValTot + NitFE + NumAdq + ClTec + TipoAmbiente)`, con los mismos textos que quedan en el XML. La prueba reproduce el ejemplo oficial de la sección 11.2.1.
@@ -147,6 +171,7 @@ El XML se escribe sin indentación ni espacios y con el orden del esquema, siemp
 - `test/integracion/ventas/`: contra PostgreSQL con la firma real. Cubre el primer número de la resolución, reintentos sin gastar números, 12 ventas a la vez con números seguidos, el mismo id 5 veces a la vez (una sola venta), la reparación tras una firma fallida, el rango agotado, el producto de otra empresa y que `conta_api` no edita ni borra ventas ni baja el consecutivo.
 - `test/e2e/ventas.e2e-spec.ts`: la API completa con el cajero, campos de más, otra empresa y una empresa sin habilitar.
 - `test/unitarias/facturacion/comprobante/`: comprobante, correo, renderizador (PDF determinista), Brevo con transporte falso y los casos de uso. `test/integracion/ventas/comprobante-y-correo.int-spec.ts`: el correo se pide al aceptar, dos procesadores no lo mandan dos veces, la función de vencidos (solo lectura) y lo que `conta_api` no puede cambiar.
+- `test/unitarias/facturacion/configuracion/`, `test/integracion/configuracion/` y `test/e2e/configuracion-dian.e2e-spec.ts`: dominio y casos de uso de la configuración, resoluciones que solo se agregan, NIT fijo con ventas, PIN cifrado, bitácora de solo inserción, permisos y verificación reciente de punta a punta.
 - `test/habilitacion/`: envío **real** al set de pruebas. Solo corre en el workflow manual «Habilitación DIAN» con el entorno `SECRETOS`.
 
 ## Qué falta, y en qué historia
@@ -156,6 +181,6 @@ El XML se escribe sin indentación ni espacios y con el orden del esquema, siemp
 - Adaptador durable de colas definitivo (reemplaza la tabla y el despertador): HU-06.04.
 - Envío en producción (`SendBillAsync`): HU-06.04 con la habilitación (EP-07). Hoy el envío va al set de pruebas.
 - Alertas de rango por agotarse: HU-06.07.
-- Preferencia del negocio «siempre factura» y software POS por empresa desde la pantalla de configuración DIAN: EP-07.
-- Configuración DIAN y datos fiscales por empresa desde la consola, en lugar del entorno y el comando: EP-07.
+- Certificado por empresa (hoy sigue en `DIAN_HAB_P12_*`) y cifrado de sobre: HU-07.02.
+- Pasos de habilitación y diagnóstico con la DIAN: HU-07.01 y HU-07.03.
 - INC, ICA, descuentos, cargos, retenciones, otras monedas y notas crédito y débito: EP-06.

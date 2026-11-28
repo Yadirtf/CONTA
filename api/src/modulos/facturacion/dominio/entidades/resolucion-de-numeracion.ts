@@ -57,6 +57,7 @@ export class ResolucionDeNumeracion {
   }
 }
 
+/** AAAA-MM-DD real entre 2000 y 2099: la DIAN no emite resoluciones fuera de ese siglo (hallazgos B1 y B4). */
 function esFecha(texto: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(texto) && new Date(`${texto}T00:00:00Z`).toISOString().startsWith(texto);
+  return /^20\d{2}-\d{2}-\d{2}$/.test(texto) && new Date(`${texto}T00:00:00Z`).toISOString().startsWith(texto);
 }

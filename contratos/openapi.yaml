@@ -846,6 +846,187 @@ paths:
       summary: El PDF de la factura con su QR, cuando la DIAN ya la aceptó.
       tags:
         - ventas
+  /configuracion-dian:
+    get:
+      operationId: ConfiguracionDianController_leer
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ""
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfiguracionDianRespuesta"
+        "403":
+          description: No es el dueño (permiso.denegado), no pasó la verificación en dos
+            pasos (acceso.segundo-factor-requerido) o, para cambiar, no la pasó
+            hace poco (acceso.segundo-factor-reciente-requerido).
+        "429":
+          description: Más de 30 cambios de la empresa en 10 minutos (configuracion.limite).
+        "503":
+          description: El servidor no tiene la clave para cifrar datos reservados
+            (configuracion.no-disponible).
+      security:
+        - bearer: []
+      summary: Lo guardado de la configuración DIAN y lo que falta para facturar. Sin
+        PIN ni clave técnica.
+      tags:
+        - configuracion-dian
+  /configuracion-dian/datos-fiscales:
+    put:
+      operationId: ConfiguracionDianController_datosFiscales
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DatosFiscalesNuevos"
+      responses:
+        "204":
+          description: Guardados.
+        "403":
+          description: No es el dueño (permiso.denegado), no pasó la verificación en dos
+            pasos (acceso.segundo-factor-requerido) o, para cambiar, no la pasó
+            hace poco (acceso.segundo-factor-reciente-requerido).
+        "409":
+          description: El NIT cambiaría y ya hay ventas (configuracion.nit-con-ventas).
+        "429":
+          description: Más de 30 cambios de la empresa en 10 minutos (configuracion.limite).
+        "503":
+          description: El servidor no tiene la clave para cifrar datos reservados
+            (configuracion.no-disponible).
+      security:
+        - bearer: []
+      summary: Guarda o corrige los datos fiscales del facturador. El NIT no cambia si
+        ya hay ventas.
+      tags:
+        - configuracion-dian
+  /configuracion-dian/resoluciones:
+    post:
+      operationId: ConfiguracionDianController_resolucion
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolucionPorAgregar"
+      responses:
+        "200":
+          description: "Ya existía con ese id (reintento): no se agrega otra."
+        "201":
+          description: Agregada.
+        "403":
+          description: No es el dueño (permiso.denegado), no pasó la verificación en dos
+            pasos (acceso.segundo-factor-requerido) o, para cambiar, no la pasó
+            hace poco (acceso.segundo-factor-reciente-requerido).
+        "409":
+          description: resolucion.id-en-uso, resolucion.repetida o resolucion.rango-cruzado.
+        "429":
+          description: Más de 30 cambios de la empresa en 10 minutos (configuracion.limite).
+        "503":
+          description: El servidor no tiene la clave para cifrar datos reservados
+            (configuracion.no-disponible).
+      security:
+        - bearer: []
+      summary: Agrega una resolución de numeración. Una guardada nunca se edita ni se
+        borra.
+      tags:
+        - configuracion-dian
+  /configuracion-dian/software/{clase}:
+    put:
+      operationId: ConfiguracionDianController_software
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+        - name: clase
+          required: true
+          in: path
+          schema:
+            enum:
+              - factura
+              - pos
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SoftwareNuevo"
+      responses:
+        "204":
+          description: Guardado.
+        "403":
+          description: No es el dueño (permiso.denegado), no pasó la verificación en dos
+            pasos (acceso.segundo-factor-requerido) o, para cambiar, no la pasó
+            hace poco (acceso.segundo-factor-reciente-requerido).
+        "429":
+          description: Más de 30 cambios de la empresa en 10 minutos (configuracion.limite).
+        "503":
+          description: El servidor no tiene la clave para cifrar datos reservados
+            (configuracion.no-disponible).
+      security:
+        - bearer: []
+      summary: Guarda el software DIAN de una clase de documento. El PIN se escribe
+        solo para cambiarlo.
+      tags:
+        - configuracion-dian
+  /configuracion-dian/preferencias:
+    put:
+      operationId: ConfiguracionDianController_preferencias
+      parameters:
+        - name: X-Empresa
+          in: header
+          description: Id de la empresa en la que se trabaja.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PreferenciasNuevas"
+      responses:
+        "204":
+          description: Guardadas.
+        "403":
+          description: No es el dueño (permiso.denegado), no pasó la verificación en dos
+            pasos (acceso.segundo-factor-requerido) o, para cambiar, no la pasó
+            hace poco (acceso.segundo-factor-reciente-requerido).
+        "429":
+          description: Más de 30 cambios de la empresa en 10 minutos (configuracion.limite).
+        "503":
+          description: El servidor no tiene la clave para cifrar datos reservados
+            (configuracion.no-disponible).
+      security:
+        - bearer: []
+      summary: "Guarda «siempre factura»: con ella nunca sale tiquete POS."
+      tags:
+        - configuracion-dian
 info:
   title: CONTA API
   description: "API única de CONTA: facturación electrónica DIAN, contabilidad y
@@ -1083,6 +1264,7 @@ components:
               - ver-informes
               - anular-documentos
               - gestionar-miembros
+              - configurar-facturacion
               - usar-modo-contador
         exigeSegundoFactor:
           type: boolean
@@ -1698,3 +1880,350 @@ components:
         - estado
         - mensaje
         - motivos
+    DireccionDelFacturador:
+      type: object
+      properties:
+        codigoMunicipio:
+          type: string
+          example: "11001"
+          description: Código DANE del municipio (5 dígitos).
+        ciudad:
+          type: string
+          example: Bogotá, D.C.
+        departamento:
+          type: string
+          example: Bogotá
+        linea:
+          type: string
+          example: "Calle 12 # 3-45"
+      required:
+        - codigoMunicipio
+        - ciudad
+        - departamento
+        - linea
+    DatosFiscalesGuardadosRespuesta:
+      type: object
+      properties:
+        nit:
+          type: string
+          example: "900373076"
+        digitoVerificacion:
+          type: number
+          example: 4
+        razonSocial:
+          type: string
+        tipoDePersona:
+          type: string
+          enum:
+            - juridica
+            - natural
+        responsabilidadesFiscales:
+          type: array
+          items:
+            type: string
+        responsableDeIva:
+          type: boolean
+        direccion:
+          $ref: "#/components/schemas/DireccionDelFacturador"
+        correo:
+          type: string
+          nullable: true
+      required:
+        - nit
+        - digitoVerificacion
+        - razonSocial
+        - tipoDePersona
+        - responsabilidadesFiscales
+        - responsableDeIva
+        - direccion
+        - correo
+    ResolucionGuardadaRespuesta:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        clase:
+          type: string
+          enum: *a5
+        numero:
+          type: string
+        prefijo:
+          type: string
+        desde:
+          type: number
+        hasta:
+          type: number
+        vigenteDesde:
+          type: string
+        vigenteHasta:
+          type: string
+        siguiente:
+          type: number
+          description: El próximo número que se usará.
+        disponible:
+          type: boolean
+          description: Vigente hoy y con números por usar.
+        conClaveTecnica:
+          type: boolean
+          description: true si se guardó con su clave técnica (que nunca se devuelve).
+      required:
+        - id
+        - clase
+        - numero
+        - prefijo
+        - desde
+        - hasta
+        - vigenteDesde
+        - vigenteHasta
+        - siguiente
+        - disponible
+        - conClaveTecnica
+    FabricanteDelSoftwarePos:
+      type: object
+      properties:
+        nombre:
+          type: string
+          example: Pepe Pérez
+        razonSocial:
+          type: string
+          example: Tienda Don Pepe S.A.S.
+      required:
+        - nombre
+        - razonSocial
+    SoftwareGuardadoRespuesta:
+      type: object
+      properties:
+        idSoftware:
+          type: string
+          format: uuid
+        testSetId:
+          type: string
+          format: uuid
+        pin:
+          type: string
+          example: •••7
+          description: El PIN guardado, tapado salvo su último carácter.
+        fabricante:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/FabricanteDelSoftwarePos"
+        actualizadoEn:
+          type: string
+      required:
+        - idSoftware
+        - testSetId
+        - pin
+        - actualizadoEn
+    SoftwarePorClaseRespuesta:
+      type: object
+      properties:
+        factura:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/SoftwareGuardadoRespuesta"
+        pos:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/SoftwareGuardadoRespuesta"
+      required:
+        - factura
+        - pos
+    CambioRespuesta:
+      type: object
+      properties:
+        seccion:
+          type: string
+          enum:
+            - datos-fiscales
+            - resolucion-factura
+            - resolucion-pos
+            - software-factura
+            - software-pos
+            - preferencias
+        hechoEn:
+          type: string
+        hechoPorMi:
+          type: boolean
+          description: true si lo hizo quien pregunta.
+      required:
+        - seccion
+        - hechoEn
+        - hechoPorMi
+    LoQueFaltaRespuesta:
+      type: object
+      properties:
+        puedeFacturar:
+          type: boolean
+          description: Con lo guardado ya sale la factura electrónica (el certificado
+            llega con HU-07.02).
+        posActivo:
+          type: boolean
+          description: El tiquete POS está completo y el negocio no pidió «siempre factura».
+        pendientes:
+          type: array
+          items:
+            type: string
+            enum:
+              - datos-fiscales
+              - resolucion-factura
+              - software-factura
+      required:
+        - puedeFacturar
+        - posActivo
+        - pendientes
+    ConfiguracionDianRespuesta:
+      type: object
+      properties:
+        datosFiscales:
+          nullable: true
+          type: object
+          allOf:
+            - $ref: "#/components/schemas/DatosFiscalesGuardadosRespuesta"
+        resoluciones:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResolucionGuardadaRespuesta"
+        software:
+          $ref: "#/components/schemas/SoftwarePorClaseRespuesta"
+        siempreFactura:
+          type: boolean
+        cambios:
+          description: Los últimos cambios, sin valores.
+          type: array
+          items:
+            $ref: "#/components/schemas/CambioRespuesta"
+        loQueFalta:
+          $ref: "#/components/schemas/LoQueFaltaRespuesta"
+      required:
+        - datosFiscales
+        - resoluciones
+        - software
+        - siempreFactura
+        - cambios
+        - loQueFalta
+    DatosFiscalesNuevos:
+      type: object
+      properties:
+        nit:
+          type: string
+          example: "900373076"
+          description: Sin puntos ni dígito de verificación.
+        digitoVerificacion:
+          type: number
+          minimum: 0
+          maximum: 9
+          description: Si se escribe, debe coincidir con el calculado.
+        razonSocial:
+          type: string
+          example: Tienda Don Pepe S.A.S.
+        tipoDePersona:
+          type: string
+          enum:
+            - juridica
+            - natural
+        responsabilidadesFiscales:
+          type: array
+          example:
+            - R-99-PN
+          items:
+            type: string
+            enum:
+              - O-13
+              - O-15
+              - O-23
+              - O-47
+              - R-99-PN
+        responsableDeIva:
+          type: boolean
+        direccion:
+          $ref: "#/components/schemas/DireccionDelFacturador"
+        correo:
+          type: object
+          nullable: true
+          example: facturas@donpepe.co
+      required:
+        - nit
+        - razonSocial
+        - tipoDePersona
+        - responsabilidadesFiscales
+        - responsableDeIva
+        - direccion
+    ResolucionPorAgregar:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: "Lo elige la app: repetir la petición no agrega dos."
+        clase:
+          type: string
+          enum: *a5
+        numero:
+          type: string
+          example: "18760000001"
+        prefijo:
+          type: string
+          example: SETP
+          description: Hasta 4 letras mayúsculas o números; puede ir vacío.
+        desde:
+          type: number
+          example: 990000000
+        hasta:
+          type: number
+          example: 995000000
+        vigenteDesde:
+          type: string
+          example: 2019-01-19
+        vigenteHasta:
+          type: string
+          example: 2030-01-19
+        primerNumero:
+          type: number
+          description: Primer número que usará CONTA. Por omisión, `desde`.
+        claveTecnica:
+          type: string
+          description: Clave técnica del rango (solo factura). Se guarda cifrada y nunca
+            se devuelve.
+      required:
+        - id
+        - clase
+        - numero
+        - prefijo
+        - desde
+        - hasta
+        - vigenteDesde
+        - vigenteHasta
+    SoftwareNuevo:
+      type: object
+      properties:
+        idSoftware:
+          type: string
+          format: uuid
+          description: Identificador del software que dio la DIAN.
+        pin:
+          type: string
+          description: "PIN del software. Solo para cambiarlo: sin él, queda el guardado.
+            Nunca se devuelve."
+        testSetId:
+          type: string
+          format: uuid
+          description: TestSetId del set de pruebas de habilitación.
+        fabricante:
+          description: Solo el tiquete POS (y ahí es obligatorio).
+          allOf:
+            - $ref: "#/components/schemas/FabricanteDelSoftwarePos"
+      required:
+        - idSoftware
+        - testSetId
+    PreferenciasNuevas:
+      type: object
+      properties:
+        siempreFactura:
+          type: boolean
+          description: "true: nunca sale tiquete POS, siempre factura electrónica."
+      required:
+        - siempreFactura

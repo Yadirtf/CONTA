@@ -14,9 +14,9 @@ const persona = IdUsuario.de('33333333-3333-4333-8333-333333333333');
 type Membresia = Pick<ContextoDeMiembro, 'rol' | 'modo'>;
 
 /** Resolutor con dobles: una sesión vigente para TOKEN y membresía solo en SUYA, con ese rol y modo. */
-function resolutor(membresia: Membresia = { rol: 'cajero', modo: 'simple' }, segundoFactorVigente = false) {
+function resolutor(membresia: Membresia = { rol: 'cajero', modo: 'simple' }, segundoFactorVigente = false, segundoFactorReciente = false) {
   const preguntas: string[] = [];
-  const sesion = { usuario: { id: persona }, segundoFactorVigente } as SesionVigente;
+  const sesion = { usuario: { id: persona }, segundoFactorVigente, segundoFactorReciente } as SesionVigente;
   const sesionDelToken = { ejecutar: (t: string) => Promise.resolve(t === TOKEN ? sesion : null) } as SesionDelToken;
   const comprobar = {
     ejecutar: (u: IdUsuario, e: IdEmpresa): Promise<ContextoDeMiembro | null> => {
@@ -33,7 +33,7 @@ describe('ResolutorPorMembresia', () => {
   it('con sesión y membresía, la petición corre en la empresa elegida, con el rol del miembro', async () => {
     const { resolutor: r, preguntas } = resolutor();
     const resolucion = await r.resolver(peticion({ authorization: `Bearer ${TOKEN}`, 'x-empresa': SUYA.toUpperCase() }));
-    expect(resolucion).toEqual({ contexto: { empresaId: IdEmpresa.de(SUYA), usuarioId: persona, rol: 'cajero', modo: 'simple' } });
+    expect(resolucion).toEqual({ contexto: { empresaId: IdEmpresa.de(SUYA), usuarioId: persona, rol: 'cajero', modo: 'simple', segundoFactor: 'sin-verificar' } });
     expect(preguntas).toEqual([`${persona.valor}@${SUYA}`]);
   });
 
@@ -64,6 +64,14 @@ describe('ResolutorPorMembresia', () => {
     expect(await resolutor({ rol: 'contador', modo: 'contador' }, true).resolutor.resolver(conToken)).toHaveProperty('contexto.rol', 'contador');
     expect(await resolutor({ rol: 'dueno', modo: 'simple' }).resolutor.resolver(conToken)).toHaveProperty('contexto.rol', 'dueno');
     expect(await resolutor({ rol: 'cajero', modo: 'simple' }).resolutor.resolver(conToken)).toHaveProperty('contexto.rol', 'cajero');
+  });
+
+  it('el contexto dice qué tan fresca está la verificación de la sesión (HU-07.04)', async () => {
+    const conToken = peticion({ authorization: `Bearer ${TOKEN}`, 'x-empresa': SUYA });
+    const dueno = { rol: 'dueno', modo: 'simple' } as const;
+    expect(await resolutor(dueno, true).resolutor.resolver(conToken)).toHaveProperty('contexto.segundoFactor', 'vigente');
+    expect(await resolutor(dueno, true, true).resolutor.resolver(conToken)).toHaveProperty('contexto.segundoFactor', 'reciente');
+    expect(await resolutor(dueno, false, true).resolutor.resolver(conToken)).toHaveProperty('contexto.segundoFactor', 'sin-verificar');
   });
 
   it('empresa ajena, mal escrita o repetida: empresa-ajena, sin distinguir', async () => {

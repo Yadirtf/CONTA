@@ -20,6 +20,7 @@ class PantallaDeEmpresa extends StatefulWidget {
     this.alVerProductos,
     this.alVender,
     this.alVerMisVentas,
+    this.alConfigurarFacturacion,
   });
 
   final Empresa empresa;
@@ -44,6 +45,9 @@ class PantallaDeEmpresa extends StatefulWidget {
 
   /// Las últimas facturas para compartirlas (HU-06.08). Solo llega si la membresía puede vender.
   final VoidCallback? alVerMisVentas;
+
+  /// La configuración DIAN del negocio (HU-07.04). Solo llega al dueño.
+  final VoidCallback? alConfigurarFacturacion;
 
   @override
   State<PantallaDeEmpresa> createState() => _PantallaDeEmpresaState();
@@ -72,6 +76,12 @@ class _PantallaDeEmpresaState extends State<PantallaDeEmpresa> {
                 onPressed: widget.alVerCompradores,
                 tooltip: 'Compradores',
                 icon: const Icon(Icons.badge_outlined),
+              ),
+            if (widget.alConfigurarFacturacion != null)
+              IconButton(
+                onPressed: widget.alConfigurarFacturacion,
+                tooltip: 'Facturación electrónica',
+                icon: const Icon(Icons.receipt_outlined),
               ),
             if (widget.alVerPersonas != null)
               IconButton(

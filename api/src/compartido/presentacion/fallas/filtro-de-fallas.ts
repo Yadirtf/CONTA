@@ -18,6 +18,11 @@ export class FiltroDeFallas implements ExceptionFilter {
 
   catch(error: unknown, host: ArgumentsHost): void {
     const respuesta = host.switchToHttp().getResponse<RespuestaHttp>();
+    if (error instanceof HttpException && esJsonMalFormado(error)) {
+      // El analizador de JSON repite el cuerpo en su mensaje (y ahí puede ir un PIN): nunca se devuelve (hallazgo B2).
+      respuesta.status(HttpStatus.BAD_REQUEST).json({ codigo: 'peticion.json-invalido', mensaje: 'El cuerpo no es un JSON válido' });
+      return;
+    }
     if (error instanceof HttpException) {
       const cuerpo = error.getResponse();
       respuesta.status(error.getStatus()).json(typeof cuerpo === 'string' ? { mensaje: cuerpo } : cuerpo);
@@ -29,6 +34,11 @@ export class FiltroDeFallas implements ExceptionFilter {
       .status(HttpStatus.INTERNAL_SERVER_ERROR)
       .json({ codigo: 'servidor.falla', mensaje: 'Algo salió mal. Intenta de nuevo.', referencia });
   }
+}
+
+/** Un 400 del analizador del cuerpo: su causa es el SyntaxError de JSON.parse, o su mensaje lo cita. */
+function esJsonMalFormado(error: HttpException): boolean {
+  return error.getStatus() === 400 && (error.cause instanceof SyntaxError || /is not valid JSON|in JSON at position/.test(error.message));
 }
 
 /** Tipo de error y datos técnicos de PostgreSQL que no llevan datos de nadie. */

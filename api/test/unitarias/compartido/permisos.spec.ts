@@ -35,6 +35,10 @@ describe('permisos por rol', () => {
     expect(ROLES.filter((rol) => tienePermiso(rol, Permiso.GestionarMiembros))).toEqual(['dueno']);
   });
 
+  it('solo el dueño configura la facturación DIAN (HU-07.04)', () => {
+    expect(ROLES.filter((rol) => tienePermiso(rol, Permiso.ConfigurarFacturacion))).toEqual(['dueno']);
+  });
+
   it('permisosDe da la lista en el orden en que se declaran', () => {
     expect(permisosDe('cajero')).toEqual(['ver-empresa', 'vender']);
     expect(permisosDe('dueno')).toEqual(Object.values(Permiso));

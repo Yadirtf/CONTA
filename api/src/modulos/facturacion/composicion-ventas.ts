@@ -19,7 +19,8 @@ import {
   type ProveedorDeConfiguracionDian,
 } from './aplicacion/puertos/proveedor-de-configuracion-dian.js';
 import type { RepositoriosDeVenta } from './aplicacion/puertos/repositorios-de-venta.js';
-import { ConfiguracionDianDesdeEntorno } from './infraestructura/acceso-dian/configuracion-dian-desde-entorno.js';
+import { CUSTODIA_DE_SECRETOS, type CustodiaDeSecretos } from './aplicacion/puertos/custodia-de-secretos.js';
+import { PreferenciasPostgres } from './infraestructura/persistencia/configuracion/preferencias-postgres.js';
 import { CatalogoDeVentaConCatalogo } from './infraestructura/catalogo/catalogo-de-venta-con-catalogo.js';
 import { RepositorioDeCorreosPostgres } from './infraestructura/persistencia/correos/repositorio-de-correos-postgres.js';
 import { ColaDeEmisionesPostgres } from './infraestructura/persistencia/ventas/cola-de-emisiones-postgres.js';
@@ -28,7 +29,7 @@ import { NumeracionPostgres } from './infraestructura/persistencia/ventas/numera
 import { RepositorioDeVentasPostgres } from './infraestructura/persistencia/ventas/repositorio-de-ventas-postgres.js';
 
 // Composición de las ventas (HU-06.01): une los puertos con sus adaptadores. El catálogo entra por su API pública;
-// la configuración DIAN sale del entorno hasta EP-07.
+// la configuración DIAN la carga el dueño (HU-07.04, composicion-configuracion-dian.ts).
 
 export const UNIDAD_DE_TRABAJO_DE_VENTAS = Symbol('UnidadDeTrabajoDeVentas');
 export type DeVentas = UnidadDeTrabajo<RepositoriosDeVenta>;
@@ -36,16 +37,16 @@ export type DeVentas = UnidadDeTrabajo<RepositoriosDeVenta>;
 export const PROVEEDORES_DE_VENTAS: Provider[] = [
   {
     provide: UNIDAD_DE_TRABAJO_DE_VENTAS,
-    useFactory: (baseDeDatos: BaseDeDatos): DeVentas =>
+    useFactory: (baseDeDatos: BaseDeDatos, custodia: CustodiaDeSecretos): DeVentas =>
       new UnidadDeTrabajoPostgres(baseDeDatos, (ejecutor) => ({
         ventas: new RepositorioDeVentasPostgres(ejecutor),
-        numeracion: new NumeracionPostgres(ejecutor),
+        numeracion: new NumeracionPostgres(ejecutor, custodia),
         emisiones: new ColaDeEmisionesPostgres(ejecutor),
         correos: new RepositorioDeCorreosPostgres(ejecutor),
+        preferencias: new PreferenciasPostgres(ejecutor),
       })),
-    inject: [BaseDeDatos],
+    inject: [BaseDeDatos, CUSTODIA_DE_SECRETOS],
   },
-  { provide: PROVEEDOR_DE_CONFIGURACION_DIAN, useFactory: () => new ConfiguracionDianDesdeEntorno() },
   {
     provide: CATALOGO_DE_VENTA,
     useFactory: (obtener: ObtenerParaVender) => new CatalogoDeVentaConCatalogo(obtener),

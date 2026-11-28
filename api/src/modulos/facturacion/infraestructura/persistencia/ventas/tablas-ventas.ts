@@ -32,7 +32,12 @@ export const resoluciones = conta.table('resoluciones_de_numeracion', {
   vigenteHasta: date('vigente_hasta', { mode: 'string' }).notNull(),
   siguiente: bigint('siguiente', { mode: 'number' }).notNull(),
   clase: text('clase').notNull(),
-  creadaEn: timestamp('creada_en', { withTimezone: true }).notNull(),
+  // La pone la base (DEFAULT now()); conta_api no la puede escribir.
+  creadaEn: timestamp('creada_en', { withTimezone: true }).notNull().defaultNow(),
+  /** HU-07.04: la clave técnica del rango, cifrada (solo factura). */
+  claveTecnicaCifrada: text('clave_tecnica_cifrada'),
+  /** HMAC del pedido que la agregó (HU-07.04): distingue un reintento de otro pedido con el mismo id. */
+  huellaDelPedido: text('huella_del_pedido'),
 });
 
 export const ventas = conta.table('ventas', {

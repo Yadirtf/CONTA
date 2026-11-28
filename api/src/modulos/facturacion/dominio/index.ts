@@ -16,3 +16,4 @@ export * from './documentos/index.js';
 export * from './ventas/index.js';
 export * from './comprobante/index.js';
 export * from './correo/index.js';
+export * from './configuracion/index.js';
