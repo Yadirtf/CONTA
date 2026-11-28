@@ -1,26 +1,35 @@
 import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
-import { Identificacion, Nit } from '../../../../../compartido/dominio/index.js';
 import type { Ejecutor } from '../../../../../compartido/infraestructura/persistencia/base-de-datos.js';
+import { asociadoALaResolucion, type CustodiaDeSecretos } from '../../../aplicacion/puertos/custodia-de-secretos.js';
 import type { NumeracionDeLaEmpresa, ResolucionVigente } from '../../../aplicacion/puertos/numeracion-de-la-empresa.js';
-import { type ClaseDeDocumento, claseDeDocumento, participante, type Participante, ResolucionDeNumeracion } from '../../../dominio/index.js';
+import { type ClaseDeDocumento, claseDeDocumento, type Participante, ResolucionDeNumeracion } from '../../../dominio/index.js';
+import { participanteDeFila } from '../configuracion/datos-fiscales-de-fila.js';
 import { datosFiscales, type FilaDeResolucion, resoluciones } from './tablas-ventas.js';
 
 /** Datos fiscales y resoluciones de la empresa de la transacción (RLS). Solo `siguiente` cambia, y solo sube. */
 export class NumeracionPostgres implements NumeracionDeLaEmpresa {
-  constructor(private readonly ejecutor: Ejecutor) {}
+  constructor(
+    private readonly ejecutor: Ejecutor,
+    private readonly custodia: CustodiaDeSecretos,
+  ) {}
 
+  /**
+   * FOR SHARE: mientras la venta no se confirma, el dueño no puede cambiar el NIT con que sale (hallazgo B3). Su
+   * cambio espera, y el trigger nit_fijo_con_ventas ya ve la venta.
+   */
   async emisor(): Promise<Participante | null> {
-    const [f] = await this.ejecutor.select().from(datosFiscales).limit(1);
-    if (!f) return null;
-    return participante({
-      identificacion: Identificacion.nit(Nit.de(f.nit)),
-      razonSocial: f.razonSocial,
-      tipoDePersona: f.tipoDePersona === 'natural' ? 'natural' : 'juridica',
-      responsabilidadesFiscales: f.responsabilidadesFiscales,
-      responsableDeIva: f.responsableDeIva,
-      direccion: { codigoMunicipio: f.codigoMunicipio, ciudad: f.ciudad, departamento: f.departamento, linea: f.direccion },
-      correo: f.correo,
-    });
+    const [f] = await this.ejecutor.select().from(datosFiscales).limit(1).for('share');
+    return f ? participanteDeFila(f) : null;
+  }
+
+  async claveTecnica(resolucionId: string): Promise<string | null> {
+    const [f] = await this.ejecutor
+      .select({ empresaId: resoluciones.empresaId, cifrada: resoluciones.claveTecnicaCifrada })
+      .from(resoluciones)
+      .where(eq(resoluciones.id, resolucionId))
+      .limit(1);
+    // Atada a su empresa y su resolución: una clave copiada a otra fila no abre (y la emisión falla).
+    return f?.cifrada ? this.custodia.descifrar(f.cifrada, asociadoALaResolucion(f.empresaId, resolucionId)) : null;
   }
 
   async resolucionVigente(fecha: string, clase: ClaseDeDocumento): Promise<ResolucionVigente | null> {

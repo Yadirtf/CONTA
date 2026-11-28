@@ -211,6 +211,48 @@ export const FABRICAS: Readonly<Record<string, FabricaDeFilas>> = {
       return id;
     },
   },
+  // HU-07.04: lo que el dueño carga en la configuración DIAN. conta_api las escribe; la empresa de la fila no cambia.
+  'conta.software_dian': {
+    columnaEmpresa: 'empresa_id',
+    columnaId: 'clase',
+    empresaInmutable: true,
+    async insertar(cliente, empresaId) {
+      await prepararEmpresa(cliente, empresaId);
+      await cliente.query(
+        `INSERT INTO conta.software_dian (empresa_id, clase, id_software, pin_cifrado, pin_final, test_set_id, actualizado_por)
+         VALUES ($1, 'factura', $2, 'v1.aaaa.bbbb.cccc', '5', $3, $4)`,
+        [empresaId, nuevoId(), nuevoId(), nuevoId()],
+      );
+      return 'factura';
+    },
+  },
+  'conta.preferencias_de_facturacion': {
+    columnaEmpresa: 'empresa_id',
+    columnaId: 'empresa_id',
+    empresaInmutable: true,
+    async insertar(cliente, empresaId) {
+      await prepararEmpresa(cliente, empresaId);
+      await cliente.query(
+        `INSERT INTO conta.preferencias_de_facturacion (empresa_id, siempre_factura, actualizado_por) VALUES ($1, true, $2)`,
+        [empresaId, nuevoId()],
+      );
+      return empresaId;
+    },
+  },
+  'conta.cambios_de_configuracion_dian': {
+    columnaEmpresa: 'empresa_id',
+    columnaId: 'id',
+    empresaInmutable: true,
+    async insertar(cliente, empresaId) {
+      await prepararEmpresa(cliente, empresaId);
+      const id = nuevoId();
+      await cliente.query(
+        `INSERT INTO conta.cambios_de_configuracion_dian (empresa_id, id, seccion, hecho_por) VALUES ($1, $2, 'software-factura', $3)`,
+        [empresaId, id, nuevoId()],
+      );
+      return id;
+    },
+  },
   'conta.datos_fiscales': {
     columnaEmpresa: 'empresa_id',
     columnaId: 'empresa_id',

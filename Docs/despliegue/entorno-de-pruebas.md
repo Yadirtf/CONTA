@@ -127,6 +127,7 @@ En Render: **New → Web Service → Yadirtf/CONTA**.
 | `DIAN_HAB_POS_FABRICANTE_NOMBRE`, `DIAN_HAB_POS_FABRICANTE_RAZON_SOCIAL` | Opcionales (HU-06.02). Nombre y razón social del fabricante del software, que van en el tiquete POS. Si falta cualquier `DIAN_HAB_POS_*`, o alguna no es válida, todo sale con factura. No las quites con tiquetes POS pendientes: esperan hasta que vuelvan |
 | `SECRETO_CODIGOS_ACCESO` | Al menos 32 caracteres al azar (`openssl rand -hex 32`). Firma los códigos de acceso ([ADR-0010](../decisiones/0010-acceso-con-celular-y-codigo-por-whatsapp.md)). Sin él, la API usa uno al azar por proceso y los códigos pendientes se pierden al reiniciar |
 | `SECRETO_SEGUNDO_FACTOR` | Al menos 32 caracteres al azar (`openssl rand -hex 32`), distinto de los demás. Cifra los secretos de las apps de verificación y firma los códigos de recuperación ([ADR-0013](../decisiones/0013-verificacion-en-dos-pasos.md)). Sin él, nadie con rol o modo contador puede trabajar en una empresa (503). Guarda una copia fuera de Render: si se pierde, cada contador debe configurar su app de nuevo |
+| `SECRETO_CONFIGURACION_DIAN` | Al menos 32 caracteres al azar (`openssl rand -hex 32`), distinto de los demás. Cifra el PIN del software y las claves técnicas que el dueño guarda en la app ([ADR-0017](../decisiones/0017-configuracion-dian-por-empresa.md)). Sin él, la pantalla de configuración DIAN responde 503 y las empresas con software guardado no facturan. Guarda una copia fuera de Render: si se pierde, cada dueño debe volver a escribir su PIN y sus claves técnicas |
 | `CORREO_BREVO_LLAVE`, `CORREO_REMITENTE` | Opcionales. Llave de la API de Brevo (capa gratuita, 300 correos al día) y la dirección remitente verificada en Brevo. Con ellas, al aceptar la DIAN una factura se le manda al comprador que tenga correo con el PDF y el XML (HU-06.08, [ADR-0015](../decisiones/0015-comprobante-a-pedido-y-correo-al-aceptar.md)). Sin ellas no sale ningún correo y cada intento queda como `correo.sin-configurar` |
 | `CONTA_ENTORNO` | `pruebas`. Es lo único que permite `CELULARES_DE_PRUEBA` |
 | `CELULARES_DE_PRUEBA` | Opcional, solo en pruebas. Pares `celular:código` separados por coma (ejemplo: `3000000001:<6 dígitos>`). A esos números no se les envía nada y entran con su código fijo. Usa números que no sean de nadie |
@@ -192,9 +193,11 @@ Mientras no esté listo, la app de pruebas entra con los celulares de `CELULARES
 3. Generar un token permanente con un usuario del sistema.
 4. Poner `WHATSAPP_TOKEN` y `WHATSAPP_ID_NUMERO` en Render.
 
-### 4.6 Dejar una empresa lista para vender (HU-06.01)
+### 4.6 Dejar una empresa lista para vender (HU-06.01 y HU-07.04)
 
-Mientras llega el asistente de habilitación (EP-07), los datos fiscales y la resolución de numeración se cargan una vez con un comando, como `conta_app` (la API solo puede leerlos):
+Desde HU-07.04, el dueño carga sus datos del RUT, sus resoluciones y su software en la app (ícono «Facturación electrónica»). Con eso, la API deja de leer `DIAN_HAB_ID_SOFTWARE`, `DIAN_HAB_PIN`, `DIAN_HAB_TEST_SET_ID` y `DIAN_HAB_POS_*` para esa empresa. El certificado sigue saliendo de `DIAN_HAB_P12_*` y de `DIAN_HAB_EMPRESA_ID` hasta HU-07.02.
+
+El comando de abajo queda como **respaldo** para soporte. Corre como `conta_app`:
 
 1. En la app, crea la empresa y copia su id (o léelo en Neon, tabla `conta.empresas`).
 2. Escribe un JSON **fuera del repositorio** con el NIT, la razón social, la dirección y la resolución (la forma está al comienzo de `api/scripts/configurar-facturacion.mjs`). Para habilitación sirve la resolución de pruebas: prefijo `SETP`, del 990000000 al 995000000.

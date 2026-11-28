@@ -73,6 +73,12 @@ describe('RegistrarVenta con tiquete POS (HU-06.02)', () => {
     expect((await claseDe(montar(), pedido({ cantidad: '124' })))?.clase).toBe('pos');
   });
 
+  it('HU-07.04: con «siempre factura» del dueño sale factura aunque el POS esté listo', async () => {
+    const montaje = montar();
+    montaje.ventas.siempreFactura = true;
+    expect((await claseDe(montaje))?.clase).toBe('factura');
+  });
+
   it('sin software POS, con otro NIT o sin resolución POS sale factura, sin error', async () => {
     expect((await claseDe(montar({ posConfigurado: false })))?.clase).toBe('factura');
     expect((await claseDe(montar({ nitPos: '800199436' })))?.clase).toBe('factura');

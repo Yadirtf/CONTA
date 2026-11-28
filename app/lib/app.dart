@@ -4,6 +4,8 @@ import 'funcionalidades/acceso/presentacion/controlador_de_acceso.dart';
 import 'funcionalidades/acceso/presentacion/puerta_de_acceso.dart';
 import 'funcionalidades/clientes/dominio/clientes.dart';
 import 'funcionalidades/clientes/presentacion/pantalla_buscar_comprador.dart';
+import 'funcionalidades/configuracion_dian/dominio/lo_que_se_escribe.dart';
+import 'funcionalidades/configuracion_dian/presentacion/pantalla_configuracion_dian.dart';
 import 'funcionalidades/empresas/dominio/empresas.dart';
 import 'funcionalidades/empresas/presentacion/pantalla_de_empresa.dart';
 import 'funcionalidades/empresas/presentacion/puerta_de_empresa.dart';
@@ -34,6 +36,7 @@ class ContaApp extends StatelessWidget {
     required this.ventas,
     required this.comprobantes,
     required this.verificacion,
+    required this.configuracionDian,
     required this.repositorioSalud,
   });
 
@@ -47,6 +50,7 @@ class ContaApp extends StatelessWidget {
   /// Cola para compartir facturas (HU-06.08): una para toda la app, así sigue aunque se cambie de pantalla.
   final ColaDeComprobantes comprobantes;
   final RepositorioDeVerificacion verificacion;
+  final RepositorioDeConfiguracionDian configuracionDian;
   final RepositorioSalud repositorioSalud;
 
   @override
@@ -114,6 +118,9 @@ class ContaApp extends StatelessWidget {
                       ),
                     )
                   : null,
+              alConfigurarFacturacion: (empresa.membresia?.puede(Permiso.configurarFacturacion) ?? false)
+                  ? () => _configurarFacturacion(contexto, empresa)
+                  : null,
               contenido: EstadoDelServidor(repositorio: repositorioSalud),
             ),
           ),
@@ -121,6 +128,25 @@ class ContaApp extends StatelessWidget {
       ),
     );
   }
+
+  /// La configuración DIAN (HU-07.04) siempre pide la verificación en dos pasos, aunque el negocio no la exija
+  /// para entrar: la API la exige igual.
+  void _configurarFacturacion(BuildContext contexto, Empresa empresa) => Navigator.of(contexto).push(
+    MaterialPageRoute<void>(
+      builder: (ruta) => PuertaDeVerificacion(
+        exigida: true,
+        repositorio: verificacion,
+        alCancelar: () => Navigator.of(ruta).pop(),
+        alPerderSesion: acceso.salir,
+        adentro: (_) => PantallaConfiguracionDian(
+          repositorio: configuracionDian,
+          verificacion: verificacion,
+          empresaId: empresa.id,
+          modoContador: empresa.membresia?.modo == Modo.contador,
+        ),
+      ),
+    ),
+  );
 
   /// Fuera de una venta, elegir un comprador solo confirma a quién se eligió.
   Future<void> _verCompradores(BuildContext contexto, String empresaId) async {

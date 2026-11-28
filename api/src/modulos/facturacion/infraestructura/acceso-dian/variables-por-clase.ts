@@ -23,3 +23,6 @@ export const VARIABLES_DEL_FABRICANTE = {
 } as const;
 
 export const NOMBRE_DEL_SOFTWARE = 'CONTA';
+
+/** Clave técnica pública del rango de pruebas de habilitación (SETP 990000000-995000000). */
+export const CLAVE_TECNICA_DE_HABILITACION = 'fc8eac422eba16e22ffd8c6f94b3f40a6e38162c';

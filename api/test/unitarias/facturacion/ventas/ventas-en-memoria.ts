@@ -26,6 +26,9 @@ export class VentasEnMemoria implements UnidadDeTrabajo<RepositoriosDeVenta> {
   siguiente = 990000000;
   ventasDelDia = 0;
   cupoDePersonaAgotado = false;
+  /** HU-07.04: «siempre factura» y la clave técnica de la resolución de factura. */
+  siempreFactura = false;
+  claveDelRango: string | null = null;
   readonly guardadas = new Map<string, Venta>();
   readonly encoladas: string[] = [];
   /** HU-06.08: la factura enviada de cada venta, por id de venta. */
@@ -93,6 +96,7 @@ export class VentasEnMemoria implements UnidadDeTrabajo<RepositoriosDeVenta> {
         },
         registrarIntento: (intento) => Promise.resolve(void this.intentosDeCorreo.push(intento)),
       },
+      preferencias: { siempreFactura: () => Promise.resolve(this.siempreFactura) },
       numeracion: {
         emisor: () => Promise.resolve(this.emisor),
         resolucionVigente: (_fecha, clase) =>
@@ -102,6 +106,7 @@ export class VentasEnMemoria implements UnidadDeTrabajo<RepositoriosDeVenta> {
               : this.resolucion && { id: 'r', resolucion: this.resolucion },
           ),
         resolucion: (id) => Promise.resolve(id === 'rpos' ? this.resolucionPos : this.resolucion),
+        claveTecnica: () => Promise.resolve(this.claveDelRango),
         reservarConsecutivo: () => {
           if (this.siguiente > 990000002) return Promise.resolve(null);
           this.siguiente += 1;

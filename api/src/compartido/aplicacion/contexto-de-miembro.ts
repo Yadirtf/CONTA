@@ -1,4 +1,4 @@
-import type { IdUsuario, Modo, Rol } from '../dominio/index.js';
+import type { IdUsuario, Modo, Rol, SegundoFactorDeLaSesion } from '../dominio/index.js';
 import type { ContextoEmpresa } from './contexto-empresa.js';
 
 /**
@@ -11,4 +11,9 @@ export interface ContextoDeMiembro extends ContextoEmpresa {
   readonly rol: Rol;
   /** No da permisos; junto con el rol decide si se exige el segundo factor (HU-04.04). */
   readonly modo: Modo;
+  /**
+   * Qué tan fresca está la verificación en dos pasos de la sesión (HU-07.04). La pone el resolutor en cada petición;
+   * sin dato, los casos de uso la toman como sin verificar.
+   */
+  readonly segundoFactor?: SegundoFactorDeLaSesion;
 }

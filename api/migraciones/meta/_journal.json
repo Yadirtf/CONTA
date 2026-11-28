@@ -85,6 +85,13 @@
       "when": 1796000000000,
       "tag": "0011_tiquete_pos",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1796100000000,
+      "tag": "0012_configuracion_dian",
+      "breakpoints": true
     }
   ]
 }

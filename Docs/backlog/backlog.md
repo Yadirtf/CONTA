@@ -212,7 +212,7 @@ Como dueño, quiero compartir la factura en PDF con su QR, para que el comprador
 - Decisión ([ADR-0015](../decisiones/0015-comprobante-a-pedido-y-correo-al-aceptar.md), nivel 3, con Verbalized Sampling y evaluador aparte): `GET /ventas/:id/comprobante` arma el PDF a pedido (pdfkit, QR vectorial, siempre igual) desde la venta y el XML firmado, con sesión, `X-Empresa`, `Permiso.Vender` y RLS, solo para facturas aceptadas, con `no-store` y 30 por 5 minutos. La app lo comparte como archivo (`share_plus`) desde «Listo» y «Mis ventas» (`GET /ventas`, últimas 50); sin internet o mientras la DIAN no aprueba, una cola de hasta 10 reintenta mientras la app está abierta. El correo se pide en la misma transacción que guarda «aceptado» y sale por Brevo (`CORREO_BREVO_LLAVE`, `CORREO_REMITENTE`) con intentos registrados; cada intento se toma antes de llamar al proveedor; los vencidos se leen con la única función `SECURITY DEFINER`, de solo lectura, que solo devuelve ids. El comprobante muestra al emisor como quedó en el XML firmado. El `ApplicationResponse` se guarda para el AttachedDocument, que queda para otra historia.
 - Módulos: `api/src/modulos/facturacion/` (`comprobante/`, `correo/`) y `app/lib/funcionalidades/ventas/`.
 
-**HU-06.02 POS electrónico** (M, M) — En revisión
+**HU-06.02 POS electrónico** (M, M) — Hecha
 Como cajero, quiero emitir el documento POS electrónico, para ventas rápidas de mostrador.
 - Cumple el anexo del documento equivalente POS y genera CUDE.
 - Decisión ([ADR-0016](../decisiones/0016-tiquete-pos-en-la-misma-tuberia.md), nivel 3, con Verbalized Sampling y evaluador aparte):
@@ -250,7 +250,7 @@ Como administrador, quiero poder cambiar al proveedor externo por configuración
 
 #### EP-07. Asistente de habilitación DIAN en la consola — Prioridad M
 
-**HU-07.04 Pantalla de configuración DIAN por empresa** (M, M) **[VS]**
+**HU-07.04 Pantalla de configuración DIAN por empresa** (M, M) **[VS]** — En revisión
 Como dueño, quiero cargar en una pantalla los datos que pide la DIAN para facturar, para no depender de variables de entorno ni del comando `facturacion:configurar`.
 - Va primero en EP-07 (decidido por Inge el 2026-11-27): la lista de pasos (HU-07.01) usa estos datos como evidencia.
 - Datos fiscales del facturador validados en la API (NIT con dígito de verificación, razón social, tipo de persona, responsabilidades, dirección y correo).
@@ -259,6 +259,7 @@ Como dueño, quiero cargar en una pantalla los datos que pide la DIAN para factu
 - Preferencia del negocio «siempre factura» (ADR-0016).
 - Solo el dueño, con verificación en dos pasos reciente. Tablas con `empresa_id`, RLS y prueba de aislamiento.
 - Con la configuración guardada, la API deja de leer `DIAN_HAB_*` para esa empresa.
+- Decisión en [ADR-0017](../decisiones/0017-configuracion-dian-por-empresa.md) (Verbalized Sampling con evaluador aparte): subdominio «configuración» dentro de facturación con un endpoint por sección; PIN y clave técnica cifrados con AES-256-GCM (`SECRETO_CONFIGURACION_DIAN`), de solo escritura (se ve `•••X`); leer exige la verificación de la jornada y cambiar, una de hace 10 minutos; bitácora de cambios sin valores; el NIT no cambia si ya hay ventas; la clave técnica va con su resolución de factura. El certificado sigue en el entorno hasta HU-07.02. En la app: tarjetas «Lo que falta para facturar» y, en modo simple, lo técnico bajo «Datos que te dio la DIAN».
 
 **HU-07.01 Lista de pasos por cliente** (M, M) **[VS]**
 Como administrador, quiero ver los 7 pasos de habilitación de cada cliente con su estado, para habilitarlo en menos de 1 hora.

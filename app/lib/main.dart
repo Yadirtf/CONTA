@@ -5,6 +5,7 @@ import 'funcionalidades/acceso/datos/almacen_de_sesion_seguro.dart';
 import 'funcionalidades/acceso/datos/repositorio_de_acceso_http.dart';
 import 'funcionalidades/acceso/presentacion/controlador_de_acceso.dart';
 import 'funcionalidades/clientes/datos/repositorio_de_clientes_http.dart';
+import 'funcionalidades/configuracion_dian/datos/repositorio_de_configuracion_dian_http.dart';
 import 'funcionalidades/empresas/datos/repositorio_de_empresas_http.dart';
 import 'funcionalidades/miembros/datos/repositorio_de_miembros_http.dart';
 import 'funcionalidades/productos/datos/repositorio_de_productos_http.dart';
@@ -29,6 +30,7 @@ void main() {
       ventas: ventas,
       comprobantes: ColaDeComprobantes(ventas, CompartidorDelTelefono()),
       verificacion: RepositorioDeVerificacionHttp(Configuracion.urlApi, token: token),
+      configuracionDian: RepositorioDeConfiguracionDianHttp(Configuracion.urlApi, token: token),
       repositorioSalud: RepositorioSaludHttp(Configuracion.urlApi),
     ),
   );

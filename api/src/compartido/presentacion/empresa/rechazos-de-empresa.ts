@@ -5,11 +5,11 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { CODIGO_SIN_PERMISO } from '../../dominio/index.js';
+import { CODIGO_SIN_PERMISO, CODIGO_SIN_SEGUNDO_FACTOR } from '../../dominio/index.js';
 import type { RechazoDeEmpresa } from './resolutor-de-empresa.js';
 
-/** Código estable con el que la app sabe que debe pedir el segundo factor (HU-04.04). */
-export const CODIGO_SIN_SEGUNDO_FACTOR = 'acceso.segundo-factor-requerido';
+/** Código estable con el que la app sabe que debe pedir el segundo factor (HU-04.04). Vive en el dominio compartido. */
+export { CODIGO_SIN_SEGUNDO_FACTOR };
 
 /** Respuesta HTTP de cada rechazo, con un código estable. La empresa ajena responde igual que la inexistente. */
 export function excepcionDe(rechazo: RechazoDeEmpresa): HttpException {
